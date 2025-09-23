@@ -10,14 +10,17 @@ export interface DatabaseConfig {
 }
 
 export async function createDatabase(logger: Logger, config: DatabaseConfig) {
+	const dbLogger = logger.named('database')
+
 	const db = drizzle({
 		schema,
 		connection: config.url,
 		casing: 'snake_case',
-		logger: new DatabaseLogger(logger.named('database')),
+		logger: new DatabaseLogger(dbLogger),
 	})
 
 	await db.$client.connect()
+	dbLogger.info('connected to postgres')
 
 	return db
 }
