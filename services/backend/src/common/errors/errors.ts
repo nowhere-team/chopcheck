@@ -31,6 +31,14 @@ export class UnauthorizedError extends ApiError {
 	}
 }
 
+export class ForbiddenError extends ApiError {
+	override severity = ErrorSeverity.MEDIUM
+
+	constructor(message: string = 'access forbidden', details?: Record<string, unknown>) {
+		super('FORBIDDEN', 403, message, details)
+	}
+}
+
 export class InternalError extends ApiError {
 	override severity = ErrorSeverity.HIGH
 

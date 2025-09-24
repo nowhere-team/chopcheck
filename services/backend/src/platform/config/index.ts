@@ -18,6 +18,15 @@ const schema = z.object({
 	CACHE_DEFAULT_TTL: z.coerce.number().default(3600), // 1 hour
 	CACHE_MAX_MEMORY_ITEMS: z.coerce.number().default(1000),
 
+	AUTH_SERVICE_URL: z.url().optional(),
+	AUTH_SERVICE_TIMEOUT: z.coerce.number().default(5000), // 5 seconds
+	AUTH_DEV_MODE: z.coerce.boolean().default(false),
+
+	// jwt validation (token goes from auth service)
+	JWT_SECRET: z.string().min(32, 'jwt secret must be at least 32 characters'),
+	JWT_ISSUER: z.string().default('nowhere-auth-service'),
+	JWT_AUDIENCE: z.string().default('chopcheck'),
+
 	PORT: z.coerce.number().min(1).max(65535).default(8080),
 })
 

@@ -1,38 +1,48 @@
 import type { MiddlewareHandler } from 'hono'
 
+import { ForbiddenError, UnauthorizedError } from '@/common/errors'
+
 export function auth(): MiddlewareHandler {
 	return async (c, next) => {
-		// todo: uncomment when jwt added
-		// const jwt = c.get('jwt')
-		//
-		// try {
-		// 	const authHeader = c.req.header('authorization')
-		// 	const token = jwt.extractTokenFromHeader(authHeader)
-		// 	const authContext = await jwt.validateToken(token)
-		//
-		// 	c.set('auth', authContext)
-		// 	await next()
-		// } catch (error) {
-		// 	if (error instanceof UnauthorizedError) {
-		// 		throw error
-		// 	}
-		// 	throw new UnauthorizedError('authentication failed')
-		// }
+		const auth = c.get('auth')
+		const logger = c.get('logger')
+
+		try {
+			const authHeader = c.req.header('authorization')
+			const token = auth.extractTokenFromHeader(authHeader)
+			const authContext = await auth.validateToken(token)
+
+			logger.debug('user authenticated', { userId: authContext.userId, tokenId: authContext.tokenId })
+
+			c.set('authContext', authContext)
+			await next()
+		} catch (error) {
+			logger.debug('authentication failed', { error })
+
+			throw new UnauthorizedError('authentication failed')
+		}
 	}
 }
 
 export function requirePermission(permission: string): MiddlewareHandler {
 	return async (c, next) => {
-		// todo: uncomment when auth module added
-		// const auth = c.get('auth')
-		// if (!auth) {
-		// 	throw new UnauthorizedError('authentication required')
-		// }
-		//
-		// if (!auth.permissions.has(permission)) {
-		// 	throw new UnauthorizedError(`permission required: ${permission}`)
-		// }
-		//
-		// await next()
+		const authContext = c.get('authContext')
+		const logger = c.get('logger')
+
+		if (!authContext) {
+			throw new UnauthorizedError('authentication required')
+		}
+
+		if (!authContext.permissions.has(permission)) {
+			logger.warn('permission denied', {
+				userId: authContext.userId,
+				required: permission,
+				available: Array.from(authContext.permissions),
+			})
+			throw new ForbiddenError(`permission required: ${permission}`)
+		}
+
+		logger.debug('permission granted', { userId: authContext.userId, permission })
+		await next()
 	}
 }
