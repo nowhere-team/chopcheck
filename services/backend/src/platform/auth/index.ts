@@ -1,10 +1,11 @@
+import { AuthClient } from '@/platform/auth/client'
+import type { Cache } from '@/platform/cache'
 import type { Logger } from '@/platform/logger'
 
-import { AuthClient } from './client'
 import type { AuthConfig } from './types'
 
-export function createAuthClient(logger: Logger, config: AuthConfig): AuthClient {
-	return new AuthClient(config, logger.named('auth'))
+export function createAuthClient(logger: Logger, cache: Cache, config: AuthConfig) {
+	return new AuthClient(logger.named('auth'), cache, config)
 }
 
 export * from './client'

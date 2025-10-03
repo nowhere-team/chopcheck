@@ -33,7 +33,7 @@ export function requirePermission(permission: string): MiddlewareHandler {
 			throw new UnauthorizedError('authentication required')
 		}
 
-		if (!authContext.permissions.has(permission)) {
+		if (!authContext.permissions.has(`cc:${permission}`)) {
 			logger.warn('permission denied', {
 				userId: authContext.userId,
 				required: permission,

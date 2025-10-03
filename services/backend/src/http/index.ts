@@ -6,6 +6,7 @@ import { trimTrailingSlash } from 'hono/trailing-slash'
 import { errorHandler } from '@/http/middleware/errors'
 import { inject } from '@/http/middleware/inject'
 import { registerRoutes } from '@/http/routes'
+import { AuthClient } from '@/platform/auth'
 import type { Logger } from '@/platform/logger'
 
 export interface ServerConfig {
@@ -13,12 +14,12 @@ export interface ServerConfig {
 	development: boolean
 }
 
-export function createRouter(logger: Logger) {
+export function createRouter(logger: Logger, auth: AuthClient) {
 	const app = new Hono()
 		.basePath('/api')
 		.use(cors())
 		.use(trimTrailingSlash())
-		.use(inject({ logger }))
+		.use(inject({ logger, auth }))
 		.onError(errorHandler)
 		.route('/', registerRoutes())
 
@@ -38,8 +39,8 @@ export interface Server {
 	instance: Bun.Server
 }
 
-export function createServer(logger: Logger, config: ServerConfig): Server {
-	const router = createRouter(logger.named('http'))
+export function createServer(logger: Logger, auth: AuthClient, config: ServerConfig): Server {
+	const router = createRouter(logger.named('http'), auth)
 
 	const instance = Bun.serve({
 		fetch: router.fetch,

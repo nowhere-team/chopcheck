@@ -1,6 +1,7 @@
-import * as crypto from 'node:crypto'
-import { randomUUID } from 'node:crypto'
+import { decode, type JwtVariables, sign, verify } from 'hono/jwt'
+import ky, { type KyInstance } from 'ky'
 
+import type { Cache } from '@/platform/cache'
 import type { Logger } from '@/platform/logger'
 
 import type {
@@ -10,265 +11,230 @@ import type {
 	CreateTokenResponse,
 	CreateUserRequest,
 	CreateUserResponse,
+	IntegrationType,
 	JwtClaims,
-	TelegramInitData,
 } from './types'
 
 export class AuthClient {
+	private readonly api?: KyInstance
+
 	constructor(
-		private readonly config: AuthConfig,
 		private readonly logger: Logger,
-	) {}
+		private readonly cache: Cache,
+		private readonly config: AuthConfig,
+	) {
+		if (!config.devMode) {
+			if (!config.serviceUrl) {
+				throw new Error('auth service url is required in production mode')
+			}
 
-	// create new user or find existing by telegram data
-	async findOrCreateUser(telegramData: TelegramInitData): Promise<CreateUserResponse> {
-		if (this.config.devMode) {
-			return this.mockUser(telegramData)
-		}
-
-		// trying to find existing one
-		try {
-			return await this.findUserByIntegration('telegram', telegramData.telegramId.toString())
-		} catch {
-			// not found, creating new one
-		}
-
-		const request: CreateUserRequest = {
-			integrations: [
-				{
-					type: 'telegram',
-					external_id: telegramData.telegramId.toString(),
-					external_data: {
-						username: telegramData.username,
-						first_name: telegramData.firstName,
-						last_name: telegramData.lastName,
-						photo_url: telegramData.photoUrl,
-						language_code: telegramData.languageCode,
-					},
-					is_primary: true,
+			this.api = ky.create({
+				prefixUrl: this.config.serviceUrl,
+				timeout: this.config.serviceTimeout,
+				retry: {
+					limit: 2,
+					methods: ['get', 'post'],
+					statusCodes: [408, 413, 429, 500, 502, 503, 504],
 				},
-			],
+				hooks: {
+					beforeRequest: [
+						request => {
+							this.logger.debug('auth service request', {
+								url: request.url,
+								method: request.method,
+							})
+						},
+					],
+					beforeError: [
+						error => {
+							const { request, response } = error
+							this.logger.warn('auth service error', {
+								url: request.url,
+								method: request.method,
+								status: response?.status,
+								statusText: response?.statusText,
+							})
+							return error
+						},
+					],
+					afterResponse: [
+						(_request, _options, response) => {
+							this.logger.debug('auth service response', {
+								status: response.status,
+								ok: response.ok,
+							})
+						},
+					],
+				},
+			})
 		}
-
-		const response = await fetch(`${this.config.serviceUrl}/internal/users`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(request),
-			signal: AbortSignal.timeout(this.config.serviceTimeout),
-		})
-
-		if (!response.ok) {
-			throw new Error(`failed to create user: ${response.status}`)
-		}
-
-		return (await response.json()) as CreateUserResponse
 	}
 
-	// create jwt token for user
-	async createToken(userId: string, clientInfo?: Record<string, unknown>): Promise<CreateTokenResponse> {
+	async createUser(request: CreateUserRequest): Promise<CreateUserResponse> {
 		if (this.config.devMode) {
-			return this.mockToken(userId)
+			return this.mockCreateUser(request)
 		}
 
-		const request: CreateTokenRequest = {
-			user_id: userId,
-			requested_by: 'chopcheck',
-			permissions: ['cc:splits:read', 'cc:splits:write', 'cc:splits:create'],
-			client_info: clientInfo || {},
-		}
-
-		const response = await fetch(`${this.config.serviceUrl}/internal/tokens`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(request),
-			signal: AbortSignal.timeout(this.config.serviceTimeout),
-		})
-
-		if (!response.ok) {
-			throw new Error(`failed to create token: ${response.status}`)
-		}
-
-		return (await response.json()) as CreateTokenResponse
+		return await this.api!.post('internal/users', { json: request }).json<CreateUserResponse>()
 	}
 
-	// validate jwt token
-	async validateToken(token: string): Promise<AuthContext> {
+	async findUserByIntegration(type: IntegrationType, externalId: string): Promise<CreateUserResponse | null> {
+		if (this.config.devMode) {
+			return this.mockFindUser(type, externalId)
+		}
+
 		try {
-			const claims = await this.verifyJwt(token)
-
-			// checks
-			if (!claims.sub || !claims.jti) {
-				throw new Error('missing required claims')
-			}
-
-			if (!claims.aud.includes(this.config.jwtAudience[0]!)) {
-				throw new Error('invalid audience')
-			}
-
-			return {
-				userId: claims.sub,
-				tokenId: claims.jti,
-				permissions: new Set(claims.permissions),
-				requestedBy: claims.requested_by,
-			}
+			return await this.api!.get(`internal/users/by-integration/${type}/${externalId}`).json<CreateUserResponse>()
 		} catch (error) {
-			this.logger.warn('jwt validation failed', { error })
-			throw new Error('invalid token')
+			if (error instanceof Error && 'response' in error) {
+				const response = (error as { response: Response }).response
+				if (response.status === 404) {
+					return null
+				}
+			}
+			throw error
 		}
 	}
 
-	// extract token from authorization header
+	async createToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
+		if (this.config.devMode) {
+			return this.mockCreateToken(request)
+		}
+
+		return await this.api!.post('internal/tokens', { json: request }).json<CreateTokenResponse>()
+	}
+
+	async revokeToken(jti: string, reason?: string): Promise<void> {
+		if (this.config.devMode) {
+			await this.mockRevokeToken(jti)
+			return
+		}
+
+		await this.api!.delete(`internal/tokens/${jti}`, { json: { reason } })
+	}
+
 	extractTokenFromHeader(authHeader?: string): string {
 		if (!authHeader) {
-			throw new Error('authorization header missing')
+			throw new Error('authorization header is missing')
 		}
 
-		const [scheme, token] = authHeader.split(' ')
-		if (scheme !== 'Bearer' || !token) {
+		const parts = authHeader.split(' ')
+		if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
 			throw new Error('invalid authorization header format')
 		}
 
-		return token
+		return parts[1]!
 	}
 
-	private async findUserByIntegration(type: string, externalId: string): Promise<CreateUserResponse> {
-		const response = await fetch(`${this.config.serviceUrl}/internal/users/by-integration/${type}/${externalId}`, {
-			signal: AbortSignal.timeout(this.config.serviceTimeout),
-		})
+	async validateToken(token: string): Promise<AuthContext> {
+		const { payload } = decode(token)
+		const claims = payload as unknown as JwtClaims
 
-		if (!response.ok) {
-			throw new Error(`user not found: ${response.status}`)
+		this.validateBasicClaims(claims)
+
+		if (!this.config.devMode) {
+			try {
+				await verify(token, this.config.jwtSecret, 'HS256')
+				this.logger.debug('jwt signature verified', { jti: claims.jti })
+			} catch (error) {
+				this.logger.warn('jwt signature verification failed', { error })
+				throw new Error('invalid jwt signature')
+			}
 		}
 
-		return (await response.json()) as CreateUserResponse
-	}
-
-	private mockUser(telegramData: TelegramInitData): CreateUserResponse {
-		const displayName = [telegramData.firstName, telegramData.lastName].filter(Boolean).join(' ') || 'Dev User'
+		const isBlocked = await this.cache.exists(`blocked_token:${claims.jti}`)
+		if (isBlocked) {
+			throw new Error('token has been revoked')
+		}
 
 		return {
-			user_id: randomUUID(),
-			display_name: displayName,
-			username: telegramData.username,
-			avatar_url: telegramData.photoUrl,
-			status: 'active',
-			metadata: { dev_mode: true },
+			userId: claims.sub,
+			tokenId: claims.jti,
+			permissions: new Set(claims.permissions),
+			requestedBy: claims.requested_by,
 		}
 	}
 
-	private async mockToken(userId: string): Promise<CreateTokenResponse> {
+	private validateBasicClaims(claims: JwtClaims): void {
 		const now = Math.floor(Date.now() / 1000)
-		const jti = randomUUID()
 
-		const claims: JwtClaims = {
-			iss: this.config.jwtIssuer,
-			aud: [this.config.jwtAudience],
-			sub: userId,
-			jti,
-			exp: now + 86400, // 24h
-			iat: now,
-			requested_by: 'chopcheck',
-			permissions: ['cc:splits:read', 'cc:splits:write', 'cc:splits:create'],
+		if (!claims.sub || !claims.jti) {
+			throw new Error('jwt missing required claims')
 		}
 
-		const token = await this.signJwt(claims)
+		if (claims.exp && claims.exp < now) {
+			throw new Error('jwt token has expired')
+		}
+
+		if (claims.iss !== this.config.jwtIssuer) {
+			throw new Error(`jwt issuer mismatch: expected ${this.config.jwtIssuer}, got ${claims.iss}`)
+		}
+
+		if (!claims.aud.includes(this.config.jwtAudience)) {
+			throw new Error(`jwt audience mismatch: expected ${this.config.jwtAudience}`)
+		}
+	}
+
+	// -- mocking for dev mode --
+
+	private devUsers = new Map<string, CreateUserResponse>()
+
+	private mockCreateUser(request: CreateUserRequest): CreateUserResponse {
+		const telegramIntegration = request.integrations.find(i => i.type === 'telegram')
+		if (!telegramIntegration) {
+			throw new Error('telegram integration is required')
+		}
+
+		const userId = crypto.randomUUID()
+		const user: CreateUserResponse = {
+			user_id: userId,
+			display_name: request.custom_display_name || telegramIntegration.external_data.first_name || 'unknown user',
+			username: request.custom_username || telegramIntegration.external_data.username,
+			avatar_url: request.custom_avatar_url || telegramIntegration.external_data.photo_url,
+			metadata: {},
+		}
+
+		this.devUsers.set(`telegram:${telegramIntegration.external_id}`, user)
+		this.logger.debug('mock user created', { userId, externalId: telegramIntegration.external_id })
+
+		return user
+	}
+
+	private mockFindUser(type: IntegrationType, externalId: string): CreateUserResponse | null {
+		const user = this.devUsers.get(`${type}:${externalId}`)
+		return user || null
+	}
+
+	private async mockCreateToken(request: CreateTokenRequest): Promise<CreateTokenResponse> {
+		const now = Math.floor(Date.now() / 1000)
+		const exp = now + (request.ttl_seconds || 86400)
+		const jti = crypto.randomUUID()
+
+		const payload: JwtVariables['jwtPayload'] & JwtClaims = {
+			iss: this.config.jwtIssuer,
+			aud: [this.config.jwtAudience],
+			sub: request.user_id,
+			jti,
+			exp,
+			iat: now,
+			requested_by: request.requested_by,
+			permissions: request.permissions,
+			user_status: 'active',
+		}
+
+		const token = await sign(payload as JwtVariables['jwtPayload'], this.config.jwtSecret, 'HS256')
+
+		this.logger.debug('mock token created', { userId: request.user_id, jti })
 
 		return {
 			access_token: token,
-			expires_at: new Date((now + 86400) * 1000).toISOString(),
+			expires_at: new Date(exp * 1000).toISOString(),
 			jti,
 		}
 	}
 
-	private async verifyJwt(token: string): Promise<JwtClaims> {
-		const parts = token.split('.')
-		if (parts.length !== 3) {
-			throw new Error('invalid token format')
-		}
-
-		const [encodedHeader, encodedClaims, encodedSignature] = parts
-		const message = `${encodedHeader}.${encodedClaims}`
-
-		// verify signature
-		const encoder = new TextEncoder()
-		const key = await crypto.subtle.importKey(
-			'raw',
-			encoder.encode(this.config.jwtSecret),
-			{ name: 'HMAC', hash: 'SHA-256' },
-			false,
-			['verify'],
-		)
-
-		const signature = this.base64UrlDecode(encodedSignature!)
-		const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(message))
-
-		if (!isValid) {
-			throw new Error('invalid signature')
-		}
-
-		// decode claims
-		const claims = JSON.parse(this.base64UrlDecodeText(encodedClaims!)) as JwtClaims
-
-		// check expiration
-		const now = Math.floor(Date.now() / 1000)
-		if (claims.exp < now) {
-			throw new Error('token expired')
-		}
-
-		return claims
-	}
-
-	private async signJwt(claims: JwtClaims): Promise<string> {
-		const encoder = new TextEncoder()
-		const header = { alg: 'HS256', typ: 'JWT' }
-
-		const encodedHeader = this.base64UrlEncode(JSON.stringify(header))
-		const encodedClaims = this.base64UrlEncode(JSON.stringify(claims))
-
-		const message = `${encodedHeader}.${encodedClaims}`
-		const key = await crypto.subtle.importKey(
-			'raw',
-			encoder.encode(this.config.jwtSecret),
-			{ name: 'HMAC', hash: 'SHA-256' },
-			false,
-			['sign'],
-		)
-
-		const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message))
-		const encodedSignature = this.base64UrlEncode(signature)
-
-		return `${message}.${encodedSignature}`
-	}
-
-	private base64UrlEncode(data: string | ArrayBuffer): string {
-		let base64: string
-		if (typeof data === 'string') {
-			base64 = btoa(data)
-		} else {
-			base64 = btoa(String.fromCharCode(...new Uint8Array(data)))
-		}
-
-		return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-	}
-
-	private base64UrlDecode(data: string): ArrayBuffer {
-		const base64 = data
-			.replace(/-/g, '+')
-			.replace(/_/g, '/')
-			.padEnd(data.length + ((4 - (data.length % 4)) % 4), '=')
-		const binary = atob(base64)
-		const bytes = new Uint8Array(binary.length)
-		for (let i = 0; i < binary.length; i++) {
-			bytes[i] = binary.charCodeAt(i)
-		}
-		return bytes.buffer
-	}
-
-	private base64UrlDecodeText(data: string): string {
-		const base64 = data
-			.replace(/-/g, '+')
-			.replace(/_/g, '/')
-			.padEnd(data.length + ((4 - (data.length % 4)) % 4), '=')
-		return atob(base64)
+	private async mockRevokeToken(jti: string): Promise<void> {
+		await this.cache.set(`blocked_token:${jti}`, true, 86400)
+		this.logger.debug('mock token revoked', { jti })
 	}
 }

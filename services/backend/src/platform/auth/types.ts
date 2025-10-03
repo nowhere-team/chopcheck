@@ -1,3 +1,5 @@
+export type IntegrationType = 'telegram'
+
 export interface AuthConfig {
 	serviceUrl?: string // auth service url for production
 	serviceTimeout: number
@@ -25,22 +27,13 @@ export interface JwtClaims {
 	permissions: string[] // custom: user permissions
 }
 
-export interface TelegramInitData {
-	telegramId: number
-	username?: string
-	firstName?: string
-	lastName?: string
-	photoUrl?: string
-	languageCode?: string
-}
-
 // auth service api contracts
 export interface CreateUserRequest {
 	custom_username?: string
 	custom_display_name?: string
 	custom_avatar_url?: string
 	integrations: Array<{
-		type: 'telegram'
+		type: IntegrationType
 		external_id: string
 		external_data: {
 			username?: string
@@ -58,7 +51,6 @@ export interface CreateUserResponse {
 	display_name: string
 	username?: string
 	avatar_url?: string
-	status: 'active' | 'suspended' | 'deleted'
 	metadata: Record<string, unknown>
 }
 

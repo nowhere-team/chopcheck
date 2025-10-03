@@ -1,4 +1,5 @@
 import { createServer, type Server } from '@/http'
+import { AuthClient, createAuthClient } from '@/platform/auth'
 import { type Cache, createCache } from '@/platform/cache'
 import { type Config, createConfig } from '@/platform/config'
 import { createDatabase, type Database } from '@/platform/database'
@@ -9,6 +10,7 @@ export interface App {
 	logger: Logger
 	database: Database
 	cache: Cache
+	auth: AuthClient
 	server: Server
 }
 
@@ -29,12 +31,22 @@ export async function start(): Promise<App> {
 	})
 	logger.info('cache initialized')
 
-	const server = createServer(logger, { port: config.PORT, development: config.isDev() })
+	const auth = createAuthClient(logger, cache, {
+		serviceUrl: config.AUTH_SERVICE_URL,
+		serviceTimeout: config.AUTH_SERVICE_TIMEOUT,
+		devMode: config.AUTH_DEV_MODE,
+		jwtSecret: config.JWT_SECRET,
+		jwtIssuer: config.JWT_ISSUER,
+		jwtAudience: config.JWT_AUDIENCE,
+	})
+	logger.info('auth client initialized', { devMode: config.AUTH_DEV_MODE })
+
+	const server = createServer(logger, auth, { port: config.PORT, development: config.isDev() })
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')
 
-	return { config, logger, database, cache, server }
+	return { config, logger, database, cache, auth, server }
 }
 
 export async function stop(app: App) {
