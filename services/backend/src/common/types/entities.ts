@@ -11,4 +11,7 @@ export type ParticipantItem = typeof schema.splitItemParticipants.$inferSelect
 export type ParticipantWithUser = Participant & {
 	user: Pick<User, 'id' | 'displayName' | 'username' | 'avatarUrl' | 'isDeleted'> | null
 }
-export type DetailedSplit = { split: Split; items: Item[]; participants: ParticipantWithUser[] }
+
+export type ParticipantWithSelections = ParticipantWithUser & {
+	itemParticipations: ParticipantItem[]
+}

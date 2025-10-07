@@ -21,6 +21,10 @@ function transformError(err: Error, path: string): ApiError {
 
 	return new InternalError('unknown error', {
 		originalMessage: err.message,
+		errorName: err.name,
+		stack: err.stack,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		cause: 'cause' in err ? (err as any).cause : undefined,
 		path,
 	})
 }

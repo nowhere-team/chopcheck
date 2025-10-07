@@ -7,19 +7,21 @@ import { errorHandler } from '@/http/middleware/errors'
 import { inject } from '@/http/middleware/inject'
 import { registerRoutes } from '@/http/routes'
 import { AuthClient } from '@/platform/auth'
+import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
+import type { Services } from '@/services'
 
 export interface ServerConfig {
 	port: number
 	development: boolean
 }
 
-export function createRouter(logger: Logger, auth: AuthClient) {
+export function createRouter(logger: Logger, database: Database, auth: AuthClient, services: Services) {
 	const app = new Hono()
 		.basePath('/api')
 		.use(cors())
 		.use(trimTrailingSlash())
-		.use(inject({ logger, auth }))
+		.use(inject({ logger, auth, database, services }))
 		.onError(errorHandler)
 		.route('/', registerRoutes())
 
@@ -39,8 +41,14 @@ export interface Server {
 	instance: Bun.Server
 }
 
-export function createServer(logger: Logger, auth: AuthClient, config: ServerConfig): Server {
-	const router = createRouter(logger.named('http'), auth)
+export function createServer(
+	logger: Logger,
+	database: Database,
+	auth: AuthClient,
+	services: Services,
+	config: ServerConfig,
+): Server {
+	const router = createRouter(logger.named('http'), database, auth, services)
 
 	const instance = Bun.serve({
 		fetch: router.fetch,

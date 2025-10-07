@@ -4,6 +4,7 @@ import { type Cache, createCache } from '@/platform/cache'
 import { type Config, createConfig } from '@/platform/config'
 import { createDatabase, type Database } from '@/platform/database'
 import { createLogger, type Logger } from '@/platform/logger'
+import { createServices, type Services } from '@/services'
 
 export interface App {
 	config: Config
@@ -11,6 +12,7 @@ export interface App {
 	database: Database
 	cache: Cache
 	auth: AuthClient
+	services: Services
 	server: Server
 }
 
@@ -41,12 +43,15 @@ export async function start(): Promise<App> {
 	})
 	logger.info('auth client initialized', { devMode: config.AUTH_DEV_MODE })
 
-	const server = createServer(logger, auth, { port: config.PORT, development: config.isDev() })
+	const services = createServices(database, cache, logger)
+	logger.info('services initialized')
+
+	const server = createServer(logger, database, auth, services, { port: config.PORT, development: config.isDev() })
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')
 
-	return { config, logger, database, cache, auth, server }
+	return { config, logger, database, cache, auth, services, server }
 }
 
 export async function stop(app: App) {

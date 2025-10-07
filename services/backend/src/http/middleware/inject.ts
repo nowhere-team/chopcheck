@@ -6,6 +6,8 @@ export function inject(deps: ExternalDependencies): MiddlewareHandler {
 	return async (c, next) => {
 		c.set('logger', deps.logger)
 		c.set('auth', deps.auth)
+		c.set('services', deps.services)
+		c.set('database', deps.database)
 		await next()
 	}
 }

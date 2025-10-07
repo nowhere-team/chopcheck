@@ -1,21 +1,24 @@
 import { Hono } from 'hono'
 
-import { auth, requirePermission } from '@/http/middleware/auth'
+import { auth } from '@/http/middleware/auth'
+
+import { createAddItemsRoute } from './add-items'
+import { createCreateSplitRoute } from './create'
+import { createGetSplitRoute } from './get'
+import { createSelectItemsRoute } from './select-items'
+import { createUpdateSplitRoute } from './update'
 
 export function createSplitsRoutes() {
-	return new Hono()
-		.get('/public/:id', async c => {
-			return c.json({ message: 'public data' })
-		})
-		.use('/*', auth())
-		.get('/my', async c => {
-			const authContext = c.get('authContext')!
-			return c.json({
-				userId: authContext.userId,
-				permissions: Array.from(authContext.permissions),
-			})
-		})
-		.post('/', requirePermission('splits:create'), async c => {
-			return c.json({ message: 'split created' })
-		})
+	return (
+		new Hono()
+			// public endpoint - get split
+			.route('/', createGetSplitRoute())
+
+			// protected endpoints
+			.use('/*', auth())
+			.route('/', createCreateSplitRoute())
+			.route('/', createUpdateSplitRoute())
+			.route('/', createAddItemsRoute())
+			.route('/', createSelectItemsRoute())
+	)
 }
