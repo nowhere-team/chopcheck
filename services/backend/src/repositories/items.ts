@@ -5,7 +5,7 @@ import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-type CreateItemData = Pick<Item, 'name' | 'price' | 'type' | 'quantity'>
+export type CreateItemData = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>
 
 export class ItemsRepository extends BaseRepository {
 	private getCacheKey(splitId: string, suffix: string = 'items'): string {
@@ -32,7 +32,7 @@ export class ItemsRepository extends BaseRepository {
 					type: item.type || 'product',
 					quantity: item.quantity || '1',
 					displayOrder: index,
-					defaultDivisionMethod: 'equal' as const,
+					defaultDivisionMethod: item.defaultDivisionMethod || 'equal',
 				})),
 			)
 			.returning()

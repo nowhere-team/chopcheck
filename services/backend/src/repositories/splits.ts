@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq, exists, or } from 'drizzle-orm'
 
 import type { Split } from '@/common/types'
 import { schema } from '@/platform/database'
@@ -31,6 +31,35 @@ export class SplitsRepository extends BaseRepository {
 
 			return split || null
 		})
+	}
+
+	async findByUser(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
+		return await this.db
+			.select()
+			.from(schema.splits)
+			.where(
+				and(
+					eq(schema.splits.isDeleted, false),
+					or(
+						eq(schema.splits.ownerId, userId),
+						exists(
+							this.db
+								.select({ id: schema.splitParticipants.id })
+								.from(schema.splitParticipants)
+								.where(
+									and(
+										eq(schema.splitParticipants.splitId, schema.splits.id),
+										eq(schema.splitParticipants.userId, userId),
+										eq(schema.splitParticipants.isDeleted, false),
+									),
+								),
+						),
+					),
+				),
+			)
+			.orderBy(desc(schema.splits.updatedAt))
+			.offset(offset)
+			.limit(limit)
 	}
 
 	async create(ownerId: string, data: CreateSplitData): Promise<Split> {

@@ -2,15 +2,15 @@ import { Hono } from 'hono'
 
 import { createSplitSchema } from '@/common/types'
 import { requirePermission } from '@/http/middleware/auth'
+import { validate } from '@/http/utils'
 
 export function createCreateSplitRoute() {
-	return new Hono().post('/', requirePermission('splits:create'), async c => {
+	return new Hono().post('/', validate('json', createSplitSchema), requirePermission('splits:create'), async c => {
 		const authContext = c.get('authContext')!
 		const services = c.get('services')
 		const logger = c.get('logger')
 
-		const body = await c.req.json()
-		const dto = createSplitSchema.parse(body)
+		const dto = c.req.valid('json')
 
 		logger.info('creating split via api', { userId: authContext.userId, name: dto.name })
 

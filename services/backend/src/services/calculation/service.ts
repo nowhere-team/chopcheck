@@ -41,15 +41,6 @@ export class CalculationService {
 
 		const difference = totalSplitAmount - totalCollected
 
-		if (Math.abs(difference) > 1) {
-			this.logger.warn('significant rounding difference detected', {
-				splitId: data.split.id,
-				totalSplitAmount,
-				totalCollected,
-				difference,
-			})
-		}
-
 		return {
 			...data,
 			calculations,

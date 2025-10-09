@@ -3,7 +3,9 @@ import type {
 	Calculations,
 	CreateSplitDto,
 	Item,
+	Participant,
 	ParticipantCalculationData,
+	Split,
 	SplitData,
 	SplitResponse,
 } from '@/common/types'
@@ -42,6 +44,10 @@ export class SplitsService {
 		return response
 	}
 
+	async getMySplits(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
+		return await this.splitsRepo.findByUser(userId, offset, limit)
+	}
+
 	async create(userId: string, dto: CreateSplitDto): Promise<SplitResponse> {
 		this.logger.info('creating split', { userId, name: dto.name })
 
@@ -69,10 +75,35 @@ export class SplitsService {
 		return result
 	}
 
+	async join(splitId: string, userId: string): Promise<SplitResponse> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		if (split.maxParticipants) {
+			const currentCount = await this.participantsRepo.countParticipants(splitId)
+			if (currentCount >= split.maxParticipants) {
+				throw new Error('split is full')
+			}
+		}
+
+		await this.participantsRepo.join(splitId, userId)
+
+		this.logger.info('user joined split', { splitId, userId })
+
+		const result = await this.getById(splitId, false)
+		if (!result) {
+			throw new NotFoundError('split not found after join')
+		}
+
+		return result
+	}
+
 	async addItems(
 		splitId: string,
 		userId: string,
-		items: Array<{ name: string; price: number; type: Item['type']; quantity: string | null }>,
+		items: Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>[],
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
@@ -154,6 +185,24 @@ export class SplitsService {
 		}
 
 		return result
+	}
+
+	async getMyParticipation(
+		splitId: string,
+		userId: string,
+	): Promise<{ participant: Participant; calculation?: unknown } | null> {
+		const participant = await this.participantsRepo.findByUserAndSplit(userId, splitId)
+		if (!participant) return null
+
+		const split = await this.getById(splitId, true)
+		if (!split || !split.calculations) return { participant }
+
+		const calc = split.calculations.participants.find(p => p.participantId === participant.id)
+
+		return {
+			participant,
+			calculation: calc,
+		}
 	}
 
 	private buildCalculations(data: SplitData): Calculations {

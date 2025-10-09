@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 
 import type { Participant, ParticipantWithSelections } from '@/common/types'
 import { schema } from '@/platform/database'
@@ -36,9 +36,42 @@ export class ParticipantsRepository extends BaseRepository {
 				},
 			})
 
-			// typescript теперь знает что itemParticipations есть
 			return participants as ParticipantWithSelections[]
 		})
+	}
+
+	async findByUserAndSplit(userId: string, splitId: string): Promise<Participant | null> {
+		const participants = await this.db.query.splitParticipants.findFirst({
+			where: and(
+				eq(schema.splitParticipants.splitId, splitId),
+				eq(schema.splitParticipants.userId, userId),
+				eq(schema.splitParticipants.isDeleted, false),
+			),
+		})
+
+		return participants || null
+	}
+
+	async join(splitId: string, userId: string, displayName?: string): Promise<Participant> {
+		const existing = await this.findByUserAndSplit(userId, splitId)
+		if (existing) {
+			return existing
+		}
+
+		const [participant] = await this.db
+			.insert(schema.splitParticipants)
+			.values({
+				splitId,
+				userId,
+				displayName,
+				isReady: false,
+				hasPaid: false,
+			})
+			.returning()
+
+		await this.cache.deletePattern(this.getCacheKey(splitId))
+
+		return participant!
 	}
 
 	async addParticipant(splitId: string, userId: string | null, displayName?: string): Promise<Participant> {
@@ -72,5 +105,14 @@ export class ParticipantsRepository extends BaseRepository {
 		})
 
 		await this.cache.deletePattern(this.getCacheKey(splitId))
+	}
+
+	async countParticipants(splitId: string): Promise<number> {
+		const result = await this.db
+			.select({ count: count() })
+			.from(schema.splitParticipants)
+			.where(and(eq(schema.splitParticipants.splitId, splitId), eq(schema.splitParticipants.isDeleted, false)))
+
+		return Number(result[0]?.count || 0)
 	}
 }
