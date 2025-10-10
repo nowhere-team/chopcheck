@@ -1,8 +1,18 @@
 {
-  "useTabs": true,
-  "printWidth": 120,
-  "semi": false,
-  "singleQuote": true,
-  "endOfLine": "lf",
-  "arrowParens": "avoid"
+	"useTabs": true,
+	"singleQuote": true,
+	"bracketSpacing": true,
+	"trailingComma": "none",
+	"printWidth": 100,
+	"endOfLine": "lf",
+	"arrowParens": "avoid",
+	"plugins": ["prettier-plugin-svelte"],
+	"overrides": [
+		{
+			"files": "*.svelte",
+			"options": {
+				"parser": "svelte"
+			}
+		}
+	]
 }
