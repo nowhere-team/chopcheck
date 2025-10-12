@@ -6,6 +6,7 @@
 	"printWidth": 100,
 	"endOfLine": "lf",
 	"arrowParens": "avoid",
+	"semi": false,
 	"plugins": ["prettier-plugin-svelte"],
 	"overrides": [
 		{

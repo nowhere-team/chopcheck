@@ -1,17 +1,17 @@
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath } from 'node:url'
 
-import { includeIgnoreFile } from '@eslint/compat';
-import js from '@eslint/js';
-import { defineConfig } from 'eslint/config';
-import prettierConfig from 'eslint-plugin-prettier/recommended';
-import importSort from 'eslint-plugin-simple-import-sort';
-import svelte from 'eslint-plugin-svelte';
-import globals from 'globals';
-import ts from 'typescript-eslint';
+import { includeIgnoreFile } from '@eslint/compat'
+import js from '@eslint/js'
+import { defineConfig } from 'eslint/config'
+import prettierConfig from 'eslint-plugin-prettier/recommended'
+import importSort from 'eslint-plugin-simple-import-sort'
+import svelte from 'eslint-plugin-svelte'
+import globals from 'globals'
+import ts from 'typescript-eslint'
 
-import svelteConfig from './svelte.config.js';
+import svelteConfig from './svelte.config.js'
 
-const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
+const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url))
 
 // noinspection JSCheckFunctionSignatures
 export default defineConfig(
@@ -50,4 +50,4 @@ export default defineConfig(
 			}
 		}
 	}
-);
+)

@@ -6,6 +6,16 @@
   ],
   "scripts": {
     "dev": "bun run --filter='./services/*' dev",
+
+    "dev:front": "bun run --cwd=./services/frontend dev",
+    "dev:back": "bun run --cwd=./services/backend dev",
+    "dev:telegram": "bun run --cwd=./services/telegram dev",
+
+    "dev:ft": "concurrently -n front,tg -c bgBlue,bgMagenta \"bun run dev:front\" \"bun run dev:telegram\"",
+
     "build": "bun run --filter='./services/* build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

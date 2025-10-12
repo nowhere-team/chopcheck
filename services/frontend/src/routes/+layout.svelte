@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount } from 'svelte'
 
-	import favicon from '$lib/assets/favicon.svg';
-	import { init } from '$telegram';
+	import favicon from '$lib/assets/favicon.svg'
+	import { init } from '$telegram'
 
-	const { children } = $props();
-	let platform = $state('');
+	const { children } = $props()
+	let platform = $state('')
 
 	onMount(async () => {
-		const data = await init();
-		platform = data.platform;
-	});
+		const data = await init()
+		platform = data.platform
+	})
 </script>
 
 <svelte:head>

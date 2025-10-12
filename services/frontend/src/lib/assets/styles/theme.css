@@ -1,0 +1,90 @@
+:root {
+	/* base palette */
+	--cc-bg-page: #ffffff;
+	--cc-bg-surface: #ffffff;
+	--cc-bg-surface-secondary: #f1f5f9;
+	--cc-text-primary: #0f172a;
+	--cc-text-secondary: #475569;
+	--cc-text-tertiary: #64748b;
+	--cc-text-quaternary: #94a3b8;
+	--cc-button-primary-bg: #0f172a;
+	--cc-button-primary-text: #ffffff;
+	--cc-border-default: #e2e8f0;
+	--cc-border-subtle: #f1f5f9;
+
+	/* spacing */
+	--spacing-m: 4px;
+	--spacing-2-m: 8px;
+	--spacing-3-m: 12px;
+	--spacing-4-m: 16px;
+	--spacing-5-m: 20px;
+	--spacing-6-m: 24px;
+
+	/* radii */
+	--radius-default: 8px;
+
+    /* telegram insets (updated from js) */
+    --tg-inset-top: 0px;
+    --tg-inset-bottom: 0px;
+    --tg-inset-left: 0px;
+    --tg-inset-right: 0px;
+}
+
+/* default theme - chopcheck */
+:root,
+:root[data-theme='chopcheck'] {
+	/* backgrounds */
+	--color-bg-page: var(--cc-bg-page);
+	--color-bg-surface: var(--cc-bg-surface);
+	--color-bg-surface-secondary: var(--cc-bg-surface-secondary);
+	--color-bg-surface-selected: var(--cc-bg-surface-secondary);
+
+	/* text */
+	--color-text-primary: var(--cc-text-primary);
+	--color-text-secondary: var(--cc-text-secondary);
+	--color-text-tertiary: var(--cc-text-tertiary);
+	--color-text-quaternary: var(--cc-text-quaternary);
+
+	/* buttons */
+	--color-button-primary-bg: var(--cc-button-primary-bg);
+	--color-button-primary-text: var(--cc-button-primary-text);
+	--color-button-secondary-bg: var(--cc-bg-surface-secondary);
+	--color-button-secondary-text: var(--cc-text-primary);
+
+	/* borders */
+	--color-border-default: var(--cc-border-default);
+	--color-border-subtle: var(--cc-border-subtle);
+
+	/* icons */
+	--color-icon-default: var(--cc-text-tertiary);
+	--color-icon-active: var(--cc-text-primary);
+	--color-icon-inactive: var(--cc-text-quaternary);
+}
+
+/* telegram theme */
+/* noinspection CssUnresolvedCustomProperty */
+:root[data-theme='telegram'] {
+	/* direct mapping */
+	--color-bg-page: var(--tg-bg);
+	--color-bg-surface: var(--tg-section-bg);
+	--color-bg-surface-secondary: var(--tg-secondary-bg);
+
+	--color-text-primary: var(--tg-text);
+	--color-text-secondary: var(--tg-subtitle);
+	--color-text-tertiary: var(--tg-hint);
+
+	--color-button-primary-bg: var(--tg-button);
+	--color-button-primary-text: var(--tg-button-text);
+
+	--color-icon-default: var(--tg-hint);
+	--color-icon-active: var(--tg-text);
+
+	/* generated via color-mix */
+	--color-bg-surface-selected: color-mix(in srgb, var(--tg-text) 8%, var(--tg-section-bg));
+	--color-text-quaternary: color-mix(in srgb, var(--tg-hint) 60%, var(--tg-bg));
+	--color-button-secondary-bg: color-mix(in srgb, var(--tg-text) 10%, var(--tg-bg));
+	--color-button-secondary-text: var(--tg-text);
+	--color-border-default: color-mix(in srgb, var(--tg-text) 20%, transparent);
+	--color-border-subtle: color-mix(in srgb, var(--tg-text) 10%, transparent);
+	--color-icon-inactive: color-mix(in srgb, var(--tg-hint) 50%, var(--tg-bg));
+}

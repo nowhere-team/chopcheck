@@ -1,5 +1,5 @@
 <script>
-	import { m } from '$lib/i18n.js';
+	import { m } from '$lib/i18n.js'
 </script>
 
 <h1>{m.hello_world({ name: 'test' })}</h1>

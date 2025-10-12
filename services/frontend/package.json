@@ -44,7 +44,6 @@
 	},
 	"dependencies": {
 		"@telegram-apps/bridge": "^2.11.0",
-		"@telegram-apps/sdk-svelte": "^2.0.31",
 		"@telegram-apps/signals": "^1.1.2",
 		"grammy": "^1.38.3",
 		"ky": "^1.11.0",
