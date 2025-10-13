@@ -8,6 +8,7 @@ const addItemsSchema = z.object({
 			price: z.number().int().positive(),
 			type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 			quantity: z.string().default('1'),
+			defaultDivisionMethod: z.enum(['custom', 'fixed', 'equal', 'shares', 'proportional']),
 		}),
 	),
 })

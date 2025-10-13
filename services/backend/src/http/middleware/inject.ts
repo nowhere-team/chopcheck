@@ -8,6 +8,7 @@ export function inject(deps: ExternalDependencies): MiddlewareHandler {
 		c.set('auth', deps.auth)
 		c.set('services', deps.services)
 		c.set('database', deps.database)
+		c.set('config', deps.config)
 		await next()
 	}
 }

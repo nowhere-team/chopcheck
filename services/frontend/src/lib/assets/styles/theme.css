@@ -84,7 +84,7 @@
 	--color-text-quaternary: color-mix(in srgb, var(--tg-hint) 60%, var(--tg-bg));
 	--color-button-secondary-bg: color-mix(in srgb, var(--tg-text) 10%, var(--tg-bg));
 	--color-button-secondary-text: var(--tg-text);
-	--color-border-default: color-mix(in srgb, var(--tg-text) 20%, transparent);
-	--color-border-subtle: color-mix(in srgb, var(--tg-text) 10%, transparent);
+	--color-border-default: color-mix(in srgb, var(--tg-text) 8%, transparent);
+	--color-border-subtle: color-mix(in srgb, var(--tg-text) 5%, transparent);
 	--color-icon-inactive: color-mix(in srgb, var(--tg-hint) 50%, var(--tg-bg));
 }

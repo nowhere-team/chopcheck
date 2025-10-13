@@ -43,10 +43,11 @@ export async function start(): Promise<App> {
 	})
 	logger.info('auth client initialized', { devMode: config.AUTH_DEV_MODE })
 
-	const services = createServices(database, cache, logger)
+	const services = createServices(auth, database, cache, logger)
 	logger.info('services initialized')
 
-	const server = createServer(logger, database, auth, services, { port: config.PORT, development: config.isDev() })
+	const serverConfig = { port: config.PORT, telegramToken: config.TELEGRAM_BOT_TOKEN, development: config.isDev() }
+	const server = createServer(logger, database, auth, services, serverConfig)
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')

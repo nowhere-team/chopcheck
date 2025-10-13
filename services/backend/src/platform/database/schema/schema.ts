@@ -1,4 +1,4 @@
-import { boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import { divisionMethodEnum, itemTypeEnum, paymentMethodTypeEnum, paymentStatusEnum, splitPhaseEnum, splitStatusEnum } from './enums'
 import { decimal, money, timestamptz } from './utils'
@@ -8,7 +8,7 @@ export const users = pgTable(
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 
-		telegramId: money('telegram_id'),
+		telegramId: bigint('telegram_id', { mode: 'number' }),
 		username: varchar('username', { length: 100 }),
 		displayName: varchar('display_name', { length: 255 }).notNull(),
 		avatarUrl: varchar('avatar_url', { length: 512 }),

@@ -1,0 +1,72 @@
+::view-transition-old(page-content),
+::view-transition-new(page-content) {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* forward slide */
+:root[data-direction="forward"] {
+    &::view-transition-old(page-content) {
+        animation-name: slide-out-left;
+    }
+    &::view-transition-new(page-content) {
+        animation-name: slide-in-right;
+    }
+}
+
+/* backward slide */
+:root[data-direction="backward"] {
+    &::view-transition-old(page-content) {
+        animation-name: slide-out-right;
+    }
+    &::view-transition-new(page-content) {
+        animation-name: slide-in-left;
+    }
+}
+
+/* fade для остальных */
+:root[data-direction="none"] {
+    &::view-transition-old(page-content) {
+        animation-name: fade-out;
+    }
+    &::view-transition-new(page-content) {
+        animation-name: fade-in;
+    }
+}
+
+/* анимации остаются те же */
+@keyframes slide-out-left {
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slide-out-right {
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+@keyframes fade-out {
+    to { opacity: 0; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+}

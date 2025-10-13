@@ -4,6 +4,7 @@
 
 	import { authenticateWithTelegram, getMe } from '$api/auth'
 	import { clearToken, getToken } from '$api/tokens'
+	import Spinner from '$components/Spinner.svelte'
 	import { setAuthContext } from '$lib/contexts/auth.svelte'
 	import { setTelegramContext } from '$lib/contexts/telegram.svelte'
 	import { init } from '$telegram'
@@ -14,6 +15,7 @@
 	let errorMessage = $state('')
 
 	const auth = setAuthContext()
+	const telegram = setTelegramContext()
 
 	onMount(async () => {
 		try {
@@ -24,7 +26,7 @@
 			}
 
 			const tg = await init()
-			setTelegramContext(tg)
+			telegram.data = tg
 
 			// restore session
 			const existingToken = await getToken()
@@ -68,11 +70,27 @@
 </script>
 
 {#if initState === 'loading'}
-	<p>Загрузка</p>
+	<div class="container">
+		<Spinner size="xl" />
+	</div>
 {:else if initState === 'not-telegram'}
-	<p>Only Telegram</p>
+	<div class="container">
+		<h1>Приложение доступно только с Telegram</h1>
+	</div>
 {:else if initState === 'error'}
-	<p>Ошибка</p>
+	<div class="container">
+		<p>Ошибка</p>
+		<p>{auth.error}</p>
+	</div>
 {:else if initState === 'success' && auth.isAuthenticated}
 	{@render children?.()}
 {/if}
+
+<style>
+	.container {
+		height: 100dvh;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+</style>

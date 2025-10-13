@@ -6,27 +6,23 @@ import { trimTrailingSlash } from 'hono/trailing-slash'
 import { errorHandler } from '@/http/middleware/errors'
 import { inject } from '@/http/middleware/inject'
 import { registerRoutes } from '@/http/routes'
+import type { ExternalDependencies, ServerConfig } from '@/http/types'
 import { AuthClient } from '@/platform/auth'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 import type { Services } from '@/services'
 
-export interface ServerConfig {
-	port: number
-	development: boolean
-}
-
-export function createRouter(logger: Logger, database: Database, auth: AuthClient, services: Services) {
+export function createRouter(deps: ExternalDependencies) {
 	const app = new Hono()
 		.basePath('/api')
 		.use(cors())
 		.use(trimTrailingSlash())
-		.use(inject({ logger, auth, database, services }))
+		.use(inject(deps))
 		.onError(errorHandler)
 		.route('/', registerRoutes())
 
 	const routes = inspectRoutes(app)
-	logger.debug('routes registered', {
+	deps.logger.debug('routes registered', {
 		count: routes.length,
 		routes: routes
 			.filter((r: { method: string; path: string }) => r.method !== 'ALL')
@@ -48,7 +44,8 @@ export function createServer(
 	services: Services,
 	config: ServerConfig,
 ): Server {
-	const router = createRouter(logger.named('http'), database, auth, services)
+	const deps = { database, auth, services, config, logger: logger.named('http') }
+	const router = createRouter(deps)
 
 	const instance = Bun.serve({
 		fetch: router.fetch,

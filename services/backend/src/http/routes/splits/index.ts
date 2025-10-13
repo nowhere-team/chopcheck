@@ -11,10 +11,8 @@ import { createMySplitsRoute } from './my-splits'
 import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
 
-export function createSplitsRoutes() {
+function createPrivateSplitsRoutes() {
 	return new Hono()
-		.route('/', createGetSplitRoute())
-
 		.use('/*', auth())
 		.route('/', createMySplitsRoute())
 		.route('/', createJoinRoute())
@@ -23,4 +21,12 @@ export function createSplitsRoutes() {
 		.route('/', createUpdateSplitRoute())
 		.route('/', createAddItemsRoute())
 		.route('/', createSelectItemsRoute())
+}
+
+function createPublicSplitsRoutes() {
+	return new Hono().route('/', createGetSplitRoute())
+}
+
+export function createSplitsRoutes() {
+	return new Hono().route('/', createPrivateSplitsRoutes()).route('/', createPublicSplitsRoutes())
 }

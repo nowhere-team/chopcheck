@@ -12,6 +12,7 @@
     "dev:telegram": "bun run --cwd=./services/telegram dev",
 
     "dev:ft": "concurrently -n front,tg -c bgBlue,bgMagenta \"bun run dev:front\" \"bun run dev:telegram\"",
+    "dev:all": "concurrently -n back,front,tg -c bgGreen,bgBlue,bgMagenta \"bun run dev:back\" \"bun run dev:front\" \"bun run dev:telegram\"",
 
     "build": "bun run --filter='./services/* build"
   },

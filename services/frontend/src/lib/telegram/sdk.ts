@@ -1,5 +1,5 @@
-import { isTMA, retrieveLaunchParams } from '@telegram-apps/bridge'
-import { init as sdkInit, requestFullscreen, viewport } from '@telegram-apps/sdk'
+import { retrieveLaunchParams, retrieveRawInitData } from '@telegram-apps/bridge'
+import { init as sdkInit, requestFullscreen, swipeBehavior, viewport } from '@telegram-apps/sdk'
 
 import { bindTheme, enableTelegramTheme } from '$telegram/theme'
 import type { TelegramAuth } from '$telegram/types'
@@ -12,10 +12,6 @@ let cachedResult: TelegramData | null = null
 export async function init() {
 	if (cachedResult) return cachedResult
 	if (initPromise) return initPromise
-
-	if (!isTMA()) {
-		throw new Error('not telegram app')
-	}
 
 	initPromise = sdk().then(result => {
 		cachedResult = result
@@ -40,6 +36,12 @@ async function sdk() {
 		await requestFullscreen()
 	}
 
+	if (swipeBehavior.mount.isAvailable()) {
+		swipeBehavior.mount()
+		swipeBehavior.disableVertical()
+	}
+
+	const raw = retrieveRawInitData()
 	const insets = viewport.safeAreaInsets()
 	bindTheme(theme, insets)
 	enableTelegramTheme()
@@ -48,6 +50,7 @@ async function sdk() {
 		viewport,
 		platform,
 		theme,
+		raw,
 		insets,
 		auth: auth as unknown as TelegramAuth
 	}

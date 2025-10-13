@@ -28,6 +28,8 @@ const schema = z.object({
 	JWT_AUDIENCE: z.string().default('chopcheck'),
 
 	PORT: z.coerce.number().min(1).max(65535).default(8080),
+
+	TELEGRAM_BOT_TOKEN: z.string().nonempty(),
 })
 
 export function createConfig(env: Env) {

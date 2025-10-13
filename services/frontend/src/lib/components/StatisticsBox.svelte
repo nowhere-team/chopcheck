@@ -11,7 +11,7 @@
 
 <Box>
 	<div class="content">
-		<span class="label">{label}</span>
+		<small class="label">{label}</small>
 		<span class="value">{value}</span>
 	</div>
 </Box>
@@ -22,6 +22,7 @@
 		flex-direction: column;
 	}
 
-	.label {
+	.value {
+		font-weight: var(--font-semibold);
 	}
 </style>

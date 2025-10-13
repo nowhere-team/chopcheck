@@ -18,11 +18,6 @@ export default defineConfig({
 	resolve: {
 		extensions: ['.js', '.ts', '.svelte']
 	},
-	define: {
-		'import.meta.env.VITE_API_URL': JSON.stringify(
-			process.env.VITE_API_URL || 'http://localhost:8080/api'
-		)
-	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
