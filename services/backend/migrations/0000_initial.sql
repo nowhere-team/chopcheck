@@ -131,7 +131,7 @@ CREATE TABLE "user_payment_methods" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"telegram_id" integer,
+	"telegram_id" bigint,
 	"username" varchar(100),
 	"display_name" varchar(255) NOT NULL,
 	"avatar_url" varchar(512),

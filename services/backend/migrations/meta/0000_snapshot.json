@@ -1,5 +1,5 @@
 {
-  "id": "78390502-263d-4e04-95ce-1f95540446ee",
+  "id": "8bf0abed-a68c-4353-b7f6-0e99817d44fe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1653,7 +1653,7 @@
         },
         "telegram_id": {
           "name": "telegram_id",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
