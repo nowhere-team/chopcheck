@@ -4,7 +4,9 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist",
-    "start": "bun src/index.ts"
+    "start": "bun src/index.ts",
+    "format": "prettier --write .",
+    "lint": "prettier --check . && eslint ."
   },
   "dependencies": {
     "drizzle-orm": "^0.44.5",

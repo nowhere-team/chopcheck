@@ -6,7 +6,6 @@ import type { Services } from '@/services'
 export interface ServerConfig {
 	port: number
 	development: boolean
-	telegramToken: string
 }
 
 export interface ExternalDependencies {
