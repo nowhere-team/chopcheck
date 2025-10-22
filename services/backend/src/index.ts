@@ -10,7 +10,7 @@ for (const signal of SHUTDOWN_SIGNALS) {
 		try {
 			await stop(app)
 			process.exit(0)
-		} catch (error) {
+		} catch {
 			process.exit(1)
 		}
 	})

@@ -23,11 +23,11 @@
 	/* radii */
 	--radius-default: 8px;
 
-    /* telegram insets (updated from js) */
-    --tg-inset-top: 0px;
-    --tg-inset-bottom: 0px;
-    --tg-inset-left: 0px;
-    --tg-inset-right: 0px;
+	/* telegram insets (updated from js) */
+	--tg-inset-top: 0px;
+	--tg-inset-bottom: 0px;
+	--tg-inset-left: 0px;
+	--tg-inset-right: 0px;
 }
 
 /* default theme - chopcheck */

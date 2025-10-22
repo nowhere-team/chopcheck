@@ -27,6 +27,8 @@ const schema = z.object({
 	JWT_ISSUER: z.string().default('nowhere-auth-service'),
 	JWT_AUDIENCE: z.string().default('chopcheck'),
 
+	TELEGRAM_BOT_TOKEN: z.string().nonempty(),
+
 	PORT: z.coerce.number().min(1).max(65535).default(8080),
 })
 
