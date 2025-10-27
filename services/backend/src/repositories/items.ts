@@ -42,6 +42,15 @@ export class ItemsRepository extends BaseRepository {
 		return created
 	}
 
+	async softDelete(id: string, splitId: string): Promise<void> {
+		await this.db
+			.update(schema.splitItems)
+			.set({ isDeleted: true, updatedAt: new Date() })
+			.where(eq(schema.splitItems.id, id))
+
+		await this.cache.deletePattern(this.getCacheKey(splitId))
+	}
+
 	async update(id: string, splitId: string, data: Partial<Item>): Promise<void> {
 		await this.db
 			.update(schema.splitItems)
@@ -50,4 +59,13 @@ export class ItemsRepository extends BaseRepository {
 
 		await this.cache.deletePattern(this.getCacheKey(splitId))
 	}
+
+	async findById(id: string): Promise<Item | null> {
+		const item = await this.db.query.splitItems.findFirst({
+			where: and(eq(schema.splitItems.id, id), eq(schema.splitItems.isDeleted, false)),
+		})
+
+		return item || null
+	}
+
 }
