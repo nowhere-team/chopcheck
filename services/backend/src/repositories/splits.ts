@@ -124,34 +124,27 @@ export class SplitsRepository extends BaseRepository {
 	}
 
 	async getUserMonthlyTotal(userId: string): Promise<number> {
-	  const oneMonthAgo = new Date();
-	  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-	
-	  const result = await this.db
-	    .select({
-	      totalAmount: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)`
-	    })
-	    .from(schema.splitItemParticipants)
-	    .innerJoin(
-	      schema.splitParticipants,
-	      eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id)
-	    )
-	    .innerJoin(
-	      schema.splits,
-	      eq(schema.splitParticipants.splitId, schema.splits.id)
-	    )
-	    .where(
-	      and(
-	        eq(schema.splitParticipants.userId, userId),
-	        eq(schema.splitItemParticipants.isDeleted, false),
-	        eq(schema.splitParticipants.isDeleted, false),
-	        eq(schema.splits.isDeleted, false),
-	        gte(schema.splitItemParticipants.createdAt, oneMonthAgo),
-	        isNotNull(schema.splitItemParticipants.calculatedSum)
-	      )
-	    );
-	
-	  return Number(result[0]?.totalAmount ?? 0);
-	}
+		const oneMonthAgo = new Date()
+		oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
 
+		const result = await this.db
+			.select({
+				totalAmount: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)`,
+			})
+			.from(schema.splitItemParticipants)
+			.innerJoin(schema.splitParticipants, eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id))
+			.innerJoin(schema.splits, eq(schema.splitParticipants.splitId, schema.splits.id))
+			.where(
+				and(
+					eq(schema.splitParticipants.userId, userId),
+					eq(schema.splitItemParticipants.isDeleted, false),
+					eq(schema.splitParticipants.isDeleted, false),
+					eq(schema.splits.isDeleted, false),
+					gte(schema.splitItemParticipants.createdAt, oneMonthAgo),
+					isNotNull(schema.splitItemParticipants.calculatedSum),
+				),
+			)
+
+		return Number(result[0]?.totalAmount ?? 0)
+	}
 }

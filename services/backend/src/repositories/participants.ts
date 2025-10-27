@@ -115,4 +115,25 @@ export class ParticipantsRepository extends BaseRepository {
 
 		return Number(result[0]?.count || 0)
 	}
+
+	async updateCalculatedSums(
+		splitId: string,
+		calculations: Array<{ participantId: string; itemId: string; calculatedSum: number }>,
+	): Promise<void> {
+		await this.db.transaction(async tx => {
+			for (const calc of calculations) {
+				await tx
+					.update(schema.splitItemParticipants)
+					.set({ calculatedSum: calc.calculatedSum })
+					.where(
+						and(
+							eq(schema.splitItemParticipants.participantId, calc.participantId),
+							eq(schema.splitItemParticipants.itemId, calc.itemId),
+						),
+					)
+			}
+		})
+
+		await this.cache.deletePattern(this.getCacheKey(splitId))
+	}
 }

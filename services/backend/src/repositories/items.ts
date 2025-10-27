@@ -14,7 +14,7 @@ export class ItemsRepository extends BaseRepository {
 
 	async findBySplitId(splitId: string): Promise<Item[]> {
 		return this.getOrSet(this.getCacheKey(splitId), async () => {
-			return await this.db.query.splitItems.findMany({
+			return this.db.query.splitItems.findMany({
 				where: and(eq(schema.splitItems.splitId, splitId), eq(schema.splitItems.isDeleted, false)),
 				orderBy: (items, { asc }) => [asc(items.displayOrder)],
 			})

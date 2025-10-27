@@ -18,7 +18,14 @@ export function createServices(auth: AuthClient, db: Database, cache: Cache, log
 
 	const users = new UsersService(repos.users, auth, logger.named('service/users'))
 	const calc = new CalculationService(logger.named('service/calculation'))
-	const splits = new SplitsService(repos.splits, repos.items, repos.participants, calc, logger.named('service/splits'))
+	const splits = new SplitsService(
+		repos.splits,
+		repos.items,
+		repos.participants,
+		repos.stats,
+		calc,
+		logger.named('service/splits'),
+	)
 
 	return { users, splits }
 }
