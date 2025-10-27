@@ -8,6 +8,7 @@ export function createMeRoute() {
 		const services = c.get('services')
 
 		const user = await services.users.getById(authContext.userId)
+		const stats = await services.splits.getUserStats(authContext.userId)
 
 		if (!user) {
 			return c.json({ error: 'user not found' }, 404)
@@ -20,6 +21,10 @@ export function createMeRoute() {
 			avatar_url: user.avatarUrl,
 			telegram_id: user.telegramId,
 			created_at: user.createdAt,
+			stats: {
+				totalSplits: stats.totalSplits,
+				monthlyAmount: stats.monthlyAmount,
+			},
 		})
 	})
 }

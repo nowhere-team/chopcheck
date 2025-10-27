@@ -1,4 +1,4 @@
-import { and, desc, eq, exists, or } from 'drizzle-orm'
+import { and, count, desc, eq, exists, gte, or, sql } from 'drizzle-orm'
 
 import type { Split } from '@/common/types'
 import { schema } from '@/platform/database'
@@ -93,5 +93,57 @@ export class SplitsRepository extends BaseRepository {
 			.where(eq(schema.splits.id, id))
 
 		await this.cache.delete(this.getCacheKey(id))
+	}
+
+	async countUserSplits(userId: string): Promise<number> {
+		const result = await this.db
+			.select({ count: count() })
+			.from(schema.splits)
+			.where(
+				and(
+					eq(schema.splits.isDeleted, false),
+					or(
+						eq(schema.splits.ownerId, userId),
+						exists(
+							this.db
+								.select({ id: schema.splitParticipants.id })
+								.from(schema.splitParticipants)
+								.where(
+									and(
+										eq(schema.splitParticipants.splitId, schema.splits.id),
+										eq(schema.splitParticipants.userId, userId),
+										eq(schema.splitParticipants.isDeleted, false),
+									),
+								),
+						),
+					),
+				),
+			)
+
+		return Number(result[0]?.count ?? 0)
+	}
+
+	async getUserMonthlyTotal(userId: string): Promise<number> {
+		const oneMonthAgo = new Date()
+		oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+
+		const result = await this.db
+			.select({
+				totalAmount: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)`,
+			})
+			.from(schema.splitItemParticipants)
+			.innerJoin(schema.splitParticipants, eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id))
+			.innerJoin(schema.splits, eq(schema.splitParticipants.splitId, schema.splits.id))
+			.where(
+				and(
+					eq(schema.splitParticipants.userId, userId),
+					eq(schema.splitItemParticipants.isDeleted, false),
+					eq(schema.splitParticipants.isDeleted, false),
+					eq(schema.splits.isDeleted, false),
+					gte(schema.splits.createdAt, oneMonthAgo),
+				),
+			)
+
+		return Number(result[0]?.totalAmount ?? 0)
 	}
 }

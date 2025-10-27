@@ -205,6 +205,23 @@ export class SplitsService {
 		}
 	}
 
+	async getUserStats(userId: string): Promise<{
+		totalSplits: number
+		monthlyAmount: number
+	}> {
+		const [totalSplits, monthlyAmount] = await Promise.all([
+			this.splitsRepo.countUserSplits(userId),
+			this.splitsRepo.getUserMonthlyTotal(userId),
+		])
+
+		this.logger.debug('user stats fetched', { userId, totalSplits, monthlyAmount })
+
+		return {
+			totalSplits,
+			monthlyAmount,
+		}
+	}
+
 	private buildCalculations(data: SplitData): Calculations {
 		const calculated = this.calcService.calculate(data)
 
