@@ -7,11 +7,13 @@ import { ParticipantsRepository } from './participants'
 import { SplitsRepository } from './splits'
 import { StatsRepository } from './stats'
 import { UsersRepository } from './users'
+import { PaymentMethodsRepository } from './payment-methods'
 
 export interface Repositories {
 	splits: SplitsRepository
 	items: ItemsRepository
 	participants: ParticipantsRepository
+	paymentMethods: PaymentMethodsRepository
 	users: UsersRepository
 	stats: StatsRepository
 }
@@ -22,5 +24,6 @@ export function createRepositories(db: Database, cache: Cache, logger: Logger): 
 	const participants = new ParticipantsRepository(db, cache, logger.named('repository/participants'))
 	const users = new UsersRepository(db, cache, logger.named('repository/users'))
 	const stats = new StatsRepository(db, cache, logger.named('repository/stats'))
-	return { splits, items, participants, users, stats }
+	const paymentMethods = new PaymentMethodsRepository(db, cache, logger.named('repository/payment-methods'))
+	return { splits, items, participants, paymentMethods, users, stats}
 }

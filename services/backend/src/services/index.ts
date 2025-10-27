@@ -22,6 +22,7 @@ export function createServices(auth: AuthClient, db: Database, cache: Cache, log
 		repos.splits,
 		repos.items,
 		repos.participants,
+		repos.paymentMethods,
 		repos.stats,
 		calc,
 		logger.named('service/splits'),
