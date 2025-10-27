@@ -6,6 +6,7 @@ import { createHealthRoutes } from '@/http/routes/health'
 import { createSplitsRoutes } from '@/http/routes/splits'
 import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
 import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
+import { paymentMethodsRoutes, splitPaymentMethodsRoutes } from './payment-methods'
 
 export function registerRoutes() {
 	return new Hono()
@@ -13,4 +14,6 @@ export function registerRoutes() {
 		.route('/auth', createAuthRoutes())
 		.route('/splits', createSplitsRoutes())
 		.route('/dev', createDevRoutes())
+		.route('/payment-methods', paymentMethodsRoutes)
+		.route('/splits', splitPaymentMethodsRoutes)
 }
