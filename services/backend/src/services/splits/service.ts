@@ -1,4 +1,4 @@
-import { NotFoundError } from '@/common/errors'
+import { NotFoundError, ForbiddenError } from '@/common/errors'
 import type {
 	Calculations,
 	CreateSplitDto,
@@ -45,6 +45,75 @@ export class SplitsService {
 
 		return response
 	}
+
+	async updateItem(
+		splitId: string,
+		itemId: string,
+		userId: string,
+		data: Partial<Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>>,
+	): Promise<SplitResponse | null> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ForbiddenError('only split owner can update items')
+		}
+
+		const item = await this.itemsRepo.findById(itemId)
+		if (!item || item.splitId !== splitId) {
+			return null
+		}
+
+		await this.itemsRepo.update(itemId, splitId, data)
+
+		this.logger.info('item updated', {
+			splitId,
+			itemId,
+			userId,
+			changes: data,
+		})
+
+		const result = await this.getById(splitId, true)
+		if (!result) {
+			throw new NotFoundError('split not found after updating item')
+		}
+
+		return result
+	}
+
+	async deleteItem(splitId: string, itemId: string, userId: string): Promise<SplitResponse | null> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ForbiddenError('only split owner can delete items')
+		}
+
+		const item = await this.itemsRepo.findById(itemId)
+		if (!item || item.splitId !== splitId) {
+			return null
+		}
+
+		await this.itemsRepo.softDelete(itemId, splitId)
+
+		this.logger.info('item deleted', {
+			splitId,
+			itemId,
+			userId,
+		})
+
+		const result = await this.getById(splitId, true)
+		if (!result) {
+			throw new NotFoundError('split not found after deleting item')
+		}
+
+		return result
+	}
+
 
 	async getMySplits(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
 		return await this.splitsRepo.findByUser(userId, offset, limit)

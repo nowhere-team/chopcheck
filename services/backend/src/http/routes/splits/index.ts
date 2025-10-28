@@ -10,6 +10,8 @@ import { createMyParticipationRoute } from './my-participation'
 import { createMySplitsRoute } from './my-splits'
 import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
+import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
+import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
 
 function createPrivateSplitsRoutes() {
 	return new Hono()
@@ -21,6 +23,8 @@ function createPrivateSplitsRoutes() {
 		.route('/', createUpdateSplitRoute())
 		.route('/', createAddItemsRoute())
 		.route('/', createSelectItemsRoute())
+		.route('/', createDeleteItemRoute())
+		.route('/', createUpdateItemRoute())
 }
 
 function createPublicSplitsRoutes() {
