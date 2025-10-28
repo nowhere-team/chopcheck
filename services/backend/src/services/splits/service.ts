@@ -13,6 +13,7 @@ import type { Logger } from '@/platform/logger'
 import type { ItemsRepository } from '@/repositories/items'
 import type { ParticipantsRepository } from '@/repositories/participants'
 import type { SplitsRepository } from '@/repositories/splits'
+import type { StatsRepository } from '@/repositories/stats'
 import { CalculationService } from '@/services/calculation'
 
 export class SplitsService {
@@ -20,6 +21,7 @@ export class SplitsService {
 		private splitsRepo: SplitsRepository,
 		private itemsRepo: ItemsRepository,
 		private participantsRepo: ParticipantsRepository,
+		private statsRepo: StatsRepository,
 		private calcService: CalculationService,
 		private logger: Logger,
 	) {}
@@ -153,13 +155,31 @@ export class SplitsService {
 			selectionsCount: selections.length,
 		})
 
-		// back with calculations - they're changed
-		const result = await this.getById(splitId, true)
-		if (!result) {
-			throw new NotFoundError('split not found after selecting items')
-		}
+		const [items, participants] = await Promise.all([
+			this.itemsRepo.findBySplitId(splitId),
+			this.participantsRepo.findBySplitId(splitId),
+		])
 
-		return result
+		const calculated = this.calcService.calculate({
+			split,
+			items,
+			participants,
+		})
+
+		const calculatedSums = calculated.calculations.flatMap(calc =>
+			calc.items.map(item => ({
+				participantId: calc.participantId,
+				itemId: item.itemId,
+				calculatedSum: item.finalAmount,
+			})),
+		)
+
+		await this.participantsRepo.updateCalculatedSums(splitId, calculatedSums)
+
+		const response: SplitResponse = { split, items, participants }
+		response.calculations = this.buildCalculations(response)
+
+		return response
 	}
 
 	async updateSplit(
@@ -203,6 +223,10 @@ export class SplitsService {
 			participant,
 			calculation: calc,
 		}
+	}
+
+	async getUserStats(userId: string) {
+		return await this.statsRepo.getUserStats(userId)
 	}
 
 	private buildCalculations(data: SplitData): Calculations {
