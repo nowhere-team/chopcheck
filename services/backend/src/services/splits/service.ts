@@ -1,4 +1,4 @@
-import { NotFoundError } from '@/common/errors'
+import { NotFoundError, ForbiddenError } from '@/common/errors'
 import type {
 	Calculations,
 	CreateSplitDto,
@@ -56,7 +56,7 @@ export class SplitsService {
 		}
 
 		if (split.ownerId !== userId) {
-			throw new Error('only split owner can update items')
+			throw new ForbiddenError('only split owner can update items')
 		}
 
 		const item = await this.itemsRepo.findById(itemId)
@@ -88,7 +88,7 @@ export class SplitsService {
 		}
 
 		if (split.ownerId !== userId) {
-			throw new Error('only split owner can delete items')
+			throw new ForbiddenError('only split owner can delete items')
 		}
 
 		const item = await this.itemsRepo.findById(itemId)

@@ -46,7 +46,12 @@ export class ItemsRepository extends BaseRepository {
 		await this.db
 			.update(schema.splitItems)
 			.set({ isDeleted: true, updatedAt: new Date() })
-			.where(eq(schema.splitItems.id, id))
+			.where(
+				and(
+					eq(schema.splitItems.id, id),
+					eq(schema.splitItems.splitId, splitId)
+				)
+			);
 
 		await this.cache.deletePattern(this.getCacheKey(splitId))
 	}
