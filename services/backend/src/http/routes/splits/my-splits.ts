@@ -1,4 +1,3 @@
-// file: services/backend/src/http/routes/splits/my-splits.ts
 import { Hono } from 'hono'
 import { z } from 'zod'
 
