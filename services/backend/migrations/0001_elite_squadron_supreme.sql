@@ -1,0 +1,2 @@
+ALTER TABLE "split_participants" ADD COLUMN "anonymous" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE INDEX "idx_splitparticipants_anonymous" ON "split_participants" USING btree ("split_id","anonymous");
