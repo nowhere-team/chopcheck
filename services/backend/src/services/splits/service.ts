@@ -1,4 +1,4 @@
-import { NotFoundError, ForbiddenError } from '@/common/errors'
+import { ForbiddenError, NotFoundError } from '@/common/errors'
 import type {
 	Calculations,
 	CreateSplitDto,
@@ -8,6 +8,7 @@ import type {
 	Split,
 	SplitData,
 	SplitResponse,
+	SplitsByPeriod,
 } from '@/common/types'
 import type { Logger } from '@/platform/logger'
 import type { ItemsRepository } from '@/repositories/items'
@@ -44,6 +45,22 @@ export class SplitsService {
 		}
 
 		return response
+	}
+
+	async getMySplitsGrouped(userId: string): Promise<SplitsByPeriod> {
+		return await this.splitsRepo.findByUserGroupedByPeriod(userId)
+	}
+
+	async getEarlierSplits(userId: string, offset: number = 0, limit: number = 20): Promise<Split[]> {
+		const now = new Date()
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+		startOfMonth.setHours(0, 0, 0, 0)
+
+		return await this.splitsRepo.findByUser(userId, {
+			offset,
+			limit,
+			before: startOfMonth,
+		})
 	}
 
 	async updateItem(
@@ -114,9 +131,15 @@ export class SplitsService {
 		return result
 	}
 
-
-	async getMySplits(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
-		return await this.splitsRepo.findByUser(userId, offset, limit)
+	async getMySplits(
+		userId: string,
+		options: {
+			offset?: number
+			limit?: number
+			status?: 'draft' | 'active' | 'completed'
+		} = {},
+	): Promise<Split[]> {
+		return await this.splitsRepo.findByUser(userId, options)
 	}
 
 	async create(userId: string, dto: CreateSplitDto): Promise<SplitResponse> {
