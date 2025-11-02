@@ -1,4 +1,3 @@
-// file: services/backend/src/repositories/splits.ts
 import { and, desc, eq, exists, gte, or, sql } from 'drizzle-orm'
 
 import type { Split, SplitsByPeriod } from '@/common/types'
