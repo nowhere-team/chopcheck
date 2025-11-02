@@ -1,6 +1,7 @@
-import { and, desc, eq, exists, or } from 'drizzle-orm'
+// file: services/backend/src/repositories/splits.ts
+import { and, desc, eq, exists, gte, or, sql } from 'drizzle-orm'
 
-import type { Split } from '@/common/types'
+import type { Split, SplitsByPeriod } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
@@ -33,30 +34,116 @@ export class SplitsRepository extends BaseRepository {
 		})
 	}
 
-	async findByUser(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
+	async findByUserGroupedByPeriod(userId: string): Promise<SplitsByPeriod> {
+		const now = new Date()
+
+		// start of the week (monday)
+		const startOfWeek = new Date(now)
+		const day = startOfWeek.getDay()
+		const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1)
+		startOfWeek.setDate(diff)
+		startOfWeek.setHours(0, 0, 0, 0)
+
+		// start of the month
+		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+		startOfMonth.setHours(0, 0, 0, 0)
+
+		// noinspection DuplicatedCode
+		const baseConditions = [
+			eq(schema.splits.isDeleted, false),
+			or(
+				eq(schema.splits.ownerId, userId),
+				exists(
+					this.db
+						.select({ id: schema.splitParticipants.id })
+						.from(schema.splitParticipants)
+						.where(
+							and(
+								eq(schema.splitParticipants.splitId, schema.splits.id),
+								eq(schema.splitParticipants.userId, userId),
+								eq(schema.splitParticipants.isDeleted, false),
+							),
+						),
+				),
+			),
+		]
+
+		const [thisWeek, thisMonth, earlier] = await Promise.all([
+			// this week
+			this.db
+				.select()
+				.from(schema.splits)
+				.where(and(...baseConditions, gte(schema.splits.createdAt, startOfWeek)))
+				.orderBy(desc(schema.splits.updatedAt)),
+
+			// this month (but not this week)
+			this.db
+				.select()
+				.from(schema.splits)
+				.where(
+					and(
+						...baseConditions,
+						gte(schema.splits.createdAt, startOfMonth),
+						sql`${schema.splits.createdAt} < ${startOfWeek}`,
+					),
+				)
+				.orderBy(desc(schema.splits.updatedAt)),
+
+			// earlier (with the limit)
+			this.db
+				.select()
+				.from(schema.splits)
+				.where(and(...baseConditions, sql`${schema.splits.createdAt} < ${startOfMonth}`))
+				.orderBy(desc(schema.splits.updatedAt))
+				.limit(20),
+		])
+
+		return { thisWeek, thisMonth, earlier }
+	}
+
+	async findByUser(
+		userId: string,
+		options: {
+			offset?: number
+			limit?: number
+			status?: 'draft' | 'active' | 'completed'
+			before?: Date
+		} = {},
+	): Promise<Split[]> {
+		const { offset = 0, limit = 20, status, before } = options
+
+		// noinspection DuplicatedCode
+		const conditions = [
+			eq(schema.splits.isDeleted, false),
+			or(
+				eq(schema.splits.ownerId, userId),
+				exists(
+					this.db
+						.select({ id: schema.splitParticipants.id })
+						.from(schema.splitParticipants)
+						.where(
+							and(
+								eq(schema.splitParticipants.splitId, schema.splits.id),
+								eq(schema.splitParticipants.userId, userId),
+								eq(schema.splitParticipants.isDeleted, false),
+							),
+						),
+				),
+			),
+		]
+
+		if (status) {
+			conditions.push(eq(schema.splits.status, status))
+		}
+
+		if (before) {
+			conditions.push(sql`${schema.splits.createdAt} < ${before}`)
+		}
+
 		return await this.db
 			.select()
 			.from(schema.splits)
-			.where(
-				and(
-					eq(schema.splits.isDeleted, false),
-					or(
-						eq(schema.splits.ownerId, userId),
-						exists(
-							this.db
-								.select({ id: schema.splitParticipants.id })
-								.from(schema.splitParticipants)
-								.where(
-									and(
-										eq(schema.splitParticipants.splitId, schema.splits.id),
-										eq(schema.splitParticipants.userId, userId),
-										eq(schema.splitParticipants.isDeleted, false),
-									),
-								),
-						),
-					),
-				),
-			)
+			.where(and(...conditions))
 			.orderBy(desc(schema.splits.updatedAt))
 			.offset(offset)
 			.limit(limit)

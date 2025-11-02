@@ -21,7 +21,7 @@
 			const img = container.querySelector('img')
 			if (img) {
 				img.style.width = `${size}px`
-				img.style.height = `${size}px`
+				// img.style.height = `${size}px`
 			}
 		}
 	})
