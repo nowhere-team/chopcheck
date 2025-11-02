@@ -56,3 +56,9 @@ export interface Calculations {
 export interface SplitResponse extends SplitData {
 	calculations?: Calculations
 }
+
+export interface SplitsByPeriod {
+	thisWeek: Split[]
+	thisMonth: Split[]
+	earlier: Split[]
+}

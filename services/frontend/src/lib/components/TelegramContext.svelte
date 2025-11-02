@@ -7,6 +7,7 @@
 	import Spinner from '$components/Spinner.svelte'
 	import { setAuthContext } from '$lib/contexts/auth.svelte'
 	import { setTelegramContext } from '$lib/contexts/telegram.svelte'
+	import { m } from '$lib/i18n'
 	import { init } from '$telegram'
 
 	const { children } = $props()
@@ -28,7 +29,6 @@
 			const tg = await init()
 			telegram.data = tg
 
-			// restore session
 			const existingToken = await getToken()
 			if (existingToken) {
 				if (await tryRestoreSession()) {
@@ -37,7 +37,6 @@
 				}
 			}
 
-			// authenticate with telegram
 			const authResponse = await authenticateWithTelegram(tg.raw!)
 			auth.user = { ...authResponse.user, telegramId: tg.auth.user.id }
 			finishAuth()
@@ -62,7 +61,7 @@
 	}
 
 	function failAuth(err: unknown) {
-		errorMessage = err instanceof Error ? err.message : 'unknown error'
+		errorMessage = err instanceof Error ? err.message : m.error_generic()
 		auth.error = errorMessage
 		auth.isLoading = false
 		initState = 'error'
@@ -75,11 +74,11 @@
 	</div>
 {:else if initState === 'not-telegram'}
 	<div class="container">
-		<h1>Приложение доступно только с Telegram</h1>
+		<h1>{m.not_available_in_telegram()}</h1>
 	</div>
 {:else if initState === 'error'}
 	<div class="container">
-		<p>Ошибка</p>
+		<p>{m.error_generic()}</p>
 		<p>{auth.error}</p>
 	</div>
 {:else if initState === 'success' && auth.isAuthenticated}

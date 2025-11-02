@@ -10,9 +10,16 @@
 	import Navbar from '$components/Navbar.svelte'
 	import SwipeContainer from '$components/SwipeContainer.svelte'
 	import TelegramContext from '$components/TelegramContext.svelte'
+	import { setActiveSplitsContext } from '$lib/contexts/active-splits.svelte'
+	import { setSplitsHistoryContext } from '$lib/contexts/splits-history.svelte'
+	import { setStatsContext } from '$lib/contexts/stats.svelte'
 	import { getNavigationDirection } from '$lib/navigation/carousel'
 
 	const { children } = $props()
+
+	setStatsContext()
+	setActiveSplitsContext()
+	setSplitsHistoryContext()
 
 	// add transition between pages
 	onNavigate(navigation => {
