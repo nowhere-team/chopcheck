@@ -33,7 +33,7 @@ export function createSelectItemsRoute() {
 				return participation.participant.id
 			})())
 
-		const split = await services.splits.selectItems(splitId, participantId, selections)
+		const split = await services.splits.selectItems(splitId, authContext.userId, participantId, selections)
 		return c.json(split)
 	})
 }

@@ -16,8 +16,8 @@ export class ParticipantsRepository extends BaseRepository {
 		return `split:${splitId}:${suffix}`
 	}
 
-	async findBySplitId(splitId: string): Promise<ParticipantWithSelections[]> {
-		return this.getOrSet(this.getCacheKey(splitId), async () => {
+	async findBySplitId(splitId: string, viewerId?: string): Promise<ParticipantWithSelections[]> {
+		return this.getOrSet(this.getCacheKey(splitId, viewerId ?? 'public'), async () => {
 			const participants = await this.db.query.splitParticipants.findMany({
 				where: and(eq(schema.splitParticipants.splitId, splitId), eq(schema.splitParticipants.isDeleted, false)),
 				with: {
@@ -36,8 +36,20 @@ export class ParticipantsRepository extends BaseRepository {
 				},
 			})
 
-			return participants as ParticipantWithSelections[]
+			return participants.map(p => this.anonymizeIfNeeded(p, viewerId)) as ParticipantWithSelections[]
 		})
+	}
+
+	private anonymizeIfNeeded(participant: ParticipantWithSelections, viewerId?: string): ParticipantWithSelections {
+		if (participant.anonymous && participant.userId !== viewerId) {
+			return {
+				...participant,
+				userId: null,
+				displayName: participant.displayName ?? 'Аноним',
+				user: null,
+			}
+		}
+		return participant
 	}
 
 	async findByUserAndSplit(userId: string, splitId: string): Promise<Participant | null> {
@@ -52,10 +64,19 @@ export class ParticipantsRepository extends BaseRepository {
 		return participants || null
 	}
 
-	async join(splitId: string, userId: string, displayName?: string): Promise<Participant> {
-		const existing = await this.findByUserAndSplit(userId, splitId)
-		if (existing) {
-			return existing
+	async join(
+		splitId: string,
+		userId: string,
+		options?: {
+			displayName?: string
+			anonymous?: boolean
+		},
+	): Promise<Participant> {
+		if (!options?.anonymous) {
+			const existing = await this.findByUserAndSplit(userId, splitId)
+			if (existing) {
+				return existing
+			}
 		}
 
 		const [participant] = await this.db
@@ -63,13 +84,14 @@ export class ParticipantsRepository extends BaseRepository {
 			.values({
 				splitId,
 				userId,
-				displayName,
+				displayName: options?.displayName,
+				anonymous: options?.anonymous ?? false,
 				isReady: false,
 				hasPaid: false,
 			})
 			.returning()
 
-		await this.cache.deletePattern(this.getCacheKey(splitId))
+		await this.cache.deletePattern(this.getCacheKey(splitId, '*'))
 
 		return participant!
 	}

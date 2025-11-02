@@ -2,6 +2,7 @@ import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uu
 
 import { divisionMethodEnum, itemTypeEnum, paymentMethodTypeEnum, paymentStatusEnum, splitPhaseEnum, splitStatusEnum } from './enums'
 import { decimal, money, timestamptz } from './utils'
+import { sql } from 'drizzle-orm'
 
 export const users = pgTable(
 	'users',
@@ -139,6 +140,7 @@ export const splitParticipants = pgTable(
 		userId: uuid('user_id'),
 
 		displayName: varchar('display_name', { length: 255 }),
+		anonymous: boolean('anonymous').notNull().default(false),
 
 		isReady: boolean('is_ready').notNull().default(false),
 		hasPaid: boolean('has_paid').notNull().default(false),
@@ -169,13 +171,15 @@ export const splitParticipants = pgTable(
 			foreignColumns: [users.id],
 		}).onDelete('set null'),
 
-		unique('unique_split_user').on(table.splitId, table.userId),
-
 		index('idx_split_participants_split_id').on(table.splitId),
 		index('idx_split_participants_user_id').on(table.userId),
 		index('idx_split_participants_split_active').on(table.splitId, table.isDeleted),
 		index('idx_split_participants_has_paid').on(table.splitId, table.hasPaid, table.isDeleted),
 		index('idx_split_participants_is_ready').on(table.splitId, table.isReady, table.isDeleted),
+		index('idx_splitparticipants_anonymous').on(table.splitId, table.anonymous),
+		index('unique_split_user_not_anonymous')
+			.on(table.splitId, table.userId)
+			.where(sql`user_id IS NOT NULL AND is_deleted = FALSE`),
 	],
 )
 

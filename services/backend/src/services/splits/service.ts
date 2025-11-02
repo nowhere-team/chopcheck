@@ -26,13 +26,13 @@ export class SplitsService {
 		private logger: Logger,
 	) {}
 
-	async getById(splitId: string, includeCalculations = true): Promise<SplitResponse | null> {
+	async getById(splitId: string, includeCalculations = true, viewerId?: string): Promise<SplitResponse | null> {
 		this.logger.debug('fetching split', { splitId })
 
 		const [split, items, participants] = await Promise.all([
 			this.splitsRepo.findById(splitId),
 			this.itemsRepo.findBySplitId(splitId),
-			this.participantsRepo.findBySplitId(splitId),
+			this.participantsRepo.findBySplitId(splitId, viewerId),
 		])
 
 		if (!split) return null
@@ -40,7 +40,7 @@ export class SplitsService {
 		const response: SplitResponse = { split, items, participants }
 
 		if (includeCalculations) {
-			response.calculations = this.buildCalculations(response)
+			response.calculations = this.buildCalculations(response, viewerId)
 		}
 
 		return response
@@ -114,7 +114,6 @@ export class SplitsService {
 		return result
 	}
 
-
 	async getMySplits(userId: string, offset: number = 0, limit: number = 50): Promise<Split[]> {
 		return await this.splitsRepo.findByUser(userId, offset, limit)
 	}
@@ -146,7 +145,14 @@ export class SplitsService {
 		return result
 	}
 
-	async join(splitId: string, userId: string): Promise<SplitResponse> {
+	async join(
+		splitId: string,
+		userId: string,
+		options?: {
+			displayName?: string
+			anonymous?: boolean
+		},
+	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
@@ -159,11 +165,11 @@ export class SplitsService {
 			}
 		}
 
-		await this.participantsRepo.join(splitId, userId)
+		await this.participantsRepo.join(splitId, userId, options)
 
-		this.logger.info('user joined split', { splitId, userId })
+		this.logger.info('user joined split', { splitId, userId, anonymous: options?.anonymous ?? false })
 
-		const result = await this.getById(splitId, false)
+		const result = await this.getById(splitId, false, userId)
 		if (!result) {
 			throw new NotFoundError('split not found after join')
 		}
@@ -202,6 +208,7 @@ export class SplitsService {
 
 	async selectItems(
 		splitId: string,
+		userId: string,
 		participantId: string,
 		selections: Array<{
 			itemId: string
@@ -221,12 +228,13 @@ export class SplitsService {
 		this.logger.info('participant selected items', {
 			splitId,
 			participantId,
+			userId,
 			selectionsCount: selections.length,
 		})
 
 		const [items, participants] = await Promise.all([
 			this.itemsRepo.findBySplitId(splitId),
-			this.participantsRepo.findBySplitId(splitId),
+			this.participantsRepo.findBySplitId(splitId, userId),
 		])
 
 		const calculated = this.calcService.calculate({
@@ -246,7 +254,7 @@ export class SplitsService {
 		await this.participantsRepo.updateCalculatedSums(splitId, calculatedSums)
 
 		const response: SplitResponse = { split, items, participants }
-		response.calculations = this.buildCalculations(response)
+		response.calculations = this.buildCalculations(response, userId)
 
 		return response
 	}
@@ -283,7 +291,7 @@ export class SplitsService {
 		const participant = await this.participantsRepo.findByUserAndSplit(userId, splitId)
 		if (!participant) return null
 
-		const split = await this.getById(splitId, true)
+		const split = await this.getById(splitId, true, userId)
 		if (!split || !split.calculations) return { participant }
 
 		const calc = split.calculations.participants.find(p => p.participantId === participant.id)
@@ -298,14 +306,24 @@ export class SplitsService {
 		return await this.statsRepo.getUserStats(userId)
 	}
 
-	private buildCalculations(data: SplitData): Calculations {
+	private buildCalculations(data: SplitData, viewerId?: string): Calculations {
 		const calculated = this.calcService.calculate(data)
 
 		return {
 			participants: calculated.calculations.map(calc => {
-				// items array to Record<itemId, result>
-				const items = calc.items.reduce(
-					(acc, item) => {
+				const participant = data.participants.find(p => p.id === calc.participantId)
+
+				const shouldAnonymize = participant?.anonymous && participant?.userId !== viewerId
+
+				const displayName = shouldAnonymize ? (participant.displayName ?? 'Аноним') : calc.displayName
+
+				return {
+					participantId: calc.participantId,
+					displayName,
+					totalBaseAmount: calc.totalBaseAmount,
+					totalDiscountAmount: calc.totalDiscountAmount,
+					totalAmount: calc.totalAmount,
+					items: calc.items.reduce((acc, item) => {
 						acc[item.itemId] = {
 							baseAmount: item.baseAmount,
 							discountAmount: item.discountAmount,
@@ -314,20 +332,8 @@ export class SplitsService {
 							participationValue: item.participationValue,
 						}
 						return acc
-					},
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					{} as any,
-				)
-
-				const result: ParticipantCalculationData = {
-					participantId: calc.participantId,
-					totalBaseAmount: calc.totalBaseAmount,
-					totalDiscountAmount: calc.totalDiscountAmount,
-					totalAmount: calc.totalAmount,
-					items,
+					}, {} as any),
 				}
-
-				return result
 			}),
 			totals: {
 				splitAmount: calculated.totalSplitAmount,
