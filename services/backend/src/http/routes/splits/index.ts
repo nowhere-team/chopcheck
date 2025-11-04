@@ -12,6 +12,9 @@ import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
 import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
 import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
+import { createAddPaymentMethodToSplitRoute } from '../payment-methods/add-to-split'
+import { createRemovePaymentMethodFromSplitRoute } from '../payment-methods/remove-from-split'
+import { createListSplitPaymentMethodsRoute } from '../payment-methods/list-split'
 
 function createPrivateSplitsRoutes() {
 	return new Hono()
@@ -25,6 +28,9 @@ function createPrivateSplitsRoutes() {
 		.route('/', createSelectItemsRoute())
 		.route('/', createDeleteItemRoute())
 		.route('/', createUpdateItemRoute())
+		.route('/', createListSplitPaymentMethodsRoute())
+		.route('/', createAddPaymentMethodToSplitRoute())
+		.route('/', createRemovePaymentMethodFromSplitRoute())
 }
 
 function createPublicSplitsRoutes() {

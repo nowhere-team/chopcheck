@@ -1,25 +1,25 @@
 import { ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
 import type {
+	AddPaymentMethodToSplitDto,
 	Calculations,
+	CreatePaymentMethodDto,
 	CreateSplitDto,
 	Item,
 	Participant,
 	ParticipantCalculationData,
+	PaymentMethod,
 	Split,
 	SplitData,
 	SplitResponse,
 	SplitsByPeriod,
-	AddPaymentMethodToSplitDto,
-	CreatePaymentMethodDto,
-	PaymentMethod,
 	UpdatePaymentMethodDto,
 } from '@/common/types'
 import type { Logger } from '@/platform/logger'
 import type { ItemsRepository } from '@/repositories/items'
 import type { ParticipantsRepository } from '@/repositories/participants'
+import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
 import type { SplitsRepository } from '@/repositories/splits'
 import type { StatsRepository } from '@/repositories/stats'
-import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
 import { CalculationService } from '@/services/calculation'
 
 export class SplitsService {
@@ -306,13 +306,10 @@ export class SplitsService {
 	}
 
 	async getSplitPaymentMethods(splitId: string, userId: string): Promise<PaymentMethod[]> {
-		// проверяем что сплит существует
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
 		}
-
-		// TODO: проверить права доступа (является ли участником)
 
 		const methods = await this.paymentMethodsRepo.findBySplitId(splitId)
 
@@ -325,18 +322,10 @@ export class SplitsService {
 		return methods
 	}
 
-	/**
-	 * получить свои методы оплаты
-	 */
 	async getMyPaymentMethods(userId: string): Promise<PaymentMethod[]> {
 		return await this.paymentMethodsRepo.findByUserId(userId)
 	}
-
-	/**
-	 * создать новый метод оплаты
-	 */
 	async createPaymentMethod(userId: string, dto: CreatePaymentMethodDto): Promise<PaymentMethod> {
-		// валидация paymentData
 		this.validatePaymentData(dto.type, dto.paymentData)
 
 		const paymentMethod = await this.paymentMethodsRepo.create({
@@ -357,10 +346,6 @@ export class SplitsService {
 
 		return paymentMethod
 	}
-
-	/**
-	 * обновить метод оплаты
-	 */
 	async updatePaymentMethod(
 		paymentMethodId: string,
 		userId: string,
@@ -371,7 +356,6 @@ export class SplitsService {
 			throw new NotFoundError('payment method not found')
 		}
 
-		// проверяем что это метод этого юзера
 		if (paymentMethod.userId !== userId) {
 			throw new ValidationError('you can only update your own payment methods')
 		}
@@ -383,7 +367,6 @@ export class SplitsService {
 			paymentMethodId,
 		})
 
-		// возвращаем обновленный
 		const updated = await this.paymentMethodsRepo.findById(paymentMethodId)
 		if (!updated) {
 			throw new NotFoundError('payment method not found after update')
@@ -392,16 +375,12 @@ export class SplitsService {
 		return updated
 	}
 
-	/**
-	 * удалить метод оплаты
-	 */
 	async deletePaymentMethod(paymentMethodId: string, userId: string): Promise<void> {
 		const paymentMethod = await this.paymentMethodsRepo.findById(paymentMethodId)
 		if (!paymentMethod) {
 			throw new NotFoundError('payment method not found')
 		}
 
-		// проверяем что это метод этого юзера
 		if (paymentMethod.userId !== userId) {
 			throw new ValidationError('you can only delete your own payment methods')
 		}
@@ -414,25 +393,16 @@ export class SplitsService {
 		})
 	}
 
-	/**
-	 * добавить метод оплаты к сплиту
-	 */
-	async addPaymentMethodToSplit(
-		splitId: string,
-		userId: string,
-		dto: AddPaymentMethodToSplitDto,
-	): Promise<void> {
+	async addPaymentMethodToSplit(splitId: string, userId: string, dto: AddPaymentMethodToSplitDto): Promise<void> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
 		}
 
-		// только владелец может добавлять методы оплаты
 		if (split.ownerId !== userId) {
 			throw new ValidationError('only split owner can add payment methods')
 		}
 
-		// проверяем что метод существует и принадлежит владельцу
 		const paymentMethod = await this.paymentMethodsRepo.findById(dto.paymentMethodId)
 		if (!paymentMethod) {
 			throw new NotFoundError('payment method not found')
@@ -442,11 +412,7 @@ export class SplitsService {
 			throw new ValidationError('you can only add your own payment methods')
 		}
 
-		await this.paymentMethodsRepo.addToSplit(
-			splitId,
-			dto.paymentMethodId,
-			dto.isPreferred || false,
-		)
+		await this.paymentMethodsRepo.addToSplit(splitId, dto.paymentMethodId, dto.isPreferred || false)
 
 		this.logger.info('payment method added to split', {
 			splitId,
@@ -454,21 +420,12 @@ export class SplitsService {
 			paymentMethodId: dto.paymentMethodId,
 		})
 	}
-
-	/**
-	 * удалить метод оплаты из сплита
-	 */
-	async removePaymentMethodFromSplit(
-		splitId: string,
-		paymentMethodId: string,
-		userId: string,
-	): Promise<void> {
+	async removePaymentMethodFromSplit(splitId: string, paymentMethodId: string, userId: string): Promise<void> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
 		}
 
-		// только владелец может удалять методы оплаты
 		if (split.ownerId !== userId) {
 			throw new ValidationError('only split owner can remove payment methods')
 		}
@@ -482,11 +439,7 @@ export class SplitsService {
 		})
 	}
 
-	/**
-	 * валидация данных оплаты в зависимости от типа
-	 */
 	private validatePaymentData(type: string, paymentData: unknown): void {
-		// проверяем что это объект
 		if (!paymentData || typeof paymentData !== 'object') {
 			throw new ValidationError('paymentData must be an object')
 		}
@@ -521,7 +474,6 @@ export class SplitsService {
 			case 'cash':
 			case 'crypto':
 			case 'custom':
-				// эти типы не требуют специфичной валидации
 				break
 
 			default:
