@@ -5,12 +5,14 @@ import type { Logger } from '@/platform/logger'
 import { createRepositories } from '@/repositories'
 
 import { CalculationService } from './calculation'
+import { PaymentMethodsService } from './payment-methods'
 import { SplitsService } from './splits'
 import { UsersService } from './users'
 
 export interface Services {
 	users: UsersService
 	splits: SplitsService
+	paymentMethods: PaymentMethodsService
 }
 
 export function createServices(auth: AuthClient, db: Database, cache: Cache, logger: Logger): Services {
@@ -27,6 +29,7 @@ export function createServices(auth: AuthClient, db: Database, cache: Cache, log
 		calc,
 		logger.named('service/splits'),
 	)
+	const paymentMethods = new PaymentMethodsService(repos.paymentMethods, logger.named('service/payment-methods'))
 
-	return { users, splits }
+	return { users, splits, paymentMethods }
 }

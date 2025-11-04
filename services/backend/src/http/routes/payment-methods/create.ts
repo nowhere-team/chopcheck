@@ -9,16 +9,9 @@ const createPaymentMethodSchema = z.object({
 	type: paymentMethodTypeSchema,
 	displayName: z.string().max(128).optional(),
 	currency: z.string().length(3).optional(),
-	paymentData: z.object({
-		phone: z.string().optional(),
-		cardNumber: z.string().optional(),
-		cardHolder: z.string().optional(),
-		accountNumber: z.string().optional(),
-		bankName: z.string().optional(),
-		bik: z.string().optional(),
-		phoneNumber: z.string().optional(),
-		description: z.string().optional(),
-	}),
+	paymentData: z
+		.record(z.string(), z.unknown())
+		.refine(data => Object.keys(data).length > 0, { message: 'paymentData cannot be empty' }),
 	isTemporary: z.boolean().optional(),
 	isDefault: z.boolean().optional(),
 })
@@ -36,7 +29,7 @@ export function createCreatePaymentMethodRoute() {
 			type: dto.type,
 		})
 
-		const paymentMethod = await services.splits.createPaymentMethod(authContext.userId, dto)
+		const paymentMethod = await services.paymentMethods.createPaymentMethod(authContext.userId, dto)
 
 		return c.json({ success: true, data: paymentMethod }, 201)
 	})

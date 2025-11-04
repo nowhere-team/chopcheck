@@ -12,9 +12,9 @@ import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
 import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
 import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
-import { createAddPaymentMethodToSplitRoute } from '../payment-methods/add-to-split'
-import { createRemovePaymentMethodFromSplitRoute } from '../payment-methods/remove-from-split'
-import { createListSplitPaymentMethodsRoute } from '../payment-methods/list-split'
+import { createAddPaymentMethodToSplitRoute } from '@/http/routes/splits/add-payment-method'
+import { createRemovePaymentMethodFromSplitRoute } from '@/http/routes/splits/remove-payment-method'
+import { createListSplitPaymentMethodsRoute } from '@/http/routes/splits/list-payment-methods'
 
 function createPrivateSplitsRoutes() {
 	return new Hono()

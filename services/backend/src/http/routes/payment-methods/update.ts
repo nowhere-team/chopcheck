@@ -22,7 +22,7 @@ export function createUpdatePaymentMethodRoute() {
 			paymentMethodId,
 		})
 
-		const updated = await services.splits.updatePaymentMethod(paymentMethodId, authContext.userId, dto)
+		const updated = await services.paymentMethods.updatePaymentMethod(paymentMethodId, authContext.userId, dto)
 
 		return c.json({ success: true, data: updated })
 	})

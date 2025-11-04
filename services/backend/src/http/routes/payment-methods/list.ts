@@ -8,7 +8,7 @@ export function createListPaymentMethodsRoute() {
 
 		logger.debug('listing payment methods', { userId: authContext.userId })
 
-		const methods = await services.splits.getMyPaymentMethods(authContext.userId)
+		const methods = await services.paymentMethods.getMyPaymentMethods(authContext.userId)
 
 		return c.json({ success: true, data: methods })
 	})

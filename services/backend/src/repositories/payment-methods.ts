@@ -1,12 +1,15 @@
 import { and, eq } from 'drizzle-orm'
 
-import type { PaymentMethod, SplitPaymentMethod } from '@/common/types'
+import type { PaymentMethods, SplitPaymentMethod } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-type CreatePaymentMethodData = Pick<PaymentMethod, 'userId' | 'type' | 'displayName' | 'currency' | 'paymentData' | 'isTemporary' | 'isDefault'>
-type UpdatePaymentMethodData = Partial<Pick<PaymentMethod, 'displayName' | 'isDefault' | 'displayOrder'>>
+type CreatePaymentMethodData = Pick<
+	PaymentMethods,
+	'userId' | 'type' | 'displayName' | 'currency' | 'paymentData' | 'isTemporary' | 'isDefault'
+>
+type UpdatePaymentMethodData = Partial<Pick<PaymentMethods, 'displayName' | 'isDefault' | 'displayOrder'>>
 
 export class PaymentMethodsRepository extends BaseRepository {
 	private getCacheKey(id: string): string {
@@ -21,41 +24,24 @@ export class PaymentMethodsRepository extends BaseRepository {
 		return `split:${splitId}:payment_methods`
 	}
 
-	/**
-	 * найти метод оплаты по id
-	 */
-	async findById(id: string): Promise<PaymentMethod | null> {
+	async findById(id: string): Promise<PaymentMethods | null> {
 		return this.getOrSet(this.getCacheKey(id), async () => {
 			const paymentMethod = await this.db.query.userPaymentMethods.findFirst({
-				where: and(
-					eq(schema.userPaymentMethods.id, id),
-					eq(schema.userPaymentMethods.isDeleted, false)
-				),
+				where: and(eq(schema.userPaymentMethods.id, id), eq(schema.userPaymentMethods.isDeleted, false)),
 			})
 
 			return paymentMethod || null
 		})
 	}
-
-	/**
-	 * получить все методы оплаты юзера
-	 */
-	async findByUserId(userId: string): Promise<PaymentMethod[]> {
+	async findByUserId(userId: string): Promise<PaymentMethods[]> {
 		return this.getOrSet(this.getUserCacheKey(userId), async () => {
 			return await this.db.query.userPaymentMethods.findMany({
-				where: and(
-					eq(schema.userPaymentMethods.userId, userId),
-					eq(schema.userPaymentMethods.isDeleted, false)
-				),
+				where: and(eq(schema.userPaymentMethods.userId, userId), eq(schema.userPaymentMethods.isDeleted, false)),
 				orderBy: (methods, { desc }) => [desc(methods.isDefault), methods.displayOrder],
 			})
 		})
 	}
-
-	/**
-	 * получить методы оплаты привязанные к сплиту
-	 */
-	async findBySplitId(splitId: string): Promise<PaymentMethod[]> {
+	async findBySplitId(splitId: string): Promise<PaymentMethods[]> {
 		return this.getOrSet(this.getSplitCacheKey(splitId), async () => {
 			const splitPaymentMethods = await this.db.query.splitPaymentMethods.findMany({
 				where: eq(schema.splitPaymentMethods.splitId, splitId),
@@ -68,12 +54,7 @@ export class PaymentMethodsRepository extends BaseRepository {
 			return splitPaymentMethods.map(spm => spm.paymentMethod).filter(pm => !pm.isDeleted)
 		})
 	}
-
-	/**
-	 * создать новый метод оплаты
-	 */
-	async create(data: CreatePaymentMethodData): Promise<PaymentMethod> {
-		// если это метод по умолчанию, убираем флаг с других
+	async create(data: CreatePaymentMethodData): Promise<PaymentMethods> {
 		if (data.isDefault) {
 			await this.db
 				.update(schema.userPaymentMethods)
@@ -95,22 +76,13 @@ export class PaymentMethodsRepository extends BaseRepository {
 			})
 			.returning()
 
-		// инвалидируем кэш юзера
 		await this.cache.delete(this.getUserCacheKey(data.userId))
 
 		return paymentMethod!
 	}
-
-	/**
-	 * обновить метод оплаты
-	 */
 	async update(id: string, data: UpdatePaymentMethodData): Promise<void> {
 		const paymentMethod = await this.findById(id)
-		if (!paymentMethod) {
-			throw new Error('payment method not found')
-		}
-
-		// если делаем дефолтным, снимаем флаг с других
+		if (!paymentMethod) return
 		if (data.isDefault) {
 			await this.db
 				.update(schema.userPaymentMethods)
@@ -118,24 +90,13 @@ export class PaymentMethodsRepository extends BaseRepository {
 				.where(eq(schema.userPaymentMethods.userId, paymentMethod.userId))
 		}
 
-		await this.db
-			.update(schema.userPaymentMethods)
-			.set(data)
-			.where(eq(schema.userPaymentMethods.id, id))
-
-		// инвалидируем кэш
+		await this.db.update(schema.userPaymentMethods).set(data).where(eq(schema.userPaymentMethods.id, id))
 		await this.cache.delete(this.getCacheKey(id))
 		await this.cache.delete(this.getUserCacheKey(paymentMethod.userId))
 	}
-
-	/**
-	 * удалить метод оплаты (soft delete)
-	 */
 	async delete(id: string): Promise<void> {
 		const paymentMethod = await this.findById(id)
-		if (!paymentMethod) {
-			throw new Error('payment method not found')
-		}
+		if (!paymentMethod) return
 
 		await this.db
 			.update(schema.userPaymentMethods)
@@ -144,23 +105,14 @@ export class PaymentMethodsRepository extends BaseRepository {
 				deletedAt: new Date(),
 			})
 			.where(eq(schema.userPaymentMethods.id, id))
-
-		// инвалидируем кэш
 		await this.cache.delete(this.getCacheKey(id))
 		await this.cache.delete(this.getUserCacheKey(paymentMethod.userId))
 	}
-
-	/**
-	 * привязать метод оплаты к сплиту
-	 */
-	async addToSplit(splitId: string, paymentMethodId: string, isPreferred: boolean = false): Promise<SplitPaymentMethod> {
-		// проверяем что метод существует
-		const paymentMethod = await this.findById(paymentMethodId)
-		if (!paymentMethod) {
-			throw new Error('payment method not found')
-		}
-
-		// если делаем предпочтительным, снимаем флаг с других
+	async addToSplit(
+		splitId: string,
+		paymentMethodId: string,
+		isPreferred: boolean = false,
+	): Promise<SplitPaymentMethod> {
 		if (isPreferred) {
 			await this.db
 				.update(schema.splitPaymentMethods)
@@ -177,34 +129,23 @@ export class PaymentMethodsRepository extends BaseRepository {
 				displayOrder: 0,
 			})
 			.returning()
-
-		// инвалидируем кэш сплита
 		await this.cache.delete(this.getSplitCacheKey(splitId))
+		await this.cache.delete(`split:${splitId}:base`)
 
 		return splitPaymentMethod!
 	}
-
-	/**
-	 * отвязать метод оплаты от сплита
-	 */
 	async removeFromSplit(splitId: string, paymentMethodId: string): Promise<void> {
 		await this.db
 			.delete(schema.splitPaymentMethods)
 			.where(
 				and(
 					eq(schema.splitPaymentMethods.splitId, splitId),
-					eq(schema.splitPaymentMethods.paymentMethodId, paymentMethodId)
-				)
+					eq(schema.splitPaymentMethods.paymentMethodId, paymentMethodId),
+				),
 			)
-
-		// инвалидируем кэш
 		await this.cache.delete(this.getSplitCacheKey(splitId))
+		await this.cache.delete(`split:${splitId}:base`)
 	}
-
-	/**
-	 * удалить временные методы оплаты старше указанного времени
-	 * (для очистки методов которые были созданы при создании сплита)
-	 */
 	async cleanupTemporary(olderThanHours: number = 24): Promise<number> {
 		const cutoffDate = new Date()
 		cutoffDate.setHours(cutoffDate.getHours() - olderThanHours)
@@ -215,12 +156,7 @@ export class PaymentMethodsRepository extends BaseRepository {
 				isDeleted: true,
 				deletedAt: new Date(),
 			})
-			.where(
-				and(
-					eq(schema.userPaymentMethods.isTemporary, true),
-					eq(schema.userPaymentMethods.isDeleted, false)
-				)
-			)
+			.where(and(eq(schema.userPaymentMethods.isTemporary, true), eq(schema.userPaymentMethods.isDeleted, false)))
 			.returning()
 
 		return result.length

@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { auth } from '@/http/middleware/auth'
 import { uuidParam, validate } from '@/http/utils'
 
 const addPaymentMethodToSplitSchema = z.object({
@@ -13,7 +12,6 @@ const addPaymentMethodToSplitSchema = z.object({
 export function createAddPaymentMethodToSplitRoute() {
 	return new Hono().post(
 		'/:id/payment-methods',
-		auth(),
 		uuidParam('id'),
 		validate('json', addPaymentMethodToSplitSchema),
 		async c => {

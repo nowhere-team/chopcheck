@@ -2,17 +2,15 @@ import { ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
 import type {
 	AddPaymentMethodToSplitDto,
 	Calculations,
-	CreatePaymentMethodDto,
 	CreateSplitDto,
 	Item,
 	Participant,
 	ParticipantCalculationData,
-	PaymentMethod,
+	PaymentMethods,
 	Split,
 	SplitData,
 	SplitResponse,
 	SplitsByPeriod,
-	UpdatePaymentMethodDto,
 } from '@/common/types'
 import type { Logger } from '@/platform/logger'
 import type { ItemsRepository } from '@/repositories/items'
@@ -305,7 +303,7 @@ export class SplitsService {
 		return result
 	}
 
-	async getSplitPaymentMethods(splitId: string, userId: string): Promise<PaymentMethod[]> {
+	async getSplitPaymentMethods(splitId: string, userId: string): Promise<PaymentMethods[]> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
@@ -320,77 +318,6 @@ export class SplitsService {
 		})
 
 		return methods
-	}
-
-	async getMyPaymentMethods(userId: string): Promise<PaymentMethod[]> {
-		return await this.paymentMethodsRepo.findByUserId(userId)
-	}
-	async createPaymentMethod(userId: string, dto: CreatePaymentMethodDto): Promise<PaymentMethod> {
-		this.validatePaymentData(dto.type, dto.paymentData)
-
-		const paymentMethod = await this.paymentMethodsRepo.create({
-			userId,
-			type: dto.type,
-			displayName: dto.displayName || null,
-			currency: dto.currency || 'RUB',
-			paymentData: dto.paymentData,
-			isTemporary: dto.isTemporary || false,
-			isDefault: dto.isDefault || false,
-		})
-
-		this.logger.info('payment method created', {
-			userId,
-			paymentMethodId: paymentMethod.id,
-			type: dto.type,
-		})
-
-		return paymentMethod
-	}
-	async updatePaymentMethod(
-		paymentMethodId: string,
-		userId: string,
-		dto: UpdatePaymentMethodDto,
-	): Promise<PaymentMethod> {
-		const paymentMethod = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!paymentMethod) {
-			throw new NotFoundError('payment method not found')
-		}
-
-		if (paymentMethod.userId !== userId) {
-			throw new ValidationError('you can only update your own payment methods')
-		}
-
-		await this.paymentMethodsRepo.update(paymentMethodId, dto)
-
-		this.logger.info('payment method updated', {
-			userId,
-			paymentMethodId,
-		})
-
-		const updated = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!updated) {
-			throw new NotFoundError('payment method not found after update')
-		}
-
-		return updated
-	}
-
-	async deletePaymentMethod(paymentMethodId: string, userId: string): Promise<void> {
-		const paymentMethod = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!paymentMethod) {
-			throw new NotFoundError('payment method not found')
-		}
-
-		if (paymentMethod.userId !== userId) {
-			throw new ValidationError('you can only delete your own payment methods')
-		}
-
-		await this.paymentMethodsRepo.delete(paymentMethodId)
-
-		this.logger.info('payment method deleted', {
-			userId,
-			paymentMethodId,
-		})
 	}
 
 	async addPaymentMethodToSplit(splitId: string, userId: string, dto: AddPaymentMethodToSplitDto): Promise<void> {
@@ -438,49 +365,6 @@ export class SplitsService {
 			paymentMethodId,
 		})
 	}
-
-	private validatePaymentData(type: string, paymentData: unknown): void {
-		if (!paymentData || typeof paymentData !== 'object') {
-			throw new ValidationError('paymentData must be an object')
-		}
-
-		const data = paymentData as Record<string, unknown>
-
-		switch (type) {
-			case 'sbp':
-				if (!data.phone || typeof data.phone !== 'string') {
-					throw new ValidationError('phone is required for sbp type')
-				}
-				break
-
-			case 'card':
-				if (!data.cardNumber || typeof data.cardNumber !== 'string') {
-					throw new ValidationError('cardNumber is required for card type')
-				}
-				break
-
-			case 'phone':
-				if (!data.phoneNumber || typeof data.phoneNumber !== 'string') {
-					throw new ValidationError('phoneNumber is required for phone type')
-				}
-				break
-
-			case 'bank_transfer':
-				if (!data.accountNumber || typeof data.accountNumber !== 'string') {
-					throw new ValidationError('accountNumber is required for bank_transfer type')
-				}
-				break
-
-			case 'cash':
-			case 'crypto':
-			case 'custom':
-				break
-
-			default:
-				throw new ValidationError(`unknown payment method type: ${type}`)
-		}
-	}
-
 	async getMyParticipation(
 		splitId: string,
 		userId: string,

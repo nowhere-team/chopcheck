@@ -14,7 +14,7 @@ export function createDeletePaymentMethodRoute() {
 			paymentMethodId,
 		})
 
-		await services.splits.deletePaymentMethod(paymentMethodId, authContext.userId)
+		await services.paymentMethods.deletePaymentMethod(paymentMethodId, authContext.userId)
 
 		return c.json({ success: true, message: 'payment method deleted' })
 	})
