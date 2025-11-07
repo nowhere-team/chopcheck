@@ -57,9 +57,24 @@
 
   "create_split_title": "Создать сплит",
   "create_split_name_label": "Название",
+  "create_split_icon_label": "Иконка",
+  "create_split_participants_label": "Участники",
   "create_split_name_placeholder": "Ужин в ресторане",
   "create_split_currency_label": "Валюта",
   "create_split_error": "Не удалось создать сплит",
+
+  "create_split_positions_title": "Позиции",
+  "create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
+
+  "emoji_picker_label": "Выбор иконки",
+  "emoji_picker_food_category": "Еда",
+  "emoji_picker_drinks_category": "Напитки",
+  "emoji_picker_activities_category": "Развлечения",
+  "emoji_picker_travel_category": "Транспорт",
+  "emoji_picker_objects_category": "Предметы",
+  "emoji_picker_symbols_category": "Символы",
+
+  "split_participants_label": "Участники сплита",
 
   "quantity_label": "Количество",
   "quantity_unit": "шт",
