@@ -169,6 +169,65 @@ export class SplitsService {
 		return result
 	}
 
+	async createOrUpdate(userId: string, dto: CreateSplitDto & { id?: string }): Promise<SplitResponse> {
+		if (dto.id) {
+			const existing = await this.splitsRepo.findById(dto.id)
+			if (!existing) {
+				throw new NotFoundError('split not found')
+			}
+
+			if (existing.ownerId !== userId) {
+				throw new ForbiddenError('only owner can update split')
+			}
+
+			if (existing.status !== 'draft') {
+				throw new ForbiddenError('can only update draft splits')
+			}
+
+			await this.splitsRepo.update(dto.id, {
+				name: dto.name,
+				currency: dto.currency,
+			})
+
+			if (dto.items) {
+				const currentItems = await this.itemsRepo.findBySplitId(dto.id)
+
+				const itemsToUpdate = dto.items.filter(item => item.id)
+				const itemsToCreate = dto.items.filter(item => !item.id)
+
+				for (const item of itemsToUpdate) {
+					await this.itemsRepo.update(item.id!, dto.id, {
+						name: item.name,
+						price: item.price,
+						quantity: item.quantity,
+						type: item.type,
+						defaultDivisionMethod: item.defaultDivisionMethod,
+					})
+				}
+
+				if (itemsToCreate.length > 0) {
+					await this.itemsRepo.createMany(dto.id, itemsToCreate)
+				}
+
+				const updatedItemIds = new Set(dto.items.filter(i => i.id).map(i => i.id))
+				const itemsToDelete = currentItems.filter(item => !updatedItemIds.has(item.id))
+
+				for (const item of itemsToDelete) {
+					await this.itemsRepo.softDelete(item.id, dto.id)
+				}
+			}
+
+			const result = await this.getById(dto.id, false)
+			if (!result) {
+				throw new NotFoundError('split not found after update')
+			}
+
+			return result
+		}
+
+		return await this.create(userId, dto)
+	}
+
 	async join(splitId: string, userId: string): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
@@ -319,6 +378,18 @@ export class SplitsService {
 
 	async getUserStats(userId: string) {
 		return await this.statsRepo.getUserStats(userId)
+	}
+
+	async getDraft(userId: string): Promise<SplitResponse | null> {
+		const split = await this.splitsRepo.findDraftByUser(userId)
+		if (!split) return null
+
+		const [items, participants] = await Promise.all([
+			this.itemsRepo.findBySplitId(split.id),
+			this.participantsRepo.findBySplitId(split.id),
+		])
+
+		return { split, items, participants }
 	}
 
 	private buildCalculations(data: SplitData): Calculations {

@@ -76,6 +76,27 @@
 
   "split_participants_label": "Участники сплита",
 
+  "item_name_label": "название",
+  "item_name_placeholder": "введите название",
+  "item_price_label": "цена",
+  "item_icon_label": "иконка",
+  "item_division_method_label": "способ деления",
+  "item_delete_button": "удалить позицию",
+
+  "division_method_equal": "поровну",
+  "division_method_equal_desc": "каждый платит одинаково",
+  "division_method_shares": "по долям",
+  "division_method_shares_desc": "распределить по частям",
+  "division_method_proportional": "пропорционально",
+  "division_method_proportional_desc": "по отношению к общей сумме",
+  "division_method_fixed": "фиксировано",
+  "division_method_fixed_desc": "конкретная сумма для каждого",
+  "division_method_custom": "вручную",
+  "division_method_custom_desc": "указать суммы для каждого",
+
+  "action_save": "сохранить",
+  "action_cancel": "отменить",
+
   "quantity_label": "Количество",
   "quantity_unit": "шт",
   "quantity_per_portion": "поштучно",

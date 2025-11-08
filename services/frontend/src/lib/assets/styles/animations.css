@@ -1,7 +1,8 @@
 ::view-transition-old(page-content),
 ::view-transition-new(page-content) {
-	animation-duration: 300ms;
-	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
 }
 
 /* forward slide */

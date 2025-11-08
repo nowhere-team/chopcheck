@@ -5,7 +5,7 @@
 	import { haptic } from '$telegram/haptic'
 
 	interface Props {
-		variant?: 'primary' | 'secondary'
+		variant?: 'primary' | 'secondary' | 'danger'
 		size?: 'sm' | 'md' | 'lg'
 		disabled?: boolean
 		loading?: boolean
@@ -43,6 +43,7 @@
 	class="btn"
 	class:primary={variant === 'primary'}
 	class:secondary={variant === 'secondary'}
+	class:danger={variant === 'danger'}
 	class:sm={size === 'sm'}
 	class:md={size === 'md'}
 	class:lg={size === 'lg'}
@@ -133,6 +134,16 @@
 
 	.btn.secondary:hover:not(.disabled) {
 		background: var(--color-bg-surface-selected);
+	}
+
+	.btn.danger {
+		background: transparent;
+		color: var(--color-text-error, #ef4444);
+		border: 1px solid var(--color-text-error, #ef4444);
+	}
+
+	.btn.danger:hover:not(:disabled) {
+		background: rgba(239, 68, 68, 0.1);
 	}
 
 	/* disabled */

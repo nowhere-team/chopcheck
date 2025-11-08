@@ -11,6 +11,7 @@
 		maxWidthView = '24ch',
 		maxWidthEdit = '32ch',
 		showIcon = true,
+		onchange = () => {},
 		onLimitReached = () => {}
 	} = $props()
 
@@ -39,10 +40,13 @@
 			return '150px'
 		}
 		if (!fontsReady || textWidth === 0) {
-			// пока шрифты не загружены, отдаем максимум чтобы не было эллипсиса
-			return isEditing ? maxWidthEdit : maxWidthView
+			return isEditing ? 'min(64ch, calc(100vw - 80px))' : maxWidthView
 		}
-		return `min(${textWidth + 4}px, ${isEditing ? maxWidthEdit : maxWidthView})`
+
+		const calculatedWidth = `${textWidth + 4}px`
+		const maxWidth = isEditing ? 'min(64ch, calc(100vw - 80px))' : maxWidthView
+
+		return `min(${calculatedWidth}, ${maxWidth})`
 	}
 
 	function handleInput(e: Event) {
@@ -57,9 +61,9 @@
 			onLimitReached()
 		} else {
 			value = newValue
+			onchange(value)
 		}
 	}
-
 	function shake() {
 		if (isShaking) return
 		isShaking = true

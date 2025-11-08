@@ -148,6 +148,19 @@ export class SplitsRepository extends BaseRepository {
 			.limit(limit)
 	}
 
+	async findDraftByUser(userId: string): Promise<Split | null> {
+		const draft = await this.db.query.splits.findFirst({
+			where: and(
+				eq(schema.splits.ownerId, userId),
+				eq(schema.splits.status, 'draft'),
+				eq(schema.splits.isDeleted, false),
+			),
+			orderBy: (splits, { desc }) => [desc(splits.updatedAt)],
+		})
+
+		return draft || null
+	}
+
 	async create(ownerId: string, data: CreateSplitData): Promise<Split> {
 		return await this.db.transaction(async tx => {
 			const [split] = await tx
