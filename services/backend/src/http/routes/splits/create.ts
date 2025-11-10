@@ -12,10 +12,14 @@ export function createCreateSplitRoute() {
 
 		const dto = c.req.valid('json')
 
-		logger.info('creating split via api', { userId: authContext.userId, name: dto.name })
+		logger.info('creating or updating split via api', {
+			userId: authContext.userId,
+			name: dto.name,
+			isUpdate: !!dto.id,
+		})
 
-		const split = await services.splits.create(authContext.userId, dto)
+		const split = await services.splits.createOrUpdate(authContext.userId, dto)
 
-		return c.json(split, 201)
+		return c.json(split, dto.id ? 200 : 201)
 	})
 }

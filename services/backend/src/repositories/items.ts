@@ -5,7 +5,9 @@ import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-export type CreateItemData = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>
+export type CreateItemData = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & {
+	id?: string
+}
 
 export class ItemsRepository extends BaseRepository {
 	private getCacheKey(splitId: string, suffix: string = 'items'): string {

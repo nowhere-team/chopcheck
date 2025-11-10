@@ -1,6 +1,5 @@
 <script lang="ts">
 	import twemoji from '@twemoji/api'
-	import { onMount } from 'svelte'
 
 	interface Props {
 		emoji: string
@@ -11,8 +10,11 @@
 
 	let container: HTMLSpanElement
 
-	onMount(() => {
-		if (container) {
+	$effect(() => {
+		if (container && emoji) {
+			// eslint-disable-next-line svelte/no-dom-manipulating
+			container.textContent = emoji
+
 			twemoji.parse(container, {
 				folder: 'svg',
 				ext: '.svg'
@@ -21,7 +23,6 @@
 			const img = container.querySelector('img')
 			if (img) {
 				img.style.width = `${size}px`
-				// img.style.height = `${size}px`
 			}
 		}
 	})
@@ -31,7 +32,6 @@
 	{emoji}
 </span>
 
-<!--suppress CssUnusedSymbol -->
 <style>
 	.emoji-container {
 		display: inline-flex;
@@ -39,6 +39,7 @@
 		justify-content: center;
 	}
 
+	/*noinspection CssUnusedSymbol*/
 	.emoji-container :global(img.emoji) {
 		display: inline-block;
 		margin: 0;

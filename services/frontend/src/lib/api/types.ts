@@ -125,3 +125,10 @@ export interface MySplitsResponse {
 		hasMore: boolean
 	}
 }
+
+export interface DraftSplitDto {
+	id?: string
+	name: string
+	icon?: string
+	currency: string
+}

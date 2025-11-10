@@ -49,7 +49,7 @@
 <style>
 	.section {
 		border-radius: var(--radius-default);
-		background: var(--color-bg-surface);
+		background: var(--color-bg-page);
 	}
 
 	.header {

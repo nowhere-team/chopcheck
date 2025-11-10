@@ -1,17 +1,18 @@
 import { Hono } from 'hono'
 
 import { auth } from '@/http/middleware/auth'
+import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
+import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
 
 import { createAddItemsRoute } from './add-items'
 import { createCreateSplitRoute } from './create'
+import { createDraftRoute } from './draft'
 import { createGetSplitRoute } from './get'
 import { createJoinRoute } from './join'
 import { createMyParticipationRoute } from './my-participation'
 import { createMySplitsRoute } from './my-splits'
 import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
-import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
-import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
 
 function createPrivateSplitsRoutes() {
 	return new Hono()
@@ -25,6 +26,7 @@ function createPrivateSplitsRoutes() {
 		.route('/', createSelectItemsRoute())
 		.route('/', createDeleteItemRoute())
 		.route('/', createUpdateItemRoute())
+		.route('/', createDraftRoute())
 }
 
 function createPublicSplitsRoutes() {

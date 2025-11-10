@@ -56,7 +56,7 @@
 		right: 0;
 		background: var(--color-bg-surface);
 		border-top: 1px solid var(--color-border-default);
-		z-index: 100;
+		z-index: 1000;
 		padding-bottom: max(var(--tg-inset-bottom), 8px);
 	}
 
