@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 
+import { NotFoundError } from '@/common/errors'
 import { uuidParam } from '@/http/utils'
 
 export function createMyParticipationRoute() {
@@ -8,8 +9,12 @@ export function createMyParticipationRoute() {
 		const services = c.get('services')
 		const splitId = c.req.param('id')
 
-		const splits = await services.splits.getMyParticipation(splitId, authContext.userId)
+		const participation = await services.splits.getMyParticipation(splitId, authContext.userId)
 
-		return c.json({ splits })
+		if (!participation) {
+			throw new NotFoundError('you are not a participant of this split')
+		}
+
+		return c.json(participation)
 	})
 }

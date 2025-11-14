@@ -15,3 +15,7 @@ export type ParticipantWithUser = Participant & {
 export type ParticipantWithSelections = ParticipantWithUser & {
 	itemParticipations: ParticipantItem[]
 }
+
+export type AnonymizedParticipant = Omit<Participant, 'userId'> & {
+	user: null
+}
