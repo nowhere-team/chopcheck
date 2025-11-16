@@ -32,12 +32,10 @@
 			<Button size="sm" variant="secondary" onclick={onOpenScanMenu}>
 				{m.create_split_scan_button()}
 			</Button>
-			<Button
-				size="sm"
-				variant="primary"
-				onclick={onAddItem}
-				iconLeft={() => Plus({ size: 20, weight: 'bold' })}
-			>
+			<Button size="sm" variant="primary" onclick={onAddItem}>
+				{#snippet iconLeft()}
+					<Plus size={20} weight="bold" />
+				{/snippet}
 				{m.create_split_add_item_button()}
 			</Button>
 		</div>

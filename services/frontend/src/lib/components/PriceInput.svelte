@@ -14,6 +14,7 @@
 	const draft = getDraftContext()
 
 	let displayValue = $state(formatPriceInput(value))
+	let isFocused = $state(false)
 
 	const currencySymbols: Record<string, string> = {
 		RUB: '₽',
@@ -25,7 +26,11 @@
 		const target = e.target as HTMLInputElement
 		let inputValue = target.value
 
-		inputValue = inputValue.replace(/[^\d,]/g, '')
+		// Разрешаем цифры, запятую и точку
+		inputValue = inputValue.replace(/[^\d.,]/g, '')
+
+		// Заменяем точку на запятую для единообразия
+		inputValue = inputValue.replace(/\./g, ',')
 
 		const parts = inputValue.split(',')
 		if (parts.length > 2) {
@@ -39,12 +44,22 @@
 		value = parsePrice(inputValue)
 	}
 
+	function handleFocus() {
+		isFocused = true
+		// При фокусе показываем чистое значение без форматирования
+		if (value === 0) {
+			displayValue = ''
+		}
+	}
+
 	function handleBlur() {
+		isFocused = false
 		displayValue = formatPriceInput(value)
 	}
 
+	// Обновляем displayValue только когда поле не в фокусе
 	$effect(() => {
-		if (document.activeElement?.id !== `price-input-${Math.random()}`) {
+		if (!isFocused) {
 			displayValue = formatPriceInput(value)
 		}
 	})
@@ -54,9 +69,11 @@
 	{label}
 	value={displayValue}
 	oninput={handleInput}
+	onfocus={handleFocus}
 	onblur={handleBlur}
 	suffix={currencySymbols[draft.split.currency] || draft.split.currency}
 	{error}
 	inputmode="decimal"
+	pattern="[0-9.,]*"
 	placeholder="0,00"
 />
