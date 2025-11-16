@@ -102,6 +102,7 @@
 	.split-card {
 		width: 100%;
 		display: flex;
+		align-items: center;
 		gap: var(--spacing-3-m);
 		padding: var(--spacing-4-m);
 		background: var(--color-bg-surface);

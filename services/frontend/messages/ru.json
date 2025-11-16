@@ -57,9 +57,51 @@
 
   "create_split_title": "Создать сплит",
   "create_split_name_label": "Название",
+  "create_split_icon_label": "Иконка",
+  "create_split_participants_label": "Участники",
   "create_split_name_placeholder": "Ужин в ресторане",
   "create_split_currency_label": "Валюта",
   "create_split_error": "Не удалось создать сплит",
+
+  "create_split_positions_title": "Позиции",
+  "create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
+
+  "create_split_button": "Создать сплит",
+  "create_split_add_item_button": "Добавить",
+  "create_split_scan_button": "Отсканировать",
+  "create_split_scan_upload_button": "Загрузить фото",
+  "create_split_scan_qr_button": "Отсканировать QR-код",
+
+  "emoji_picker_label": "Выбор иконки",
+  "emoji_picker_food_category": "Еда",
+  "emoji_picker_drinks_category": "Напитки",
+  "emoji_picker_activities_category": "Развлечения",
+  "emoji_picker_travel_category": "Транспорт",
+  "emoji_picker_objects_category": "Предметы",
+  "emoji_picker_symbols_category": "Символы",
+
+  "split_participants_label": "Участники сплита",
+
+  "item_name_label": "Название",
+  "item_name_placeholder": "Введите название",
+  "item_price_label": "Цена",
+  "item_icon_label": "Иконка",
+  "item_division_method_label": "Способ деления",
+  "item_delete_button": "Удалить позицию",
+
+  "division_method_equal": "Поровну",
+  "division_method_equal_desc": "Каждый платит одинаково",
+  "division_method_shares": "По долям",
+  "division_method_shares_desc": "Распределить по частям",
+  "division_method_proportional": "Пропорционально",
+  "division_method_proportional_desc": "По отношению к общей сумме",
+  "division_method_fixed": "Фиксировано",
+  "division_method_fixed_desc": "Конкретная сумма для каждого",
+  "division_method_custom": "Вручную",
+  "division_method_custom_desc": "Указать суммы для каждого",
+
+  "action_save": "сохранить",
+  "action_cancel": "отменить",
 
   "quantity_label": "Количество",
   "quantity_unit": "шт",
