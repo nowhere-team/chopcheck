@@ -1,10 +1,12 @@
-import { ForbiddenError, NotFoundError } from '@/common/errors'
+import { ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
 import type {
+	AddPaymentMethodToSplitDto,
 	Calculations,
 	CreateSplitDto,
 	Item,
 	Participant,
 	ParticipantCalculationData,
+	PaymentMethods,
 	Split,
 	SplitData,
 	SplitResponse,
@@ -13,6 +15,7 @@ import type {
 import type { Logger } from '@/platform/logger'
 import type { ItemsRepository } from '@/repositories/items'
 import type { ParticipantsRepository } from '@/repositories/participants'
+import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
 import type { SplitsRepository } from '@/repositories/splits'
 import type { StatsRepository } from '@/repositories/stats'
 import { CalculationService } from '@/services/calculation'
@@ -22,6 +25,7 @@ export class SplitsService {
 		private splitsRepo: SplitsRepository,
 		private itemsRepo: ItemsRepository,
 		private participantsRepo: ParticipantsRepository,
+		private paymentMethodsRepo: PaymentMethodsRepository,
 		private statsRepo: StatsRepository,
 		private calcService: CalculationService,
 		private logger: Logger,
@@ -358,6 +362,68 @@ export class SplitsService {
 		return result
 	}
 
+	async getSplitPaymentMethods(splitId: string, userId: string): Promise<PaymentMethods[]> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		const methods = await this.paymentMethodsRepo.findBySplitId(splitId)
+
+		this.logger.debug('fetched split payment methods', {
+			splitId,
+			userId,
+			count: methods.length,
+		})
+
+		return methods
+	}
+
+	async addPaymentMethodToSplit(splitId: string, userId: string, dto: AddPaymentMethodToSplitDto): Promise<void> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ValidationError('only split owner can add payment methods')
+		}
+
+		const paymentMethod = await this.paymentMethodsRepo.findById(dto.paymentMethodId)
+		if (!paymentMethod) {
+			throw new NotFoundError('payment method not found')
+		}
+
+		if (paymentMethod.userId !== userId) {
+			throw new ValidationError('you can only add your own payment methods')
+		}
+
+		await this.paymentMethodsRepo.addToSplit(splitId, dto.paymentMethodId, dto.isPreferred || false)
+
+		this.logger.info('payment method added to split', {
+			splitId,
+			userId,
+			paymentMethodId: dto.paymentMethodId,
+		})
+	}
+	async removePaymentMethodFromSplit(splitId: string, paymentMethodId: string, userId: string): Promise<void> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ValidationError('only split owner can remove payment methods')
+		}
+
+		await this.paymentMethodsRepo.removeFromSplit(splitId, paymentMethodId)
+
+		this.logger.info('payment method removed from split', {
+			splitId,
+			userId,
+			paymentMethodId,
+		})
+	}
 	async getMyParticipation(
 		splitId: string,
 		userId: string,
