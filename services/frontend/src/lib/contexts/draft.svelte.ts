@@ -2,6 +2,7 @@ import { getContext, setContext } from 'svelte'
 
 import { getMyDraft, saveDraft } from '$api/drafts'
 import type { Split } from '$api/types'
+import { m } from '$lib/i18n'
 import { getPersistedStorage } from '$lib/storage/persisted'
 import type { DraftItem, DraftSplit } from '$lib/types/draft'
 
@@ -97,7 +98,7 @@ export function setDraftContext() {
 				split = { ...defaultDraft }
 			}
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'не удалось загрузить драфт'
+			error = err instanceof Error ? err.message : m.error_draft_load_failed()
 			console.error('failed to load draft:', err)
 		} finally {
 			isLoading = false
@@ -139,7 +140,7 @@ export function setDraftContext() {
 
 			await syncToStorage()
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'не удалось сохранить драфт'
+			error = err instanceof Error ? err.message : m.error_draft_save_failed()
 			console.error('failed to save draft:', err)
 		} finally {
 			isSaving = false
@@ -190,17 +191,17 @@ export function setDraftContext() {
 
 	async function publish(): Promise<string> {
 		if (!split.name?.trim()) {
-			throw new Error('название сплита не может быть пустым')
+			throw new Error(m.error_split_name_empty())
 		}
 
 		if (split.items.length === 0) {
-			throw new Error('добавьте хотя бы одну позицию')
+			throw new Error(m.error_split_no_items())
 		}
 
 		await save()
 
 		if (!split.id) {
-			throw new Error('не удалось сохранить сплит')
+			throw new Error(m.error_split_save_failed())
 		}
 
 		return split.id

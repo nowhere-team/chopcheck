@@ -83,16 +83,23 @@
 			bind:value={item.defaultDivisionMethod}
 		/>
 
+		<button class="emoji-trigger" onclick={() => (showEmojiPicker = true)} type="button">
+			<span class="label">{m.item_icon_label()}</span>
+			<span class="emoji-preview">{item.icon || '🍽️'}</span>
+		</button>
+
 		{#if showEmojiPicker}
-			<div class="emoji-section">
-				<span class="label">{m.item_icon_label()}</span>
-				<EmojiPicker selected={item.icon} onselect={handleSelectEmoji} />
+			<div class="emoji-overlay" onclick={() => (showEmojiPicker = false)}>
+				<div class="emoji-modal" onclick={(e) => e.stopPropagation()}>
+					<div class="emoji-modal-header">
+						<span>{m.item_icon_label()}</span>
+						<button class="close-button" onclick={() => (showEmojiPicker = false)} type="button">
+							✕
+						</button>
+					</div>
+					<EmojiPicker selected={item.icon} onselect={handleSelectEmoji} />
+				</div>
 			</div>
-		{:else}
-			<button class="emoji-trigger" onclick={() => (showEmojiPicker = true)} type="button">
-				<span class="label">{m.item_icon_label()}</span>
-				<span class="emoji-preview">{item.icon || '🍽️'}</span>
-			</button>
 		{/if}
 	</div>
 
@@ -149,13 +156,61 @@
 	}
 
 	.emoji-preview {
-		font-size: 24px;
+		font-size: 28px;
 	}
 
-	.emoji-section {
+	.emoji-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 2000;
 		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-3-m);
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-4-m);
+	}
+
+	.emoji-modal {
+		background: var(--color-bg-surface);
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--color-border-default);
+		max-width: 480px;
+		width: 100%;
+		max-height: 80vh;
+		overflow-y: auto;
+		padding: var(--spacing-4-m);
+	}
+
+	.emoji-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-4-m);
+		font-size: var(--text-lg);
+		font-weight: var(--font-semibold);
+		color: var(--color-text-primary);
+	}
+
+	.close-button {
+		all: unset;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--radius-default);
+		cursor: pointer;
+		color: var(--color-text-secondary);
+		transition: all 150ms;
+	}
+
+	.close-button:hover {
+		background: var(--color-bg-surface-secondary);
+		color: var(--color-text-primary);
+	}
+
+	.close-button:active {
+		transform: scale(0.95);
 	}
 
 	.actions {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Input from '$components/Input.svelte'
+	import { getDraftContext } from '$lib/contexts/draft.svelte'
 	import { formatPriceInput, parsePrice } from '$lib/utils/price'
 
 	interface Props {
@@ -10,7 +11,15 @@
 
 	let { label, value = $bindable(0), error }: Props = $props()
 
+	const draft = getDraftContext()
+
 	let displayValue = $state(formatPriceInput(value))
+
+	const currencySymbols: Record<string, string> = {
+		RUB: '₽',
+		USD: '$',
+		EUR: '€'
+	}
 
 	function handleInput(e: Event) {
 		const target = e.target as HTMLInputElement
@@ -46,7 +55,7 @@
 	value={displayValue}
 	oninput={handleInput}
 	onblur={handleBlur}
-	suffix="₽"
+	suffix={currencySymbols[draft.split.currency] || draft.split.currency}
 	{error}
 	inputmode="decimal"
 	placeholder="0,00"

@@ -55,10 +55,15 @@ export interface SplitItem {
 
 export interface Participant {
 	id: string
-	userId: string
-	displayName: string
-	avatarUrl?: string
+	userId: string | null
+	displayName?: string | null
 	joinedAt: string
+	user: {
+		id: string
+		displayName: string
+		username?: string
+		avatarUrl?: string
+	} | null
 }
 
 export interface ItemSelection {
@@ -75,6 +80,12 @@ export interface MyParticipation {
 
 export interface MySplitsResponse {
 	splits: Split[]
+}
+
+export interface SplitResponse {
+	split: Split
+	items: SplitItem[]
+	participants: Participant[]
 }
 
 export interface CreateSplitDto {

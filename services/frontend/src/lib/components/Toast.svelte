@@ -49,8 +49,8 @@
 		border: 1px solid var(--color-border-default);
 		border-radius: var(--radius-default);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		min-width: 300px;
-		max-width: 500px;
+		width: 90vw;
+		max-width: 600px;
 	}
 
 	.toast.success {
@@ -85,7 +85,7 @@
 
 	.toast-message {
 		flex: 1;
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--color-text-primary);
 	}
 

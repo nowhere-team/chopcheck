@@ -11,6 +11,8 @@
 	import Emoji from '$components/Emoji.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import ItemEditForm from '$components/ItemEditForm.svelte'
+	import ParticipantsCompact from '$components/ParticipantsCompact.svelte'
+	import ParticipantsSheet from '$components/ParticipantsSheet.svelte'
 	import SettingItem from '$components/SettingItem.svelte'
 	import { getDraftContext, setDraftContext } from '$lib/contexts/draft.svelte'
 	import { getToastContext } from '$lib/contexts/toast.svelte'
@@ -112,12 +114,12 @@
 			const splitId = await draft.publish()
 			await draft.clear()
 			haptic.success()
-			toast.success('сплит создан')
+			toast.success(m.success_split_created())
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			await goto(`/split/${splitId}`)
 		} catch (error) {
 			haptic.error()
-			const message = error instanceof Error ? error.message : 'не удалось создать сплит'
+			const message = error instanceof Error ? error.message : m.error_split_create_failed()
 			toast.error(message)
 		}
 	}
@@ -152,8 +154,12 @@
 			label={m.create_split_participants_label()}
 			sheetTitle={m.split_participants_label()}
 		>
+			{#snippet value()}
+				<ParticipantsCompact participants={[]} />
+			{/snippet}
+
 			{#snippet sheet()}
-				<p>участники - заглушка</p>
+				<ParticipantsSheet participants={[]} />
 			{/snippet}
 		</SettingItem>
 	</div>
@@ -388,21 +394,7 @@
 		height: 56px;
 		border-radius: var(--radius-default);
 		flex-shrink: 0;
-	}
-
-	.scan-option-icon.qr {
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		color: white;
-	}
-
-	.scan-option-icon.photo {
-		background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-		color: white;
-	}
-
-	.scan-option-icon.upload {
-		background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-		color: white;
+		color: var(--color-button-primary-bg);
 	}
 
 	.scan-option-content {

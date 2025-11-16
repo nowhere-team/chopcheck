@@ -43,6 +43,13 @@
   "division_method_shares": "По долям",
   "division_method_shares_desc": "Распределить по частям",
 
+  "error_draft_load_failed": "не удалось загрузить драфт",
+  "error_draft_save_failed": "не удалось сохранить драфт",
+  "error_split_create_failed": "не удалось создать сплит",
+  "error_split_name_empty": "название сплита не может быть пустым",
+  "error_split_no_items": "добавьте хотя бы одну позицию",
+  "error_split_save_failed": "не удалось сохранить сплит",
+
   "emoji_picker_activities_category": "Развлечения",
   "emoji_picker_drinks_category": "Напитки",
   "emoji_picker_food_category": "Еда",
@@ -57,7 +64,7 @@
 
   "error_generic": "Ошибка",
 
-  "item_delete_button": "Удалить позицию",
+  "item_delete_button": "удалить позицию",
   "item_division_method_label": "Способ деления",
   "item_icon_label": "Иконка",
   "item_name_label": "Название",
@@ -67,6 +74,10 @@
   "loading": "Загрузка...",
 
   "not_available_in_telegram": "Приложение доступно только в Telegram",
+
+  "participants_add_button": "добавить участника",
+  "participants_empty": "Участники будут добавлены автоматически при присоединении к сплиту",
+  "participants_kick_button": "исключить",
 
   "quantity_label": "Количество",
   "quantity_per_portion": "поштучно",
@@ -106,5 +117,7 @@
 
   "stats_loading_error": "Не удалось загрузить статистику",
   "stats_monthly_spent": "Разделено за месяц",
-  "stats_total_splits": "Всего сплитов"
+  "stats_total_splits": "Всего сплитов",
+
+  "success_split_created": "сплит создан"
 }
