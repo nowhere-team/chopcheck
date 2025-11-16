@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Camera, Plus, Upload } from 'phosphor-svelte'
+	import { Camera, Image, Plus, QrCode } from 'phosphor-svelte'
 	import { onMount } from 'svelte'
 
 	import { goto } from '$app/navigation'
@@ -16,6 +16,7 @@
 	import { getToastContext } from '$lib/contexts/toast.svelte'
 	import { m } from '$lib/i18n'
 	import type { DraftItem } from '$lib/types/draft'
+	import { formatPrice } from '$lib/utils/price'
 	import { haptic } from '$telegram/haptic'
 
 	setDraftContext()
@@ -89,17 +90,17 @@
 		haptic.soft()
 	}
 
-	function handleUploadPhoto() {
+	function handleScanQR() {
 		isScanMenuOpen = false
 		haptic.soft()
 	}
 
-	// function handleQRCode() {
-	// 	isScanMenuOpen = false
-	// 	haptic.soft()
-	// }
-
 	function handleTakePhoto() {
+		isScanMenuOpen = false
+		haptic.soft()
+	}
+
+	function handleUploadPhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
 	}
@@ -173,11 +174,11 @@
 								<span class="item-name">{item.name}</span>
 								<span class="item-meta">
 									{item.quantity}
-									{m.quantity_unit()} · {item.price.toLocaleString('ru-RU')} ₽
+									{m.quantity_unit()} · {formatPrice(item.price)} ₽
 								</span>
 							</div>
 							<div class="item-price">
-								{item.price.toLocaleString('ru-RU')} ₽
+								{formatPrice(item.price)} ₽
 							</div>
 						</div>
 					</Box>
@@ -220,20 +221,39 @@
 	/>
 </BottomSheet>
 
-<BottomSheet height={40} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
+<BottomSheet height={60} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
 	<div class="scan-menu">
-		<Button variant="secondary" size="lg" onclick={handleTakePhoto}>
-			{#snippet iconLeft()}
-				<Camera size={24} />
-			{/snippet}
-			{m.create_split_scan_qr_button()}
-		</Button>
-		<Button variant="secondary" size="lg" onclick={handleUploadPhoto}>
-			{#snippet iconLeft()}
-				<Upload size={24} />
-			{/snippet}
-			{m.create_split_scan_upload_button()}
-		</Button>
+		<h3 class="scan-menu-title">{m.create_split_scan_menu_title()}</h3>
+
+		<button class="scan-option" onclick={handleScanQR} type="button">
+			<div class="scan-option-icon qr">
+				<QrCode size={32} weight="bold" />
+			</div>
+			<div class="scan-option-content">
+				<span class="scan-option-title">{m.create_split_scan_qr_title()}</span>
+				<span class="scan-option-description">{m.create_split_scan_qr_description()}</span>
+			</div>
+		</button>
+
+		<button class="scan-option" onclick={handleTakePhoto} type="button">
+			<div class="scan-option-icon photo">
+				<Camera size={32} weight="bold" />
+			</div>
+			<div class="scan-option-content">
+				<span class="scan-option-title">{m.create_split_scan_photo_title()}</span>
+				<span class="scan-option-description">{m.create_split_scan_photo_description()}</span>
+			</div>
+		</button>
+
+		<button class="scan-option" onclick={handleUploadPhoto} type="button">
+			<div class="scan-option-icon upload">
+				<Image size={32} weight="bold" />
+			</div>
+			<div class="scan-option-content">
+				<span class="scan-option-title">{m.create_split_scan_upload_title()}</span>
+				<span class="scan-option-description">{m.create_split_scan_upload_description()}</span>
+			</div>
+		</button>
 	</div>
 </BottomSheet>
 
@@ -322,10 +342,86 @@
 		padding-bottom: var(--spacing-6-m);
 	}
 
+	.publish-section :global(button) {
+		width: 100%;
+	}
+
 	.scan-menu {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-3-m);
-		padding-top: var(--spacing-6-m);
+		gap: var(--spacing-4-m);
+		padding-top: var(--spacing-4-m);
+	}
+
+	.scan-menu-title {
+		font-size: var(--text-lg);
+		font-weight: var(--font-semibold);
+		color: var(--color-text-primary);
+		text-align: center;
+		margin-bottom: var(--spacing-2-m);
+	}
+
+	.scan-option {
+		all: unset;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-4-m);
+		padding: var(--spacing-4-m);
+		background: var(--color-bg-surface-secondary);
+		border: 1px solid var(--color-border-default);
+		border-radius: var(--radius-default);
+		cursor: pointer;
+		transition: all 150ms;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.scan-option:active {
+		transform: scale(0.98);
+		background: var(--color-bg-surface-selected);
+	}
+
+	.scan-option-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 56px;
+		height: 56px;
+		border-radius: var(--radius-default);
+		flex-shrink: 0;
+	}
+
+	.scan-option-icon.qr {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+	}
+
+	.scan-option-icon.photo {
+		background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+		color: white;
+	}
+
+	.scan-option-icon.upload {
+		background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+		color: white;
+	}
+
+	.scan-option-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-m);
+		flex: 1;
+		text-align: left;
+	}
+
+	.scan-option-title {
+		font-size: var(--text-base);
+		font-weight: var(--font-semibold);
+		color: var(--color-text-primary);
+	}
+
+	.scan-option-description {
+		font-size: var(--text-sm);
+		color: var(--color-text-secondary);
+		line-height: 1.4;
 	}
 </style>

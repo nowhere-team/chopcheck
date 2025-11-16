@@ -58,6 +58,7 @@
 		border-top: 1px solid var(--color-border-default);
 		z-index: 1000;
 		padding-bottom: max(var(--tg-inset-bottom), 8px);
+		view-transition-name: navbar;
 	}
 
 	.navbar-content {

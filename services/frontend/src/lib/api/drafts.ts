@@ -32,7 +32,9 @@ export async function saveDraft(data: {
 	if (data.id) {
 		return await api.patch<Split>(`splits/${data.id}`, {
 			name: data.name,
-			currency: data.currency
+			icon: data.icon,
+			currency: data.currency,
+			items: data.items
 		})
 	}
 

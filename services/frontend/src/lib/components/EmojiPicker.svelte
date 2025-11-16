@@ -45,7 +45,7 @@
 						onclick={() => handleSelect(emoji)}
 						type="button"
 					>
-						<Emoji {emoji} size={32} />
+						<Emoji {emoji} size={24} />
 					</button>
 				{/each}
 			</div>
@@ -69,8 +69,8 @@
 
 	.emojis {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-		gap: var(--spacing-2-m);
+		grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+		gap: var(--spacing-m);
 	}
 
 	.emoji-btn {
@@ -78,8 +78,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 48px;
-		height: 48px;
+		width: 40px;
+		height: 40px;
 		border-radius: var(--radius-default);
 		cursor: pointer;
 		transition: all 150ms;

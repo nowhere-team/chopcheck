@@ -189,10 +189,18 @@ export function setDraftContext() {
 	}
 
 	async function publish(): Promise<string> {
+		if (!split.name?.trim()) {
+			throw new Error('название сплита не может быть пустым')
+		}
+
+		if (split.items.length === 0) {
+			throw new Error('добавьте хотя бы одну позицию')
+		}
+
 		await save()
 
 		if (!split.id) {
-			throw new Error('draft must be saved before publishing')
+			throw new Error('не удалось сохранить сплит')
 		}
 
 		return split.id

@@ -3,6 +3,7 @@
 	import Delimiter from '$components/Delimiter.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import Input from '$components/Input.svelte'
+	import PriceInput from '$components/PriceInput.svelte'
 	import Select from '$components/Select.svelte'
 	import { m } from '$lib/i18n'
 
@@ -10,7 +11,7 @@
 		name: string
 		price: number
 		quantity: string
-		defaultDivisionMethod: 'equal' | 'shares' | 'proportional' | 'fixed' | 'custom'
+		defaultDivisionMethod: 'equal' | 'shares' | 'custom'
 		icon?: string
 	}
 
@@ -33,16 +34,6 @@
 			value: 'shares',
 			label: m.division_method_shares(),
 			description: m.division_method_shares_desc()
-		},
-		{
-			value: 'proportional',
-			label: m.division_method_proportional(),
-			description: m.division_method_proportional_desc()
-		},
-		{
-			value: 'fixed',
-			label: m.division_method_fixed(),
-			description: m.division_method_fixed_desc()
 		},
 		{
 			value: 'custom',
@@ -83,14 +74,7 @@
 				min="0.01"
 				step="0.01"
 			/>
-			<Input
-				label={m.item_price_label()}
-				type="number"
-				bind:value={item.price}
-				suffix="₽"
-				min="0.01"
-				step="0.01"
-			/>
+			<PriceInput label={m.item_price_label()} bind:value={item.price} />
 		</div>
 
 		<Select
@@ -165,7 +149,7 @@
 	}
 
 	.emoji-preview {
-		font-size: 28px;
+		font-size: 24px;
 	}
 
 	.emoji-section {

@@ -74,6 +74,11 @@
 	}
 }
 
+::view-transition-old(navbar),
+::view-transition-new(navbar) {
+	animation: none;
+	z-index: 1000;
+}
 
 @keyframes shake {
     0%,
