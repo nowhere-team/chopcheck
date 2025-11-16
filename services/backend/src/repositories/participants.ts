@@ -52,16 +52,14 @@ export class ParticipantsRepository extends BaseRepository {
 		return participants || null
 	}
 
-	async join(splitId: string, userId: string | null, displayName?: string): Promise<Participant> {
-		// For authenticated users, check if they already joined
-		if (userId) {
-			const existing = await this.findByUserAndSplit(userId, splitId)
-			if (existing) {
-				return existing
-			}
+	async join(splitId: string, userId: string, displayName?: string, isAnonymous: boolean = false): Promise<Participant> {
+		// Check if user already joined
+		const existing = await this.findByUserAndSplit(userId, splitId)
+		if (existing) {
+			return existing
 		}
 
-		// For anonymous users or new authenticated users, create new participant
+		// Create new participant
 		const [participant] = await this.db
 			.insert(schema.splitParticipants)
 			.values({
@@ -70,6 +68,7 @@ export class ParticipantsRepository extends BaseRepository {
 				displayName,
 				isReady: false,
 				hasPaid: false,
+				isAnonymous,
 			})
 			.returning()
 

@@ -175,9 +175,9 @@ export class SplitsService {
 
 	async join(
 		splitId: string,
-		userId: string | null,
+		userId: string,
 		displayName?: string,
-		isAnonymous?: boolean,
+		isAnonymous: boolean = false,
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
@@ -191,17 +191,9 @@ export class SplitsService {
 			}
 		}
 
-		// Generate displayName for anonymous users if not provided
-		let finalDisplayName = displayName
-		if (isAnonymous && !finalDisplayName) {
-			const currentParticipants = await this.participantsRepo.findBySplitId(splitId)
-			const anonymousCount = currentParticipants.filter(p => !p.userId).length
-			finalDisplayName = `Guest ${anonymousCount + 1}`
-		}
+		await this.participantsRepo.join(splitId, userId, displayName, isAnonymous)
 
-		await this.participantsRepo.join(splitId, userId, finalDisplayName)
-
-		this.logger.info('user joined split', { splitId, userId, isAnonymous, displayName: finalDisplayName })
+		this.logger.info('user joined split', { splitId, userId, isAnonymous, displayName })
 
 		const result = await this.getById(splitId, false)
 		if (!result) {

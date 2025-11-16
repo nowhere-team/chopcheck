@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { uuidParam, validate } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
 
 const joinQuerySchema = z.object({
 	anonymous: z
@@ -13,16 +13,14 @@ const joinQuerySchema = z.object({
 
 export function createJoinRoute() {
 	return new Hono().get('/:id/join', uuidParam('id'), validate('query', joinQuerySchema), async c => {
-		const authContext = c.get('authContext')
+		const authContext = c.get('authContext')!
 		const services = c.get('services')
 		const splitId = c.req.param('id')
 		const { anonymous, displayName } = c.req.valid('query')
 
-		// If user is not authenticated OR explicitly requested anonymous join
-		const isAnonymous = !authContext || anonymous
+		const split = await services.splits.join(splitId, authContext.userId, displayName, anonymous || false)
 
-		const split = await services.splits.join(splitId, isAnonymous ? null : authContext.userId, displayName, isAnonymous)
-
-		return c.json(split)
+		// Anonymize participants in response
+		return c.json(anonymizeSplitResponse(split))
 	})
 }

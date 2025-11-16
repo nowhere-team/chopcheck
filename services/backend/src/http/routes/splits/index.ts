@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import { auth, optionalAuth } from '@/http/middleware/auth'
+import { auth } from '@/http/middleware/auth'
 
 import { createAddItemsRoute } from './add-items'
 import { createCreateSplitRoute } from './create'
@@ -20,10 +20,12 @@ function createPrivateSplitsRoutes() {
 	return new Hono()
 		.use('/*', auth())
 		.route('/', createMySplitsRoute())
+		.route('/', createJoinRoute())
 		.route('/', createMyParticipationRoute())
 		.route('/', createCreateSplitRoute())
 		.route('/', createUpdateSplitRoute())
 		.route('/', createAddItemsRoute())
+		.route('/', createSelectItemsRoute())
 		.route('/', createDeleteItemRoute())
 		.route('/', createUpdateItemRoute())
 		.route('/', createListSplitPaymentMethodsRoute())
@@ -35,16 +37,6 @@ function createPublicSplitsRoutes() {
 	return new Hono().route('/', createGetSplitRoute())
 }
 
-function createMixedAuthSplitsRoutes() {
-	return new Hono()
-		.use('/*', optionalAuth())
-		.route('/', createJoinRoute())
-		.route('/', createSelectItemsRoute())
-}
-
 export function createSplitsRoutes() {
-	return new Hono()
-		.route('/', createPrivateSplitsRoutes())
-		.route('/', createMixedAuthSplitsRoutes())
-		.route('/', createPublicSplitsRoutes())
+	return new Hono().route('/', createPrivateSplitsRoutes()).route('/', createPublicSplitsRoutes())
 }

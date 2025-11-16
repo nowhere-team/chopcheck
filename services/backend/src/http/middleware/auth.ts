@@ -24,28 +24,6 @@ export function auth(): MiddlewareHandler {
 	}
 }
 
-export function optionalAuth(): MiddlewareHandler {
-	return async (c, next) => {
-		const auth = c.get('auth')
-		const logger = c.get('logger')
-
-		try {
-			const authHeader = c.req.header('authorization')
-			const token = auth.extractTokenFromHeader(authHeader)
-			const authContext = await auth.validateToken(token)
-
-			logger.debug('user authenticated', { userId: authContext.userId, tokenId: authContext.tokenId })
-
-			c.set('authContext', authContext)
-		} catch (error) {
-			logger.debug('no authentication provided, allowing anonymous access', { error })
-			// Don't set authContext, allowing anonymous access
-		}
-
-		await next()
-	}
-}
-
 export function requirePermission(permission: string): MiddlewareHandler {
 	return async (c, next) => {
 		const authContext = c.get('authContext')
