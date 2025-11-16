@@ -4,8 +4,8 @@
 	import { goto } from '$app/navigation'
 	import Button from '$components/Button.svelte'
 	import CollapsibleSection from '$components/CollapsibleSection.svelte'
-	import Spinner from '$components/Spinner.svelte'
 	import SplitCard from '$components/SplitCard.svelte'
+	import SplitCardSkeleton from '$components/SplitCardSkeleton.svelte'
 	import { getSplitsHistoryContext } from '$lib/contexts/splits-history.svelte'
 	import { m } from '$lib/i18n'
 
@@ -37,8 +37,10 @@
 	<h1 class="title">{m.app_title_history()}</h1>
 
 	{#if history.isLoading}
-		<div class="loading">
-			<Spinner size="lg" />
+		<div class="sections">
+			<div class="splits-list">
+				<SplitCardSkeleton count={5} />
+			</div>
 		</div>
 	{:else if history.error}
 		<div class="error">
@@ -104,7 +106,6 @@
 </div>
 
 <style>
-	.loading,
 	.error {
 		display: flex;
 		justify-content: center;

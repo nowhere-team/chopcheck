@@ -3,8 +3,9 @@
 
 	import { goto } from '$app/navigation'
 	import CollapsibleSection from '$components/CollapsibleSection.svelte'
-	import Spinner from '$components/Spinner.svelte'
+	import Skeleton from '$components/Skeleton.svelte'
 	import SplitCard from '$components/SplitCard.svelte'
+	import SplitCardSkeleton from '$components/SplitCardSkeleton.svelte'
 	import StatisticsBox from '$components/StatisticsBox.svelte'
 	import { getActiveSplitsContext } from '$lib/contexts/active-splits.svelte'
 	import { getStatsContext } from '$lib/contexts/stats.svelte'
@@ -28,8 +29,15 @@
 	<h1 class="title">{m.app_title_home()}</h1>
 
 	{#if stats.isLoading && !stats.data}
-		<div class="stats-loading">
-			<Spinner size="md" />
+		<div class="stats">
+			<div class="stat-skeleton">
+				<Skeleton height="14px" width="120px" />
+				<Skeleton height="24px" width="60px" />
+			</div>
+			<div class="stat-skeleton">
+				<Skeleton height="14px" width="140px" />
+				<Skeleton height="24px" width="80px" />
+			</div>
 		</div>
 	{:else if stats.error}
 		<div class="stats-error">
@@ -47,8 +55,8 @@
 
 	<CollapsibleSection title={m.section_your_splits()} count={activeSplits.splits.length}>
 		{#if activeSplits.isLoading}
-			<div class="section-loading">
-				<Spinner size="sm" />
+			<div class="splits-list">
+				<SplitCardSkeleton count={3} />
 			</div>
 		{:else if activeSplits.error}
 			<p class="error">{activeSplits.error}</p>
@@ -71,9 +79,18 @@
 		gap: var(--spacing-2-m);
 	}
 
-	.stats-loading,
-	.stats-error,
-	.section-loading {
+	.stat-skeleton {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-2-m);
+		padding: var(--spacing-4-m);
+		background: var(--color-bg-surface);
+		border: 1px solid var(--color-border-default);
+		border-radius: var(--radius-default);
+	}
+
+	.stats-error {
 		display: flex;
 		justify-content: center;
 		padding: var(--spacing-6-m);
@@ -81,8 +98,6 @@
 
 	.error,
 	.empty {
-		/*text-align: center;*/
-		/*padding: var(--spacing-6-m);*/
 		color: var(--color-text-tertiary);
 	}
 

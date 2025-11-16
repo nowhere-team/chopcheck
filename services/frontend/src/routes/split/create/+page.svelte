@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Camera, Image, Plus, QrCode } from 'phosphor-svelte'
 	import { onMount } from 'svelte'
 
 	import { goto } from '$app/navigation'
@@ -11,14 +10,15 @@
 	import Emoji from '$components/Emoji.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import ItemEditForm from '$components/ItemEditForm.svelte'
+	import ItemsList from '$components/ItemsList.svelte'
 	import ParticipantsCompact from '$components/ParticipantsCompact.svelte'
 	import ParticipantsSheet from '$components/ParticipantsSheet.svelte'
+	import ScanMenu from '$components/ScanMenu.svelte'
 	import SettingItem from '$components/SettingItem.svelte'
 	import { getDraftContext, setDraftContext } from '$lib/contexts/draft.svelte'
 	import { getToastContext } from '$lib/contexts/toast.svelte'
 	import { m } from '$lib/i18n'
 	import type { DraftItem } from '$lib/types/draft'
-	import { formatPrice } from '$lib/utils/price'
 	import { haptic } from '$telegram/haptic'
 	import { qrScanner } from '@telegram-apps/sdk'
 
@@ -185,48 +185,13 @@
 
 	<Delimiter />
 
-	<div class="section">
-		<h2>{m.create_split_positions_title()}</h2>
-
-		{#if draft.split.items.length === 0}
-			<p class="hint">{m.create_split_positions_hint()}</p>
-		{:else}
-			<div class="items-list">
-				{#each draft.split.items as item, index (index)}
-					<Box interactive onclick={() => openEditItem(index)}>
-						<div class="item-row">
-							<div class="item-info">
-								<span class="item-name">{item.name}</span>
-								<span class="item-meta">
-									{item.quantity}
-									{m.quantity_unit()} · {formatPrice(item.price)} ₽
-								</span>
-							</div>
-							<div class="item-price">
-								{formatPrice(item.price)} ₽
-							</div>
-						</div>
-					</Box>
-				{/each}
-			</div>
-		{/if}
-
-		<div class="actions-row">
-			<Button variant="secondary" onclick={openScanMenu}>
-				{#snippet iconLeft()}
-					<Camera size={20} weight="bold" />
-				{/snippet}
-				{m.create_split_scan_button()}
-			</Button>
-
-			<Button variant="secondary" onclick={openAddItem}>
-				{#snippet iconLeft()}
-					<Plus size={20} weight="bold" />
-				{/snippet}
-				{m.create_split_add_item_button()}
-			</Button>
-		</div>
-	</div>
+	<ItemsList
+		items={draft.split.items}
+		currency={draft.split.currency}
+		onAddItem={openAddItem}
+		onEditItem={openEditItem}
+		onOpenScanMenu={openScanMenu}
+	/>
 
 	<Delimiter />
 
@@ -247,39 +212,7 @@
 </BottomSheet>
 
 <BottomSheet height={60} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
-	<div class="scan-menu">
-		<h3 class="scan-menu-title">{m.create_split_scan_menu_title()}</h3>
-
-		<button class="scan-option" onclick={handleScanQR} type="button">
-			<span class="scan-option-icon qr">
-				<QrCode size={32} weight="bold" />
-			</span>
-			<span class="scan-option-content">
-				<span class="scan-option-title">{m.create_split_scan_qr_title()}</span>
-				<span class="scan-option-description">{m.create_split_scan_qr_description()}</span>
-			</span>
-		</button>
-
-		<button class="scan-option" onclick={handleTakePhoto} type="button">
-			<span class="scan-option-icon photo">
-				<Camera size={32} weight="bold" />
-			</span>
-			<span class="scan-option-content">
-				<span class="scan-option-title">{m.create_split_scan_photo_title()}</span>
-				<span class="scan-option-description">{m.create_split_scan_photo_description()}</span>
-			</span>
-		</button>
-
-		<button class="scan-option" onclick={handleUploadPhoto} type="button">
-			<span class="scan-option-icon upload">
-				<Image size={32} weight="bold" />
-			</span>
-			<span class="scan-option-content">
-				<span class="scan-option-title">{m.create_split_scan_upload_title()}</span>
-				<span class="scan-option-description">{m.create_split_scan_upload_description()}</span>
-			</span>
-		</button>
-	</div>
+	<ScanMenu onScanQR={handleScanQR} onTakePhoto={handleTakePhoto} onUploadPhoto={handleUploadPhoto} />
 </BottomSheet>
 
 <style>
@@ -303,63 +236,6 @@
 		gap: var(--spacing-2-m);
 	}
 
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-4-m);
-	}
-
-	.hint {
-		color: var(--color-text-tertiary);
-		text-align: center;
-		padding: var(--spacing-4-m);
-	}
-
-	.items-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-2-m);
-	}
-
-	.item-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: var(--spacing-3-m);
-	}
-
-	.item-info {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-m);
-		flex: 1;
-		min-width: 0;
-	}
-
-	.item-name {
-		font-size: var(--text-base);
-		font-weight: var(--font-medium);
-		color: var(--color-text-primary);
-	}
-
-	.item-meta {
-		font-size: var(--text-sm);
-		color: var(--color-text-secondary);
-	}
-
-	.item-price {
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
-		color: var(--color-text-primary);
-		flex-shrink: 0;
-	}
-
-	.actions-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--spacing-3-m);
-	}
-
 	.publish-section {
 		display: flex;
 		justify-content: center;
@@ -369,70 +245,5 @@
 
 	.publish-section :global(button) {
 		width: 100%;
-	}
-
-	.scan-menu {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-4-m);
-		padding-top: var(--spacing-4-m);
-	}
-
-	.scan-menu-title {
-		font-size: var(--text-lg);
-		font-weight: var(--font-semibold);
-		color: var(--color-text-primary);
-		text-align: center;
-		margin-bottom: var(--spacing-2-m);
-	}
-
-	.scan-option {
-		all: unset;
-		display: flex;
-		align-items: center;
-		gap: var(--spacing-4-m);
-		padding: var(--spacing-4-m);
-		background: var(--color-bg-surface-secondary);
-		border: 1px solid var(--color-border-default);
-		border-radius: var(--radius-default);
-		cursor: pointer;
-		transition: all 150ms;
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.scan-option:active {
-		transform: scale(0.98);
-		background: var(--color-bg-surface-selected);
-	}
-
-	.scan-option-icon {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 56px;
-		height: 56px;
-		border-radius: var(--radius-default);
-		flex-shrink: 0;
-		color: var(--color-button-primary-bg);
-	}
-
-	.scan-option-content {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-m);
-		flex: 1;
-		text-align: left;
-	}
-
-	.scan-option-title {
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
-		color: var(--color-text-primary);
-	}
-
-	.scan-option-description {
-		font-size: var(--text-sm);
-		color: var(--color-text-secondary);
-		line-height: 1.4;
 	}
 </style>
