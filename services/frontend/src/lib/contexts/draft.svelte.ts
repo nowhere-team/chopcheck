@@ -74,7 +74,9 @@ export function setDraftContext() {
 
 			serverDraft = remoteDraft
 
-			if (remoteDraft) {
+			if (storedDraft) {
+				split = storedDraft
+			} else if (remoteDraft) {
 				split = {
 					id: remoteDraft.id,
 					name: remoteDraft.name,
@@ -91,8 +93,6 @@ export function setDraftContext() {
 						})) || [],
 					lastSyncedAt: remoteDraft.updatedAt
 				}
-			} else if (storedDraft) {
-				split = storedDraft
 			} else {
 				split = { ...defaultDraft }
 			}

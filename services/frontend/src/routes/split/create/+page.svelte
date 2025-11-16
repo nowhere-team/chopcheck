@@ -186,18 +186,18 @@
 		{/if}
 
 		<div class="actions-row">
-			<Button variant="secondary" onclick={openAddItem}>
-				{#snippet iconLeft()}
-					<Plus size={20} weight="bold" />
-				{/snippet}
-				добавить
-			</Button>
-
 			<Button variant="secondary" onclick={openScanMenu}>
 				{#snippet iconLeft()}
 					<Camera size={20} weight="bold" />
 				{/snippet}
-				отсканировать
+				{m.create_split_scan_button()}
+			</Button>
+
+			<Button variant="secondary" onclick={openAddItem}>
+				{#snippet iconLeft()}
+					<Plus size={20} weight="bold" />
+				{/snippet}
+				{m.create_split_add_item_button()}
 			</Button>
 		</div>
 	</div>
@@ -206,7 +206,7 @@
 
 	<div class="publish-section">
 		<Button variant="primary" size="lg" onclick={handlePublish} disabled={!canPublish}>
-			создать сплит
+			{m.create_split_button()}
 		</Button>
 	</div>
 </div>
@@ -222,18 +222,17 @@
 
 <BottomSheet height={40} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
 	<div class="scan-menu">
-		<Button variant="secondary" size="lg" onclick={handleUploadPhoto}>
-			{#snippet iconLeft()}
-				<Upload size={24} />
-			{/snippet}
-			загрузить фото
-		</Button>
-
 		<Button variant="secondary" size="lg" onclick={handleTakePhoto}>
 			{#snippet iconLeft()}
 				<Camera size={24} />
 			{/snippet}
-			сделать фото
+			{m.create_split_scan_qr_button()}
+		</Button>
+		<Button variant="secondary" size="lg" onclick={handleUploadPhoto}>
+			{#snippet iconLeft()}
+				<Upload size={24} />
+			{/snippet}
+			{m.create_split_scan_upload_button()}
 		</Button>
 	</div>
 </BottomSheet>
@@ -317,6 +316,9 @@
 	}
 
 	.publish-section {
+		display: flex;
+		justify-content: center;
+		align-items: center;
 		padding-bottom: var(--spacing-6-m);
 	}
 
@@ -324,5 +326,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-3-m);
+		padding-top: var(--spacing-6-m);
 	}
 </style>
