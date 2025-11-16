@@ -43,7 +43,7 @@
 	.left {
 		display: flex;
 		flex-direction: column;
-		justify-content: space-around;
+		justify-content: center;
 		flex: 1;
 		gap: var(--spacing-2-m);
 		min-width: 0;

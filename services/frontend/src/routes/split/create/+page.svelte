@@ -232,33 +232,33 @@
 		<h3 class="scan-menu-title">{m.create_split_scan_menu_title()}</h3>
 
 		<button class="scan-option" onclick={handleScanQR} type="button">
-			<div class="scan-option-icon qr">
+			<span class="scan-option-icon qr">
 				<QrCode size={32} weight="bold" />
-			</div>
-			<div class="scan-option-content">
+			</span>
+			<span class="scan-option-content">
 				<span class="scan-option-title">{m.create_split_scan_qr_title()}</span>
 				<span class="scan-option-description">{m.create_split_scan_qr_description()}</span>
-			</div>
+			</span>
 		</button>
 
 		<button class="scan-option" onclick={handleTakePhoto} type="button">
-			<div class="scan-option-icon photo">
+			<span class="scan-option-icon photo">
 				<Camera size={32} weight="bold" />
-			</div>
-			<div class="scan-option-content">
+			</span>
+			<span class="scan-option-content">
 				<span class="scan-option-title">{m.create_split_scan_photo_title()}</span>
 				<span class="scan-option-description">{m.create_split_scan_photo_description()}</span>
-			</div>
+			</span>
 		</button>
 
 		<button class="scan-option" onclick={handleUploadPhoto} type="button">
-			<div class="scan-option-icon upload">
+			<span class="scan-option-icon upload">
 				<Image size={32} weight="bold" />
-			</div>
-			<div class="scan-option-content">
+			</span>
+			<span class="scan-option-content">
 				<span class="scan-option-title">{m.create_split_scan_upload_title()}</span>
 				<span class="scan-option-description">{m.create_split_scan_upload_description()}</span>
-			</div>
+			</span>
 		</button>
 	</div>
 </BottomSheet>

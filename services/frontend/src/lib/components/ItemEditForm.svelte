@@ -179,6 +179,7 @@
 		max-height: 80vh;
 		overflow-y: auto;
 		padding: var(--spacing-4-m);
+		padding-bottom: calc(64px + max(var(--tg-inset-bottom), 8px) + var(--spacing-4-m));
 	}
 
 	.emoji-modal-header {

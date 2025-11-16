@@ -198,7 +198,12 @@ export function setDraftContext() {
 			throw new Error(m.error_split_no_items())
 		}
 
+		error = null
 		await save()
+
+		if (error) {
+			throw new Error(error)
+		}
 
 		if (!split.id) {
 			throw new Error(m.error_split_save_failed())

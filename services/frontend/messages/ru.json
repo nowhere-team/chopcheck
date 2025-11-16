@@ -3,9 +3,9 @@
 
   "action_cancel": "отменить",
   "action_create_split": "Создать сплит",
-  "action_join_split": "Присоединиться",
-  "action_load_more": "Загрузить ещё",
-  "action_mark_paid": "Отметить как оплачено",
+  "action_join_split": "присоединиться",
+  "action_load_more": "загрузить ещё",
+  "action_mark_paid": "отметить как оплачено",
   "action_save": "сохранить",
 
   "all_splits_loaded": "Это все ваши сплиты",
@@ -16,7 +16,7 @@
   "app_title_home": "Главная",
   "app_title_profile": "Профиль",
 
-  "create_split_add_item_button": "Добавить",
+  "create_split_add_item_button": "добавить",
   "create_split_button": "Создать сплит",
   "create_split_currency_label": "Валюта",
   "create_split_error": "Не удалось создать сплит",
@@ -26,7 +26,7 @@
   "create_split_participants_label": "Участники",
   "create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
   "create_split_positions_title": "Позиции",
-  "create_split_scan_button": "Отсканировать",
+  "create_split_scan_button": "отсканировать",
   "create_split_scan_menu_title": "Выберите способ добавления",
   "create_split_scan_photo_description": "Сделать фото чека для распознавания",
   "create_split_scan_photo_title": "Сфотографировать чек",
