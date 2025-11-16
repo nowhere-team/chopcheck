@@ -20,6 +20,7 @@
 	import type { DraftItem } from '$lib/types/draft'
 	import { formatPrice } from '$lib/utils/price'
 	import { haptic } from '$telegram/haptic'
+	import { qrScanner } from '@telegram-apps/sdk'
 
 	setDraftContext()
 	const draft = getDraftContext()
@@ -92,19 +93,37 @@
 		haptic.soft()
 	}
 
-	function handleScanQR() {
+	async function handleScanQR() {
 		isScanMenuOpen = false
 		haptic.soft()
+
+		try {
+			if (!qrScanner.open.isAvailable()) {
+				toast.error('QR сканер недоступен в этой версии Telegram')
+				return
+			}
+
+			const qrData = await qrScanner.open({ text: 'Отсканируйте QR-код чека' })
+
+			if (qrData) {
+				toast.info(`QR код отсканирован: ${qrData}`)
+			}
+		} catch (error) {
+			console.error('QR scan error:', error)
+			toast.error('Не удалось отсканировать QR код')
+		}
 	}
 
 	function handleTakePhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
+		toast.info('Функция фото чека будет доступна скоро')
 	}
 
 	function handleUploadPhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
+		toast.info('Функция загрузки фото будет доступна скоро')
 	}
 
 	const toast = getToastContext()
