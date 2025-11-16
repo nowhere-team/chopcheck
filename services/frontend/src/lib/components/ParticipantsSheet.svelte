@@ -34,11 +34,7 @@
 						{/if}
 					</div>
 					{#if onKick}
-						<button
-							class="kick-button"
-							type="button"
-							onclick={() => handleKick(participant.id)}
-						>
+						<button class="kick-button" type="button" onclick={() => handleKick(participant.id)}>
 							{m.participants_kick_button()}
 						</button>
 					{/if}

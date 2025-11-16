@@ -2,7 +2,7 @@ body {
 	min-height: 100dvh;
 	padding: var(--tg-inset-top) max(var(--tg-inset-right), var(--spacing-4-m)) var(--tg-inset-bottom)
 		max(var(--tg-inset-left), var(--spacing-4-m));
-    background-color: var(--color-bg-page)
+	background-color: var(--color-bg-page);
 }
 
 .title {

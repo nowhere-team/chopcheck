@@ -55,7 +55,10 @@
 
 	const amount = $derived(() => {
 		if (split.items?.length) {
-			const totalKopecks = split.items.reduce((sum, item) => sum + item.price * parseFloat(item.quantity), 0)
+			const totalKopecks = split.items.reduce(
+				(sum, item) => sum + item.price * parseFloat(item.quantity),
+				0
+			)
 			return totalKopecks / 100
 		}
 		return 0

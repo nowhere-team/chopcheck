@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { qrScanner } from '@telegram-apps/sdk'
 	import { onMount } from 'svelte'
 
 	import { goto } from '$app/navigation'
 	import BottomSheet from '$components/BottomSheet.svelte'
-	import Box from '$components/Box.svelte'
 	import Button from '$components/Button.svelte'
 	import Delimiter from '$components/Delimiter.svelte'
 	import EditableText from '$components/EditableText.svelte'
@@ -20,7 +20,6 @@
 	import { m } from '$lib/i18n'
 	import type { DraftItem } from '$lib/types/draft'
 	import { haptic } from '$telegram/haptic'
-	import { qrScanner } from '@telegram-apps/sdk'
 
 	setDraftContext()
 	const draft = getDraftContext()
@@ -212,7 +211,11 @@
 </BottomSheet>
 
 <BottomSheet height={60} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
-	<ScanMenu onScanQR={handleScanQR} onTakePhoto={handleTakePhoto} onUploadPhoto={handleUploadPhoto} />
+	<ScanMenu
+		onScanQR={handleScanQR}
+		onTakePhoto={handleTakePhoto}
+		onUploadPhoto={handleUploadPhoto}
+	/>
 </BottomSheet>
 
 <style>

@@ -1,33 +1,4 @@
 pre-commit:
-  parallel: true
   commands:
-    # Frontend
-    frontend-prettier:
-      glob: "services/frontend/**/*.{js,ts,svelte,json,md}"
-      run: cd services/frontend && prettier --write {staged_files} && git add {staged_files}
-
-    frontend-eslint:
-      glob: "services/frontend/**/*.{js,ts,svelte}"
-      run: cd services/frontend && eslint --fix {staged_files} && git add {staged_files}
-
-    frontend-svelte-check:
-      glob: "services/frontend/**/*.{ts,svelte}"
-      run: cd services/frontend && svelte-check --threshold warning --fail-on-warnings
-
-    # Backend
-    backend-prettier:
-      glob: "services/backend/**/*.{js,ts,json,md}"
-      run: cd services/backend && prettier --write {staged_files} && git add {staged_files}
-
-    backend-eslint:
-      glob: "services/backend/**/*.{js,ts}"
-      run: cd services/backend && eslint --fix {staged_files} && git add {staged_files}
-
-    # Telegram
-    telegram-prettier:
-      glob: "services/telegram/**/*.{js,ts,json,md}"
-      run: cd services/telegram && prettier --write {staged_files} && git add {staged_files}
-
-    telegram-eslint:
-      glob: "services/telegram/**/*.{js,ts}"
-      run: cd services/telegram && eslint --fix {staged_files} && git add {staged_files}
+    format-staged:
+      run: bun run lint-staged

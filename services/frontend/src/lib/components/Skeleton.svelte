@@ -7,7 +7,13 @@
 		className?: string
 	}
 
-	const { width = '100%', height = '20px', circle = false, count = 1, className = '' }: Props = $props()
+	const {
+		width = '100%',
+		height = '20px',
+		circle = false,
+		count = 1,
+		className = ''
+	}: Props = $props()
 </script>
 
 {#if count === 1}

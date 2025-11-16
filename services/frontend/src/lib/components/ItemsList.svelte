@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Plus } from 'phosphor-svelte'
 
-	import Box from '$components/Box.svelte'
 	import Button from '$components/Button.svelte'
 	import Emoji from '$components/Emoji.svelte'
 	import { m } from '$lib/i18n'
@@ -53,7 +52,8 @@
 					<div class="item-info">
 						<span class="item-name">{item.name}</span>
 						<span class="item-quantity">
-							{item.quantity} {m.quantity_unit()}
+							{item.quantity}
+							{m.quantity_unit()}
 						</span>
 					</div>
 					<span class="item-price">

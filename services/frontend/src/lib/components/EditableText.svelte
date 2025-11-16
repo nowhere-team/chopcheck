@@ -9,7 +9,6 @@
 		placeholder = '',
 		maxlength = 32,
 		maxWidthView = '24ch',
-		maxWidthEdit = '32ch',
 		showIcon = true,
 		onchange = () => {},
 		onLimitReached = () => {}

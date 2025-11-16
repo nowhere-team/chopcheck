@@ -1,21 +1,21 @@
 import { Hono } from 'hono'
 
 import { auth } from '@/http/middleware/auth'
+import { createAddPaymentMethodToSplitRoute } from '@/http/routes/splits/add-payment-method'
+import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
+import { createListSplitPaymentMethodsRoute } from '@/http/routes/splits/list-payment-methods'
+import { createRemovePaymentMethodFromSplitRoute } from '@/http/routes/splits/remove-payment-method'
+import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
 
 import { createAddItemsRoute } from './add-items'
 import { createCreateSplitRoute } from './create'
+import { createDraftRoute } from './draft'
 import { createGetSplitRoute } from './get'
 import { createJoinRoute } from './join'
 import { createMyParticipationRoute } from './my-participation'
 import { createMySplitsRoute } from './my-splits'
 import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
-import { createDraftRoute } from './draft'
-import { createDeleteItemRoute } from '@/http/routes/splits/delete-item'
-import { createUpdateItemRoute } from '@/http/routes/splits/update-item'
-import { createAddPaymentMethodToSplitRoute } from '@/http/routes/splits/add-payment-method'
-import { createRemovePaymentMethodFromSplitRoute } from '@/http/routes/splits/remove-payment-method'
-import { createListSplitPaymentMethodsRoute } from '@/http/routes/splits/list-payment-methods'
 
 function createPrivateSplitsRoutes() {
 	return new Hono()
@@ -32,7 +32,7 @@ function createPrivateSplitsRoutes() {
 		.route('/', createListSplitPaymentMethodsRoute())
 		.route('/', createAddPaymentMethodToSplitRoute())
 		.route('/', createRemovePaymentMethodFromSplitRoute())
-  	.route('/', createDraftRoute())
+		.route('/', createDraftRoute())
 }
 
 function createPublicSplitsRoutes() {

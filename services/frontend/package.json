@@ -1,5 +1,5 @@
 {
-	"name": "frontend",
+	"name": "@chopcheck/frontend",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -11,7 +11,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint .",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
 	},

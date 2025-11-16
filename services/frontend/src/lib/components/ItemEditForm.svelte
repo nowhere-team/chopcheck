@@ -90,7 +90,7 @@
 
 		{#if showEmojiPicker}
 			<div class="emoji-overlay" onclick={() => (showEmojiPicker = false)}>
-				<div class="emoji-modal" onclick={(e) => e.stopPropagation()}>
+				<div class="emoji-modal" onclick={e => e.stopPropagation()}>
 					<div class="emoji-modal-header">
 						<span>{m.item_icon_label()}</span>
 						<button class="close-button" onclick={() => (showEmojiPicker = false)} type="button">

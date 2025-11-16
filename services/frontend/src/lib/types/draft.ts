@@ -4,7 +4,7 @@ export interface DraftItem {
 	price: number
 	quantity: string
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-	defaultDivisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	defaultDivisionMethod: 'equal' | 'shares' | 'custom'
 	icon?: string
 }
 
