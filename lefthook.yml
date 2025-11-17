@@ -1,4 +1,4 @@
 pre-commit:
   commands:
-    format-staged:
-      run: bun run lint-staged
+    lint-staged:
+      run: bunx lint-staged
