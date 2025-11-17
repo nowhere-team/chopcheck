@@ -17,10 +17,11 @@
 		"lint:fix": "bun run --filter='./services/*' lint:fix",
 		"format": "bun run --filter='./services/*' format",
 		"check": "cd services/frontend && bun run check",
-		"lint-staged": "bun run format && bun run lint:fix"
+		"fix": "bun run format && bun run lint:fix"
 	},
 	"devDependencies": {
 		"concurrently": "^9.2.1",
-		"lefthook": "^2.0.4"
+		"lefthook": "^2.0.4",
+		"lint-staged": "^16.2.6"
 	}
 }
