@@ -35,7 +35,12 @@
 </Box>
 
 {#if sheet && sheetTitle}
-	<BottomSheet bind:open={showSheet} title={sheetTitle} height={sheetHeight} onclose={handleClose}>
+	<BottomSheet
+		bind:open={showSheet}
+		title={sheetTitle}
+		height={sheetHeight}
+		onclose={handleClose}
+	>
 		{@render sheet()}
 	</BottomSheet>
 {/if}

@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    format-staged:
+      run: bun run lint-staged

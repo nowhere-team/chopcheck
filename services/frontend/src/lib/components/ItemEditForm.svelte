@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { X } from 'phosphor-svelte'
+
 	import Button from '$components/Button.svelte'
-	import Delimiter from '$components/Delimiter.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import Input from '$components/Input.svelte'
+	import PriceInput from '$components/PriceInput.svelte'
 	import Select from '$components/Select.svelte'
 	import { m } from '$lib/i18n'
 
@@ -10,7 +12,7 @@
 		name: string
 		price: number
 		quantity: string
-		defaultDivisionMethod: 'equal' | 'shares' | 'proportional' | 'fixed' | 'custom'
+		defaultDivisionMethod: 'equal' | 'shares' | 'custom'
 		icon?: string
 	}
 
@@ -33,16 +35,6 @@
 			value: 'shares',
 			label: m.division_method_shares(),
 			description: m.division_method_shares_desc()
-		},
-		{
-			value: 'proportional',
-			label: m.division_method_proportional(),
-			description: m.division_method_proportional_desc()
-		},
-		{
-			value: 'fixed',
-			label: m.division_method_fixed(),
-			description: m.division_method_fixed_desc()
 		},
 		{
 			value: 'custom',
@@ -83,14 +75,7 @@
 				min="0.01"
 				step="0.01"
 			/>
-			<Input
-				label={m.item_price_label()}
-				type="number"
-				bind:value={item.price}
-				suffix="₽"
-				min="0.01"
-				step="0.01"
-			/>
+			<PriceInput label={m.item_price_label()} bind:value={item.price} />
 		</div>
 
 		<Select
@@ -99,27 +84,50 @@
 			bind:value={item.defaultDivisionMethod}
 		/>
 
+		<button class="emoji-trigger" onclick={() => (showEmojiPicker = true)} type="button">
+			<span class="label">{m.item_icon_label()}</span>
+			<span class="emoji-preview">{item.icon || '🍽️'}</span>
+		</button>
+
 		{#if showEmojiPicker}
-			<div class="emoji-section">
-				<span class="label">{m.item_icon_label()}</span>
-				<EmojiPicker selected={item.icon} onselect={handleSelectEmoji} />
+			<div
+				class="emoji-overlay"
+				onclick={() => (showEmojiPicker = false)}
+				onkeydown={e => e.key === 'Escape' && (showEmojiPicker = false)}
+				role="presentation"
+				tabindex="-1"
+			>
+				<div
+					class="emoji-modal"
+					onclick={e => e.stopPropagation()}
+					onkeydown={e => e.stopPropagation()}
+					role="dialog"
+					aria-modal="true"
+					aria-label={m.item_icon_label()}
+					tabindex="0"
+				>
+					<div class="emoji-modal-header">
+						<span>{m.item_icon_label()}</span>
+						<button
+							class="close-button"
+							onclick={() => (showEmojiPicker = false)}
+							type="button"
+						>
+							<X size="24" />
+						</button>
+					</div>
+					<EmojiPicker selected={item.icon} onselect={handleSelectEmoji} />
+				</div>
 			</div>
-		{:else}
-			<button class="emoji-trigger" onclick={() => (showEmojiPicker = true)} type="button">
-				<span class="label">{m.item_icon_label()}</span>
-				<span class="emoji-preview">{item.icon || '🍽️'}</span>
-			</button>
 		{/if}
 	</div>
 
-	<Delimiter spacing="lg" />
-
 	<div class="actions">
-		<Button variant="secondary" onclick={onCancel}>{m.action_cancel()}</Button>
-		<Button variant="primary" onclick={validateAndSave}>{m.action_save()}</Button>
+		<Button size="md" variant="secondary" onclick={onCancel}>{m.action_cancel()}</Button>
+		<Button size="md" variant="primary" onclick={validateAndSave}>{m.action_save()}</Button>
 	</div>
 
-	<Button variant="danger" onclick={onDelete}>{m.item_delete_button()}</Button>
+	<Button size="md" variant="danger" onclick={onDelete}>{m.item_delete_button()}</Button>
 </div>
 
 <style>
@@ -157,8 +165,7 @@
 		background: var(--color-bg-surface);
 	}
 
-	.emoji-trigger .label,
-	.emoji-section .label {
+	.emoji-trigger .label {
 		font-size: var(--text-sm);
 		font-weight: var(--font-medium);
 		color: var(--color-text-secondary);
@@ -168,10 +175,59 @@
 		font-size: 28px;
 	}
 
-	.emoji-section {
+	.emoji-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 2000;
 		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-3-m);
+		align-items: center;
+		justify-content: center;
+		padding: var(--spacing-4-m);
+	}
+
+	.emoji-modal {
+		background: var(--color-bg-surface);
+		border-radius: var(--radius-default);
+		border: 1px solid var(--color-border-default);
+		max-width: 480px;
+		width: 100%;
+		max-height: 80vh;
+		overflow-y: auto;
+		padding: var(--spacing-4-m);
+		padding-bottom: calc(64px + max(var(--tg-inset-bottom), 8px) + var(--spacing-4-m));
+	}
+
+	.emoji-modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: var(--spacing-4-m);
+		font-size: var(--text-lg);
+		font-weight: var(--font-semibold);
+		color: var(--color-text-primary);
+	}
+
+	.close-button {
+		all: unset;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border-radius: var(--radius-default);
+		cursor: pointer;
+		color: var(--color-text-secondary);
+		transition: all 150ms;
+	}
+
+	.close-button:hover {
+		background: var(--color-bg-surface-secondary);
+		color: var(--color-text-primary);
+	}
+
+	.close-button:active {
+		transform: scale(0.95);
 	}
 
 	.actions {

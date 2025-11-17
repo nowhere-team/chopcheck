@@ -1,9 +1,10 @@
 import { api } from '$api/client'
-import type { Split } from '$api/types'
+import type { Split, SplitResponse } from '$api/types'
 
 export async function getMyDraft(): Promise<Split | null> {
 	try {
-		return await api.get<Split>('splits/draft')
+		const response = await api.get<SplitResponse>('splits/draft')
+		return response.split
 	} catch (error) {
 		if (error instanceof Error && 'response' in error) {
 			const response = (error as { response: Response }).response
@@ -26,15 +27,27 @@ export async function saveDraft(data: {
 		price: number
 		quantity: string
 		type?: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-		defaultDivisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+		defaultDivisionMethod: 'equal' | 'shares' | 'custom'
 	}>
 }): Promise<Split> {
 	if (data.id) {
-		return await api.patch<Split>(`splits/${data.id}`, {
+		const response = await api.patch<SplitResponse>(`splits/${data.id}`, {
 			name: data.name,
-			currency: data.currency
+			icon: data.icon,
+			currency: data.currency,
+			items: data.items
 		})
+		return response.split
 	}
 
-	return await api.post<Split>('splits', data)
+	const response = await api.post<SplitResponse>('splits', data)
+	return response.split
+}
+
+export async function publishDraft(id: string) {
+	try {
+		await api.post(`splits/${id}/publish`)
+	} catch (err) {
+		throw new Error(err instanceof Error ? err.message : 'Failed to publish split')
+	}
 }

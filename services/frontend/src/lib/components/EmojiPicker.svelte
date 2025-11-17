@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Emoji from '$components/Emoji.svelte'
 	import { m } from '$lib/i18n'
+	import { haptic } from '$telegram/haptic'
 
 	interface Props {
 		selected?: string
@@ -30,6 +31,7 @@
 
 	function handleSelect(emoji: string) {
 		onselect(emoji)
+		haptic.soft()
 	}
 </script>
 
@@ -45,7 +47,7 @@
 						onclick={() => handleSelect(emoji)}
 						type="button"
 					>
-						<Emoji {emoji} size={32} />
+						<Emoji {emoji} size={28} />
 					</button>
 				{/each}
 			</div>
@@ -70,7 +72,7 @@
 	.emojis {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-		gap: var(--spacing-2-m);
+		gap: var(--spacing-m);
 	}
 
 	.emoji-btn {

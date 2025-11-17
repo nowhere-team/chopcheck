@@ -15,7 +15,7 @@
 <style>
 	.toast-container {
 		position: fixed;
-		top: calc(var(--tg-inset-top) + var(--spacing-4-m));
+		top: calc((var(--tg-inset-top) + var(--spacing-6-m) * 2));
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 9999;

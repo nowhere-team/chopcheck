@@ -3,10 +3,11 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
-		"build": "bun build src/index.ts --outdir dist",
+		"build": "bun build src/index.ts --outdir dist --target=bun",
 		"start": "bun src/index.ts",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint ."
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.44.5",

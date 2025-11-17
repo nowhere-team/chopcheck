@@ -10,7 +10,7 @@ const updateSplitSchema = z.object({
 })
 
 export function createUpdateSplitRoute() {
-	return new Hono().patch('/:id', requirePermission('splits:update'), uuidParam('id'), async c => {
+	return new Hono().patch('/:id', requirePermission('splits:write'), uuidParam('id'), async c => {
 		const authContext = c.get('authContext')!
 		const services = c.get('services')
 		const splitId = c.req.param('id')

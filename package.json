@@ -1,19 +1,26 @@
 {
-  "name": "chopcheck",
-  "private": true,
-  "workspaces": [
-    "services/*"
-  ],
-  "scripts": {
-    "dev": "bun run --filter='./services/*' dev",
-    "dev:front": "bun run --cwd=./services/frontend dev",
-    "dev:back": "bun run --cwd=./services/backend dev",
-    "dev:telegram": "bun run --cwd=./services/telegram dev",
-    "dev:ft": "concurrently -n front,tg -c bgBlue,bgMagenta \"bun run dev:front\" \"bun run dev:telegram\"",
-    "dev:all": "concurrently -n back,front,tg -c bgGreen,bgBlue,bgMagenta \"bun run dev:back\" \"bun run dev:front\" \"bun run dev:telegram\"",
-    "build": "bun run --filter='./services/* build"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
-  }
+	"name": "chopcheck",
+	"private": true,
+	"workspaces": [
+		"services/*"
+	],
+	"scripts": {
+		"dev": "bun run --filter='./services/*' dev",
+		"dev:front": "bun run --cwd=./services/frontend dev",
+		"dev:back": "bun run --cwd=./services/backend dev",
+		"dev:telegram": "bun run --cwd=./services/telegram dev",
+		"dev:ft": "concurrently -n front,tg -c bgBlue,bgMagenta \"bun run dev:front\" \"bun run dev:telegram\"",
+		"dev:all": "concurrently -n back,front,tg -c bgGreen,bgBlue,bgMagenta \"bun run dev:back\" \"bun run dev:front\" \"bun run dev:telegram\"",
+		"build": "bun run --filter='./services/* build",
+		"prepare": "lefthook install || echo 'lefthook not found'",
+		"lint": "bun run --filter='./services/*' lint",
+		"lint:fix": "bun run --filter='./services/*' lint:fix",
+		"format": "bun run --filter='./services/*' format",
+		"check": "cd services/frontend && bun run check",
+		"lint-staged": "bun run format && bun run lint:fix"
+	},
+	"devDependencies": {
+		"concurrently": "^9.2.1",
+		"lefthook": "^2.0.4"
+	}
 }

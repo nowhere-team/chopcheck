@@ -75,11 +75,11 @@ export class SplitsService {
 	): Promise<SplitResponse | null> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		if (split.ownerId !== userId) {
-			throw new ForbiddenError('only split owner can update items')
+			throw new ForbiddenError('Only split owner can update items')
 		}
 
 		const item = await this.itemsRepo.findById(itemId)
@@ -98,7 +98,7 @@ export class SplitsService {
 
 		const result = await this.getById(splitId, true)
 		if (!result) {
-			throw new NotFoundError('split not found after updating item')
+			throw new NotFoundError('Split not found after updating item')
 		}
 
 		return result
@@ -107,11 +107,11 @@ export class SplitsService {
 	async deleteItem(splitId: string, itemId: string, userId: string): Promise<SplitResponse | null> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		if (split.ownerId !== userId) {
-			throw new ForbiddenError('only split owner can delete items')
+			throw new ForbiddenError('Only split owner can delete items')
 		}
 
 		const item = await this.itemsRepo.findById(itemId)
@@ -129,7 +129,7 @@ export class SplitsService {
 
 		const result = await this.getById(splitId, true)
 		if (!result) {
-			throw new NotFoundError('split not found after deleting item')
+			throw new NotFoundError('Split not found after deleting item')
 		}
 
 		return result
@@ -163,11 +163,10 @@ export class SplitsService {
 			itemsCount: dto.items?.length || 0,
 		})
 
-		// calculations not required - it's just created
 		const result = await this.getById(split.id, false)
 
 		if (!result) {
-			throw new NotFoundError('split was created but not found')
+			throw new NotFoundError('Split was created but not found')
 		}
 
 		return result
@@ -177,15 +176,15 @@ export class SplitsService {
 		if (dto.id) {
 			const existing = await this.splitsRepo.findById(dto.id)
 			if (!existing) {
-				throw new NotFoundError('split not found')
+				throw new NotFoundError('Split not found')
 			}
 
 			if (existing.ownerId !== userId) {
-				throw new ForbiddenError('only owner can update split')
+				throw new ForbiddenError('Only owner can update split')
 			}
 
 			if (existing.status !== 'draft') {
-				throw new ForbiddenError('can only update draft splits')
+				throw new ForbiddenError('Can only update draft splits')
 			}
 
 			await this.splitsRepo.update(dto.id, {
@@ -223,7 +222,7 @@ export class SplitsService {
 
 			const result = await this.getById(dto.id, false)
 			if (!result) {
-				throw new NotFoundError('split not found after update')
+				throw new NotFoundError('Split not found after update')
 			}
 
 			return result
@@ -232,16 +231,52 @@ export class SplitsService {
 		return await this.create(userId, dto)
 	}
 
+	// new method: publish draft split
+	async publishDraft(splitId: string, userId: string): Promise<SplitResponse> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('Split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ForbiddenError('Only owner can publish split')
+		}
+
+		if (split.status !== 'draft') {
+			throw new ValidationError('Split is already published')
+		}
+
+		const items = await this.itemsRepo.findBySplitId(splitId)
+		if (items.length === 0) {
+			throw new ValidationError('Cannot publish split without items')
+		}
+
+		// change status to active
+		await this.splitsRepo.update(splitId, {
+			status: 'active',
+			phase: 'voting', // participants can now select their items
+		})
+
+		this.logger.info('split published', { splitId, userId })
+
+		const result = await this.getById(splitId, true)
+		if (!result) {
+			throw new NotFoundError('Split not found after publishing')
+		}
+
+		return result
+	}
+
 	async join(splitId: string, userId: string): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		if (split.maxParticipants) {
 			const currentCount = await this.participantsRepo.countParticipants(splitId)
 			if (currentCount >= split.maxParticipants) {
-				throw new Error('split is full')
+				throw new Error('Split is full')
 			}
 		}
 
@@ -251,7 +286,7 @@ export class SplitsService {
 
 		const result = await this.getById(splitId, false)
 		if (!result) {
-			throw new NotFoundError('split not found after join')
+			throw new NotFoundError('Split not found after join')
 		}
 
 		return result
@@ -264,10 +299,8 @@ export class SplitsService {
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
-
-		// todo: permissions
 
 		await this.itemsRepo.createMany(splitId, items)
 
@@ -277,10 +310,9 @@ export class SplitsService {
 			itemsCount: items.length,
 		})
 
-		// back with calculations
 		const result = await this.getById(splitId, true)
 		if (!result) {
-			throw new NotFoundError('split not found after adding items')
+			throw new NotFoundError('Split not found after adding items')
 		}
 
 		return result
@@ -297,10 +329,8 @@ export class SplitsService {
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
-
-		// todo: check if participantId is in splitId
 
 		await this.participantsRepo.selectItems(participantId, splitId, selections)
 
@@ -344,19 +374,16 @@ export class SplitsService {
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
-
-		// todo: permissions check
 
 		await this.splitsRepo.update(splitId, data)
 
 		this.logger.info('split updated', { splitId, userId, changes: data })
 
-		// calculations are not required - we're just edited split info
 		const result = await this.getById(splitId, false)
 		if (!result) {
-			throw new NotFoundError('split not found after update')
+			throw new NotFoundError('Split not found after update')
 		}
 
 		return result
@@ -365,7 +392,7 @@ export class SplitsService {
 	async getSplitPaymentMethods(splitId: string, userId: string): Promise<PaymentMethods[]> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		const methods = await this.paymentMethodsRepo.findBySplitId(splitId)
@@ -382,20 +409,20 @@ export class SplitsService {
 	async addPaymentMethodToSplit(splitId: string, userId: string, dto: AddPaymentMethodToSplitDto): Promise<void> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		if (split.ownerId !== userId) {
-			throw new ValidationError('only split owner can add payment methods')
+			throw new ValidationError('Only split owner can add payment methods')
 		}
 
 		const paymentMethod = await this.paymentMethodsRepo.findById(dto.paymentMethodId)
 		if (!paymentMethod) {
-			throw new NotFoundError('payment method not found')
+			throw new NotFoundError('Payment method not found')
 		}
 
 		if (paymentMethod.userId !== userId) {
-			throw new ValidationError('you can only add your own payment methods')
+			throw new ValidationError('You can only add your own payment methods')
 		}
 
 		await this.paymentMethodsRepo.addToSplit(splitId, dto.paymentMethodId, dto.isPreferred || false)
@@ -406,14 +433,15 @@ export class SplitsService {
 			paymentMethodId: dto.paymentMethodId,
 		})
 	}
+
 	async removePaymentMethodFromSplit(splitId: string, paymentMethodId: string, userId: string): Promise<void> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('split not found')
+			throw new NotFoundError('Split not found')
 		}
 
 		if (split.ownerId !== userId) {
-			throw new ValidationError('only split owner can remove payment methods')
+			throw new ValidationError('Only split owner can remove payment methods')
 		}
 
 		await this.paymentMethodsRepo.removeFromSplit(splitId, paymentMethodId)
@@ -424,6 +452,7 @@ export class SplitsService {
 			paymentMethodId,
 		})
 	}
+
 	async getMyParticipation(
 		splitId: string,
 		userId: string,
@@ -463,7 +492,6 @@ export class SplitsService {
 
 		return {
 			participants: calculated.calculations.map(calc => {
-				// items array to Record<itemId, result>
 				const items = calc.items.reduce(
 					(acc, item) => {
 						acc[item.itemId] = {

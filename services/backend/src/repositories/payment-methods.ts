@@ -36,7 +36,10 @@ export class PaymentMethodsRepository extends BaseRepository {
 	async findByUserId(userId: string): Promise<PaymentMethods[]> {
 		return this.getOrSet(this.getUserCacheKey(userId), async () => {
 			return await this.db.query.userPaymentMethods.findMany({
-				where: and(eq(schema.userPaymentMethods.userId, userId), eq(schema.userPaymentMethods.isDeleted, false)),
+				where: and(
+					eq(schema.userPaymentMethods.userId, userId),
+					eq(schema.userPaymentMethods.isDeleted, false),
+				),
 				orderBy: (methods, { desc }) => [desc(methods.isDefault), methods.displayOrder],
 			})
 		})

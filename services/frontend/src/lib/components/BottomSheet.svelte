@@ -212,6 +212,7 @@
 		z-index: 1000;
 		display: flex;
 		align-items: flex-end;
+		pointer-events: all;
 	}
 
 	/*noinspection CssOverwrittenProperties*/

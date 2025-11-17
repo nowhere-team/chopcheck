@@ -1,16 +1,18 @@
 <script lang="ts">
-	import { Camera, Plus, Upload } from 'phosphor-svelte'
+	import { qrScanner } from '@telegram-apps/sdk'
 	import { onMount } from 'svelte'
 
 	import { goto } from '$app/navigation'
 	import BottomSheet from '$components/BottomSheet.svelte'
-	import Box from '$components/Box.svelte'
 	import Button from '$components/Button.svelte'
 	import Delimiter from '$components/Delimiter.svelte'
 	import EditableText from '$components/EditableText.svelte'
 	import Emoji from '$components/Emoji.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import ItemEditForm from '$components/ItemEditForm.svelte'
+	import ItemsList from '$components/ItemsList.svelte'
+	import ParticipantsSheet from '$components/ParticipantsSheet.svelte'
+	import ScanMenu from '$components/ScanMenu.svelte'
 	import SettingItem from '$components/SettingItem.svelte'
 	import { getDraftContext, setDraftContext } from '$lib/contexts/draft.svelte'
 	import { getToastContext } from '$lib/contexts/toast.svelte'
@@ -89,19 +91,37 @@
 		haptic.soft()
 	}
 
-	function handleUploadPhoto() {
+	async function handleScanQR() {
 		isScanMenuOpen = false
 		haptic.soft()
-	}
 
-	// function handleQRCode() {
-	// 	isScanMenuOpen = false
-	// 	haptic.soft()
-	// }
+		try {
+			if (!qrScanner.open.isAvailable()) {
+				toast.error(m.qr_scan_unavailable())
+				return
+			}
+
+			const qrData = await qrScanner.open({ text: m.qr_scan_title() })
+
+			if (qrData) {
+				toast.info(m.qr_scan_success({ data: qrData }))
+			}
+		} catch (error) {
+			console.error('QR scan error:', error)
+			toast.error(m.qr_scan_failed())
+		}
+	}
 
 	function handleTakePhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
+		toast.info(m.function_coming())
+	}
+
+	function handleUploadPhoto() {
+		isScanMenuOpen = false
+		haptic.soft()
+		toast.info(m.function_coming())
 	}
 
 	const toast = getToastContext()
@@ -111,12 +131,12 @@
 			const splitId = await draft.publish()
 			await draft.clear()
 			haptic.success()
-			toast.success('сплит создан')
+			toast.success(m.success_split_created())
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			await goto(`/split/${splitId}`)
 		} catch (error) {
 			haptic.error()
-			const message = error instanceof Error ? error.message : 'не удалось создать сплит'
+			const message = error instanceof Error ? error.message : m.error_split_create_failed()
 			toast.error(message)
 		}
 	}
@@ -151,56 +171,25 @@
 			label={m.create_split_participants_label()}
 			sheetTitle={m.split_participants_label()}
 		>
+			<!--{#snippet value()}-->
+			<!--	<ParticipantsCompact participants={[]} />-->
+			<!--{/snippet}-->
+
 			{#snippet sheet()}
-				<p>участники - заглушка</p>
+				<ParticipantsSheet participants={[]} />
 			{/snippet}
 		</SettingItem>
 	</div>
 
 	<Delimiter />
 
-	<div class="section">
-		<h2>{m.create_split_positions_title()}</h2>
-
-		{#if draft.split.items.length === 0}
-			<p class="hint">{m.create_split_positions_hint()}</p>
-		{:else}
-			<div class="items-list">
-				{#each draft.split.items as item, index (index)}
-					<Box interactive onclick={() => openEditItem(index)}>
-						<div class="item-row">
-							<div class="item-info">
-								<span class="item-name">{item.name}</span>
-								<span class="item-meta">
-									{item.quantity}
-									{m.quantity_unit()} · {item.price.toLocaleString('ru-RU')} ₽
-								</span>
-							</div>
-							<div class="item-price">
-								{item.price.toLocaleString('ru-RU')} ₽
-							</div>
-						</div>
-					</Box>
-				{/each}
-			</div>
-		{/if}
-
-		<div class="actions-row">
-			<Button variant="secondary" onclick={openScanMenu}>
-				{#snippet iconLeft()}
-					<Camera size={20} weight="bold" />
-				{/snippet}
-				{m.create_split_scan_button()}
-			</Button>
-
-			<Button variant="secondary" onclick={openAddItem}>
-				{#snippet iconLeft()}
-					<Plus size={20} weight="bold" />
-				{/snippet}
-				{m.create_split_add_item_button()}
-			</Button>
-		</div>
-	</div>
+	<ItemsList
+		items={draft.split.items}
+		currency={draft.split.currency}
+		onAddItem={openAddItem}
+		onEditItem={openEditItem}
+		onOpenScanMenu={openScanMenu}
+	/>
 
 	<Delimiter />
 
@@ -211,7 +200,7 @@
 	</div>
 </div>
 
-<BottomSheet height={80} onclose={handleCancelEdit} bind:open={isFormOpen}>
+<BottomSheet height={75} onclose={handleCancelEdit} bind:open={isFormOpen}>
 	<ItemEditForm
 		bind:item={formItem}
 		onSave={handleSaveItem}
@@ -220,21 +209,12 @@
 	/>
 </BottomSheet>
 
-<BottomSheet height={40} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
-	<div class="scan-menu">
-		<Button variant="secondary" size="lg" onclick={handleTakePhoto}>
-			{#snippet iconLeft()}
-				<Camera size={24} />
-			{/snippet}
-			{m.create_split_scan_qr_button()}
-		</Button>
-		<Button variant="secondary" size="lg" onclick={handleUploadPhoto}>
-			{#snippet iconLeft()}
-				<Upload size={24} />
-			{/snippet}
-			{m.create_split_scan_upload_button()}
-		</Button>
-	</div>
+<BottomSheet height={60} onclose={() => (isScanMenuOpen = false)} bind:open={isScanMenuOpen}>
+	<ScanMenu
+		onScanQR={handleScanQR}
+		onTakePhoto={handleTakePhoto}
+		onUploadPhoto={handleUploadPhoto}
+	/>
 </BottomSheet>
 
 <style>
@@ -258,63 +238,6 @@
 		gap: var(--spacing-2-m);
 	}
 
-	.section {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-4-m);
-	}
-
-	.hint {
-		color: var(--color-text-tertiary);
-		text-align: center;
-		padding: var(--spacing-4-m);
-	}
-
-	.items-list {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-2-m);
-	}
-
-	.item-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: var(--spacing-3-m);
-	}
-
-	.item-info {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-m);
-		flex: 1;
-		min-width: 0;
-	}
-
-	.item-name {
-		font-size: var(--text-base);
-		font-weight: var(--font-medium);
-		color: var(--color-text-primary);
-	}
-
-	.item-meta {
-		font-size: var(--text-sm);
-		color: var(--color-text-secondary);
-	}
-
-	.item-price {
-		font-size: var(--text-base);
-		font-weight: var(--font-semibold);
-		color: var(--color-text-primary);
-		flex-shrink: 0;
-	}
-
-	.actions-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--spacing-3-m);
-	}
-
 	.publish-section {
 		display: flex;
 		justify-content: center;
@@ -322,10 +245,7 @@
 		padding-bottom: var(--spacing-6-m);
 	}
 
-	.scan-menu {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-3-m);
-		padding-top: var(--spacing-6-m);
+	.publish-section :global(button) {
+		width: 100%;
 	}
 </style>

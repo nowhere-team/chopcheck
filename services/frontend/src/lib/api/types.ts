@@ -50,20 +50,25 @@ export interface SplitItem {
 	price: number
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity: string
-	defaultDivisionMethod: 'custom' | 'fixed' | 'equal' | 'shares' | 'proportional'
+	defaultDivisionMethod: 'custom' | 'equal' | 'shares'
 }
 
 export interface Participant {
 	id: string
-	userId: string
-	displayName: string
-	avatarUrl?: string
+	userId: string | null
+	displayName?: string | null
 	joinedAt: string
+	user: {
+		id: string
+		displayName: string
+		username?: string
+		avatarUrl?: string
+	} | null
 }
 
 export interface ItemSelection {
 	itemId: string
-	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	divisionMethod: 'equal' | 'shares' | 'custom'
 	value?: string
 }
 
@@ -75,6 +80,12 @@ export interface MyParticipation {
 
 export interface MySplitsResponse {
 	splits: Split[]
+}
+
+export interface SplitResponse {
+	split: Split
+	items: SplitItem[]
+	participants: Participant[]
 }
 
 export interface CreateSplitDto {
