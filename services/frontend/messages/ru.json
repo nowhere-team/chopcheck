@@ -121,5 +121,6 @@
 	"stats_monthly_spent": "Разделено за месяц",
 	"stats_total_splits": "Всего сплитов",
 
+	"success_qr_scanned": "QR код отсканирован: {data}",
 	"success_split_created": "сплит создан"
 }

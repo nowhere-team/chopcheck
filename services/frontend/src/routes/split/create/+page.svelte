@@ -105,7 +105,7 @@
 			const qrData = await qrScanner.open({ text: 'Отсканируйте QR-код чека' })
 
 			if (qrData) {
-				toast.info(`QR код отсканирован: ${qrData}`)
+				toast.info(m.success_qr_scanned({ data: qrData }))
 			}
 		} catch (error) {
 			console.error('QR scan error:', error)
