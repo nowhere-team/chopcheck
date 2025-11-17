@@ -11,7 +11,6 @@
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import ItemEditForm from '$components/ItemEditForm.svelte'
 	import ItemsList from '$components/ItemsList.svelte'
-	import ParticipantsCompact from '$components/ParticipantsCompact.svelte'
 	import ParticipantsSheet from '$components/ParticipantsSheet.svelte'
 	import ScanMenu from '$components/ScanMenu.svelte'
 	import SettingItem from '$components/SettingItem.svelte'
@@ -98,31 +97,31 @@
 
 		try {
 			if (!qrScanner.open.isAvailable()) {
-				toast.error('QR сканер недоступен в этой версии Telegram')
+				toast.error(m.qr_scan_unavailable())
 				return
 			}
 
-			const qrData = await qrScanner.open({ text: 'Отсканируйте QR-код чека' })
+			const qrData = await qrScanner.open({ text: m.qr_scan_title() })
 
 			if (qrData) {
-				toast.info(`QR код отсканирован: ${qrData}`)
+				toast.info(m.qr_scan_success({ data: qrData }))
 			}
 		} catch (error) {
 			console.error('QR scan error:', error)
-			toast.error('Не удалось отсканировать QR код')
+			toast.error(m.qr_scan_failed())
 		}
 	}
 
 	function handleTakePhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
-		toast.info('Функция фото чека будет доступна скоро')
+		toast.info(m.function_coming())
 	}
 
 	function handleUploadPhoto() {
 		isScanMenuOpen = false
 		haptic.soft()
-		toast.info('Функция загрузки фото будет доступна скоро')
+		toast.info(m.function_coming())
 	}
 
 	const toast = getToastContext()
@@ -172,9 +171,9 @@
 			label={m.create_split_participants_label()}
 			sheetTitle={m.split_participants_label()}
 		>
-			{#snippet value()}
-				<ParticipantsCompact participants={[]} />
-			{/snippet}
+			<!--{#snippet value()}-->
+			<!--	<ParticipantsCompact participants={[]} />-->
+			<!--{/snippet}-->
 
 			{#snippet sheet()}
 				<ParticipantsSheet participants={[]} />
@@ -201,7 +200,7 @@
 	</div>
 </div>
 
-<BottomSheet height={80} onclose={handleCancelEdit} bind:open={isFormOpen}>
+<BottomSheet height={75} onclose={handleCancelEdit} bind:open={isFormOpen}>
 	<ItemEditForm
 		bind:item={formItem}
 		onSave={handleSaveItem}

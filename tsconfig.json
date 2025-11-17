@@ -1,14 +1,14 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "./services/backend"
-    },
-    {
-      "path": "./services/frontend"
-    },
-    {
-      "path": "./services/telegram"
-    }
-  ]
+	"files": [],
+	"references": [
+		{
+			"path": "./services/backend"
+		},
+		{
+			"path": "./services/frontend"
+		},
+		{
+			"path": "./services/telegram"
+		}
+	]
 }

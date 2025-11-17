@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { X } from 'phosphor-svelte'
+
 	import Button from '$components/Button.svelte'
-	import Delimiter from '$components/Delimiter.svelte'
 	import EmojiPicker from '$components/EmojiPicker.svelte'
 	import Input from '$components/Input.svelte'
 	import PriceInput from '$components/PriceInput.svelte'
@@ -89,12 +90,30 @@
 		</button>
 
 		{#if showEmojiPicker}
-			<div class="emoji-overlay" onclick={() => (showEmojiPicker = false)}>
-				<div class="emoji-modal" onclick={e => e.stopPropagation()}>
+			<div
+				class="emoji-overlay"
+				onclick={() => (showEmojiPicker = false)}
+				onkeydown={e => e.key === 'Escape' && (showEmojiPicker = false)}
+				role="presentation"
+				tabindex="-1"
+			>
+				<div
+					class="emoji-modal"
+					onclick={e => e.stopPropagation()}
+					onkeydown={e => e.stopPropagation()}
+					role="dialog"
+					aria-modal="true"
+					aria-label={m.item_icon_label()}
+					tabindex="0"
+				>
 					<div class="emoji-modal-header">
 						<span>{m.item_icon_label()}</span>
-						<button class="close-button" onclick={() => (showEmojiPicker = false)} type="button">
-							✕
+						<button
+							class="close-button"
+							onclick={() => (showEmojiPicker = false)}
+							type="button"
+						>
+							<X size="24" />
 						</button>
 					</div>
 					<EmojiPicker selected={item.icon} onselect={handleSelectEmoji} />
@@ -103,14 +122,12 @@
 		{/if}
 	</div>
 
-	<Delimiter spacing="lg" />
-
 	<div class="actions">
-		<Button variant="secondary" onclick={onCancel}>{m.action_cancel()}</Button>
-		<Button variant="primary" onclick={validateAndSave}>{m.action_save()}</Button>
+		<Button size="md" variant="secondary" onclick={onCancel}>{m.action_cancel()}</Button>
+		<Button size="md" variant="primary" onclick={validateAndSave}>{m.action_save()}</Button>
 	</div>
 
-	<Button variant="danger" onclick={onDelete}>{m.item_delete_button()}</Button>
+	<Button size="md" variant="danger" onclick={onDelete}>{m.item_delete_button()}</Button>
 </div>
 
 <style>
@@ -148,8 +165,7 @@
 		background: var(--color-bg-surface);
 	}
 
-	.emoji-trigger .label,
-	.emoji-section .label {
+	.emoji-trigger .label {
 		font-size: var(--text-sm);
 		font-weight: var(--font-medium);
 		color: var(--color-text-secondary);
@@ -172,7 +188,7 @@
 
 	.emoji-modal {
 		background: var(--color-bg-surface);
-		border-radius: var(--radius-lg);
+		border-radius: var(--radius-default);
 		border: 1px solid var(--color-border-default);
 		max-width: 480px;
 		width: 100%;

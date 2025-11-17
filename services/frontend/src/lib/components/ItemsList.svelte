@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Plus } from 'phosphor-svelte'
+	import { Plus, QrCode } from 'phosphor-svelte'
 
 	import Button from '$components/Button.svelte'
 	import Emoji from '$components/Emoji.svelte'
@@ -27,17 +27,6 @@
 <div class="items-section">
 	<div class="section-header">
 		<h2 class="section-title">{m.create_split_positions_title()}</h2>
-		<div class="section-actions">
-			<Button size="sm" variant="secondary" onclick={onOpenScanMenu}>
-				{m.create_split_scan_button()}
-			</Button>
-			<Button size="sm" variant="primary" onclick={onAddItem}>
-				{#snippet iconLeft()}
-					<Plus size={20} weight="bold" />
-				{/snippet}
-				{m.create_split_add_item_button()}
-			</Button>
-		</div>
 	</div>
 
 	{#if items.length === 0}
@@ -46,16 +35,16 @@
 		<div class="items-list">
 			{#each items as item, index (index)}
 				<button class="item-card" onclick={() => onEditItem(index)} type="button">
-					<div class="item-icon">
-						<Emoji emoji={item.icon} size={24} />
-					</div>
-					<div class="item-info">
+					<span class="item-icon">
+						<Emoji emoji={item.icon ?? '📦'} size={24} />
+					</span>
+					<span class="item-info">
 						<span class="item-name">{item.name}</span>
 						<span class="item-quantity">
 							{item.quantity}
 							{m.quantity_unit()}
 						</span>
-					</div>
+					</span>
 					<span class="item-price">
 						{formatPrice(item.price)}
 						{currencySymbols[currency] || currency}
@@ -64,6 +53,21 @@
 			{/each}
 		</div>
 	{/if}
+
+	<div class="section-actions">
+		<Button size="md" variant="secondary" onclick={onOpenScanMenu}>
+			{#snippet iconLeft()}
+				<QrCode size={24} weight="bold" />
+			{/snippet}
+			{m.create_split_scan_button()}
+		</Button>
+		<Button size="md" variant="outline" onclick={onAddItem}>
+			{#snippet iconLeft()}
+				<Plus size={24} weight="bold" />
+			{/snippet}
+			{m.create_split_add_item_button()}
+		</Button>
+	</div>
 </div>
 
 <style>
@@ -87,7 +91,8 @@
 	}
 
 	.section-actions {
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		gap: var(--spacing-2-m);
 	}
 

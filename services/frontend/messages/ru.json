@@ -1,12 +1,12 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 
-	"action_cancel": "отменить",
+	"action_cancel": "Отменить",
 	"action_create_split": "Создать сплит",
-	"action_join_split": "присоединиться",
-	"action_load_more": "загрузить ещё",
-	"action_mark_paid": "отметить как оплачено",
-	"action_save": "сохранить",
+	"action_join_split": "Присоединиться",
+	"action_load_more": "Загрузить ещё",
+	"action_mark_paid": "Отметить как оплачено",
+	"action_save": "Сохранить",
 
 	"all_splits_loaded": "Это все ваши сплиты",
 
@@ -16,7 +16,7 @@
 	"app_title_home": "Главная",
 	"app_title_profile": "Профиль",
 
-	"create_split_add_item_button": "добавить",
+	"create_split_add_item_button": "Добавить",
 	"create_split_button": "Создать сплит",
 	"create_split_currency_label": "Валюта",
 	"create_split_error": "Не удалось создать сплит",
@@ -26,7 +26,7 @@
 	"create_split_participants_label": "Участники",
 	"create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
 	"create_split_positions_title": "Позиции",
-	"create_split_scan_button": "отсканировать",
+	"create_split_scan_button": "Отсканировать",
 	"create_split_scan_menu_title": "Выберите способ добавления",
 	"create_split_scan_photo_description": "Сделать фото чека для распознавания",
 	"create_split_scan_photo_title": "Сфотографировать чек",
@@ -64,7 +64,7 @@
 
 	"error_generic": "Ошибка",
 
-	"item_delete_button": "удалить позицию",
+	"item_delete_button": "Удалить позицию",
 	"item_division_method_label": "Способ деления",
 	"item_icon_label": "Иконка",
 	"item_name_label": "Название",
@@ -72,12 +72,12 @@
 	"item_price_label": "Цена",
 
 	"loading": "Загрузка...",
-
+	"function_coming": "Функция будет доступна скоро",
 	"not_available_in_telegram": "Приложение доступно только в Telegram",
 
-	"participants_add_button": "добавить участника",
+	"participants_add_button": "Добавить участника",
 	"participants_empty": "Участники будут добавлены автоматически при присоединении к сплиту",
-	"participants_kick_button": "исключить",
+	"participants_kick_button": "Исключить",
 
 	"quantity_label": "Количество",
 	"quantity_per_portion": "поштучно",
@@ -121,5 +121,10 @@
 	"stats_monthly_spent": "Разделено за месяц",
 	"stats_total_splits": "Всего сплитов",
 
-	"success_split_created": "сплит создан"
+	"success_split_created": "Cплит создан",
+
+	"qr_scan_unavailable": "QR сканер недоступен на вашем устройстве",
+	"qr_scan_title": "Отсканируйте QR-код чека",
+	"qr_scan_success": "QR-код отсканирован: {data}",
+	"qr_scan_failed": "Не удалось отсканировать QR-код"
 }

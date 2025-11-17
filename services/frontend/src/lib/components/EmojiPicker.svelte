@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Emoji from '$components/Emoji.svelte'
 	import { m } from '$lib/i18n'
+	import { haptic } from '$telegram/haptic'
 
 	interface Props {
 		selected?: string
@@ -30,6 +31,7 @@
 
 	function handleSelect(emoji: string) {
 		onselect(emoji)
+		haptic.soft()
 	}
 </script>
 
