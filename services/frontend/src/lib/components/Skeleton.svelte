@@ -20,7 +20,11 @@
 	<div class="skeleton {className}" class:circle style="width: {width}; height: {height};"></div>
 {:else}
 	{#each Array(count) as _, i (i)}
-		<div class="skeleton {className}" class:circle style="width: {width}; height: {height};"></div>
+		<div
+			class="skeleton {className}"
+			class:circle
+			style="width: {width}; height: {height};"
+		></div>
 	{/each}
 {/if}
 

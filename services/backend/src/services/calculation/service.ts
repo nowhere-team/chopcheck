@@ -65,7 +65,9 @@ export class CalculationService {
 			}
 
 			// who else selected this item?
-			const allParticipations = data.participants.flatMap(p => p.itemParticipations).filter(ip => ip.itemId === item.id)
+			const allParticipations = data.participants
+				.flatMap(p => p.itemParticipations)
+				.filter(ip => ip.itemId === item.id)
 
 			// get a strategy using the division method
 			const strategy = this.strategyFactory.getStrategy(selection.divisionMethod)
