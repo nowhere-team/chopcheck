@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte'
 
-import { getMyDraft, saveDraft } from '$api/drafts'
+import { getMyDraft, publishDraft, saveDraft } from '$api/drafts'
 import type { Split } from '$api/types'
 import { m } from '$lib/i18n'
 import { getPersistedStorage } from '$lib/storage/persisted'
@@ -59,7 +59,7 @@ export function setDraftContext() {
 		}
 
 		autoSaveTimer = setTimeout(() => {
-			save()
+			save().catch()
 		}, AUTO_SAVE_DELAY)
 	}
 
@@ -75,9 +75,10 @@ export function setDraftContext() {
 
 			serverDraft = remoteDraft
 
+			// important: only use remote draft if it's actually in draft status
 			if (storedDraft) {
 				split = storedDraft
-			} else if (remoteDraft) {
+			} else if (remoteDraft && remoteDraft.status === 'draft') {
 				split = {
 					id: remoteDraft.id,
 					name: remoteDraft.name,
@@ -149,37 +150,37 @@ export function setDraftContext() {
 
 	function updateName(name: string) {
 		split.name = name
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
 	function updateIcon(icon: string) {
 		split.icon = icon
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
 	function updateCurrency(currency: string) {
 		split.currency = currency
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
 	function addItem(item: DraftItem) {
 		split.items = [...split.items, { ...item }]
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
 	function updateItem(index: number, item: DraftItem) {
 		split.items = split.items.map((existing, i) => (i === index ? { ...item } : existing))
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
 	function removeItem(index: number) {
 		split.items = split.items.filter((_, i) => i !== index)
-		syncToStorage()
+		syncToStorage().catch()
 		scheduleAutoSave()
 	}
 
@@ -198,16 +199,19 @@ export function setDraftContext() {
 			throw new Error(m.error_split_no_items())
 		}
 
+		// ensure split is saved before publishing
 		error = null
 		await save()
-
-		if (error) {
-			throw new Error(error)
-		}
 
 		if (!split.id) {
 			throw new Error(m.error_split_save_failed())
 		}
+
+		// now publish via endpoint
+		await publishDraft(split.id)
+
+		// clear local state
+		await clear()
 
 		return split.id
 	}

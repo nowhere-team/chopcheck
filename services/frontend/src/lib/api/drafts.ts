@@ -27,7 +27,7 @@ export async function saveDraft(data: {
 		price: number
 		quantity: string
 		type?: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-		defaultDivisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+		defaultDivisionMethod: 'equal' | 'shares' | 'custom'
 	}>
 }): Promise<Split> {
 	if (data.id) {
@@ -42,4 +42,12 @@ export async function saveDraft(data: {
 
 	const response = await api.post<SplitResponse>('splits', data)
 	return response.split
+}
+
+export async function publishDraft(id: string) {
+	try {
+		await api.post(`splits/${id}/publish`)
+	} catch (err) {
+		throw new Error(err instanceof Error ? err.message : 'Failed to publish split')
+	}
 }

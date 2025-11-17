@@ -24,7 +24,7 @@
 	const isActive = (path: string) => page.url.pathname === path
 
 	function handleClick(href: string) {
-		if (href === '/create') {
+		if (href === '/split/create') {
 			haptic.medium()
 		} else {
 			haptic.soft()
@@ -41,6 +41,7 @@
 				class:active={isActive(link.path)}
 				aria-label={link.label}
 				onclick={() => handleClick(link.path)}
+				data-sveltekit-preload-data="hover"
 			>
 				<svelte:component this={link.icon} size={32} weight="fill" />
 			</a>

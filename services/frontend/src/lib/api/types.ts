@@ -50,7 +50,7 @@ export interface SplitItem {
 	price: number
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity: string
-	defaultDivisionMethod: 'custom' | 'fixed' | 'equal' | 'shares' | 'proportional'
+	defaultDivisionMethod: 'custom' | 'equal' | 'shares'
 }
 
 export interface Participant {
@@ -68,7 +68,7 @@ export interface Participant {
 
 export interface ItemSelection {
 	itemId: string
-	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	divisionMethod: 'equal' | 'shares' | 'custom'
 	value?: string
 }
 
