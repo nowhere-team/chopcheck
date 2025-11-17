@@ -1,9 +1,13 @@
 import { and, desc, eq, exists, gte, or, sql } from 'drizzle-orm'
+import { customAlphabet } from 'nanoid'
 
 import type { Split, SplitsByPeriod } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
+
+// Custom alphabet without ambiguous characters (0, O, I, l, 1)
+const nanoid = customAlphabet('23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz', 8)
 
 type CreateSplitData = Pick<Split, 'name' | 'currency'>
 
@@ -16,6 +20,27 @@ export class SplitsRepository extends BaseRepository {
 		return this.getOrSet(this.getCacheKey(id), async () => {
 			const split = await this.db.query.splits.findFirst({
 				where: and(eq(schema.splits.id, id), eq(schema.splits.isDeleted, false)),
+				with: {
+					owner: {
+						columns: {
+							id: true,
+							displayName: true,
+							username: true,
+							avatarUrl: true,
+							isDeleted: true,
+						},
+					},
+				},
+			})
+
+			return split || null
+		})
+	}
+
+	async findByShortId(shortId: string): Promise<Split | null> {
+		return this.getOrSet(this.getCacheKey(`short:${shortId}`), async () => {
+			const split = await this.db.query.splits.findFirst({
+				where: and(eq(schema.splits.shortId, shortId), eq(schema.splits.isDeleted, false)),
 				with: {
 					owner: {
 						columns: {
@@ -163,10 +188,30 @@ export class SplitsRepository extends BaseRepository {
 
 	async create(ownerId: string, data: CreateSplitData): Promise<Split> {
 		return await this.db.transaction(async tx => {
+			// Generate unique shortId with retry logic
+			let shortId: string
+			let attempts = 0
+			const maxAttempts = 5
+
+			while (attempts < maxAttempts) {
+				shortId = nanoid()
+				const existing = await tx.query.splits.findFirst({
+					where: eq(schema.splits.shortId, shortId),
+				})
+
+				if (!existing) break
+				attempts++
+			}
+
+			if (attempts === maxAttempts) {
+				throw new Error('Failed to generate unique shortId')
+			}
+
 			const [split] = await tx
 				.insert(schema.splits)
 				.values({
 					ownerId,
+					shortId: shortId!,
 					name: data.name,
 					currency: data.currency || 'RUB',
 					status: 'draft',

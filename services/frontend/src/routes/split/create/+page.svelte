@@ -2,7 +2,6 @@
 	import { qrScanner } from '@telegram-apps/sdk'
 	import { onMount } from 'svelte'
 
-	import { goto } from '$app/navigation'
 	import BottomSheet from '$components/BottomSheet.svelte'
 	import Button from '$components/Button.svelte'
 	import Delimiter from '$components/Delimiter.svelte'
@@ -14,6 +13,7 @@
 	import ParticipantsSheet from '$components/ParticipantsSheet.svelte'
 	import ScanMenu from '$components/ScanMenu.svelte'
 	import SettingItem from '$components/SettingItem.svelte'
+	import SplitSuccessSheet from '$components/SplitSuccessSheet.svelte'
 	import { getDraftContext, setDraftContext } from '$lib/contexts/draft.svelte'
 	import { getToastContext } from '$lib/contexts/toast.svelte'
 	import { m } from '$lib/i18n'
@@ -25,7 +25,9 @@
 
 	let isFormOpen = $state(false)
 	let isScanMenuOpen = $state(false)
+	let isSuccessSheetOpen = $state(false)
 	let editingIndex = $state<number | null>(null)
+	let publishedSplit = $state<{ id: string; shortId: string } | null>(null)
 	let formItem = $state<DraftItem>({
 		name: '',
 		price: 0,
@@ -128,17 +130,19 @@
 
 	async function handlePublish() {
 		try {
-			const splitId = await draft.publish()
-			await draft.clear()
+			const split = await draft.publish()
 			haptic.success()
-			toast.success(m.success_split_created())
-			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(`/split/${splitId}`)
+			publishedSplit = { id: split.id, shortId: split.shortId }
+			isSuccessSheetOpen = true
 		} catch (error) {
 			haptic.error()
 			const message = error instanceof Error ? error.message : m.error_split_create_failed()
 			toast.error(message)
 		}
+	}
+
+	function handleCloseSuccessSheet() {
+		isSuccessSheetOpen = false
 	}
 
 	const canPublish = $derived(draft.split.name?.trim().length > 0 && draft.split.items.length > 0)
@@ -216,6 +220,15 @@
 		onUploadPhoto={handleUploadPhoto}
 	/>
 </BottomSheet>
+
+{#if publishedSplit}
+	<SplitSuccessSheet
+		bind:open={isSuccessSheetOpen}
+		onclose={handleCloseSuccessSheet}
+		splitId={publishedSplit.id}
+		shortId={publishedSplit.shortId}
+	/>
+{/if}
 
 <style>
 	.header {

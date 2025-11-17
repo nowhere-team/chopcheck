@@ -25,7 +25,7 @@ interface DraftContext {
 	updateItem: (index: number, item: DraftItem) => void
 	removeItem: (index: number) => void
 	clear: () => Promise<void>
-	publish: () => Promise<string>
+	publish: () => Promise<Split>
 }
 
 const defaultDraft: DraftSplit = {
@@ -190,7 +190,7 @@ export function setDraftContext() {
 		await storage.remove(STORAGE_KEY)
 	}
 
-	async function publish(): Promise<string> {
+	async function publish(): Promise<Split> {
 		if (!split.name?.trim()) {
 			throw new Error(m.error_split_name_empty())
 		}
@@ -208,12 +208,12 @@ export function setDraftContext() {
 		}
 
 		// now publish via endpoint
-		await publishDraft(split.id)
+		const publishedSplit = await publishDraft(split.id)
 
 		// clear local state
 		await clear()
 
-		return split.id
+		return publishedSplit
 	}
 
 	const context: DraftContext = {

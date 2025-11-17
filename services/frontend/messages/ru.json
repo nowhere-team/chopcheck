@@ -123,6 +123,18 @@
 
 	"success_split_created": "Cплит создан",
 
+	"split_created_title": "Сплит создан!",
+	"split_created_message": "Поделитесь ссылкой с участниками",
+	"share_link_label": "Ссылка для приглашения",
+	"go_to_split": "Перейти в сплит",
+	"link_copied": "Ссылка скопирована в буфер обмена",
+	"link_copy_failed": "Не удалось скопировать ссылку",
+	"split_id_label": "ID сплита",
+	"currency_label": "Валюта",
+	"total_amount_label": "Общая сумма",
+	"items_label": "Позиции",
+	"participants_label": "Участники",
+
 	"qr_scan_unavailable": "QR сканер недоступен на вашем устройстве",
 	"qr_scan_title": "Отсканируйте QR-код чека",
 	"qr_scan_success": "QR-код отсканирован: {data}",

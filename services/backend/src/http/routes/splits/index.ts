@@ -8,6 +8,7 @@ import { createCreateSplitRoute } from './create'
 import { createDeleteItemRoute } from './delete-item'
 import { createDraftRoute } from './draft'
 import { createGetSplitRoute } from './get'
+import { createGetSplitByShortIdRoute } from './get-by-short-id'
 import { createJoinRoute } from './join'
 import { createListSplitPaymentMethodsRoute } from './list-payment-methods'
 import { createMyParticipationRoute } from './my-participation'
@@ -15,6 +16,7 @@ import { createMySplitsRoute } from './my-splits'
 import { createPublishRoute } from './publish'
 import { createRemovePaymentMethodFromSplitRoute } from './remove-payment-method'
 import { createSelectItemsRoute } from './select-items'
+import { createSplitSubscribeRoute } from './subscribe'
 import { createUpdateSplitRoute } from './update'
 import { createUpdateItemRoute } from './update-item'
 
@@ -38,7 +40,10 @@ function createPrivateSplitsRoutes() {
 }
 
 function createPublicSplitsRoutes() {
-	return new Hono().route('/', createGetSplitRoute())
+	return new Hono()
+		.route('/', createGetSplitRoute())
+		.route('/', createGetSplitByShortIdRoute())
+		.route('/', createSplitSubscribeRoute())
 }
 
 export function createSplitsRoutes() {

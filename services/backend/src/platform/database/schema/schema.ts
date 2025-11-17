@@ -76,6 +76,7 @@ export const splits = pgTable(
 	'splits',
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
+		shortId: varchar('short_id', { length: 12 }).notNull(),
 		parentSplitId: uuid('parent_split_id'),
 		ownerId: uuid('owner_id').notNull(),
 
@@ -120,6 +121,8 @@ export const splits = pgTable(
 			columns: [table.ownerId],
 			foreignColumns: [users.id],
 		}).onDelete('restrict'),
+
+		unique('unique_short_id').on(table.shortId),
 
 		index('idx_splits_owner_id').on(table.ownerId),
 		index('idx_splits_status').on(table.status),

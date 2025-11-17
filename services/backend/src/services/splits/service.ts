@@ -51,6 +51,26 @@ export class SplitsService {
 		return response
 	}
 
+	async getByShortId(shortId: string, includeCalculations = true): Promise<SplitResponse | null> {
+		this.logger.debug('fetching split by shortId', { shortId })
+
+		const split = await this.splitsRepo.findByShortId(shortId)
+		if (!split) return null
+
+		const [items, participants] = await Promise.all([
+			this.itemsRepo.findBySplitId(split.id),
+			this.participantsRepo.findBySplitId(split.id),
+		])
+
+		const response: SplitResponse = { split, items, participants }
+
+		if (includeCalculations) {
+			response.calculations = this.buildCalculations(response)
+		}
+
+		return response
+	}
+
 	async getMySplitsGrouped(userId: string): Promise<SplitsByPeriod> {
 		return await this.splitsRepo.findByUserGroupedByPeriod(userId)
 	}

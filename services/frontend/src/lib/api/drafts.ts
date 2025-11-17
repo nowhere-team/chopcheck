@@ -44,9 +44,10 @@ export async function saveDraft(data: {
 	return response.split
 }
 
-export async function publishDraft(id: string) {
+export async function publishDraft(id: string): Promise<Split> {
 	try {
-		await api.post(`splits/${id}/publish`)
+		const response = await api.post<SplitResponse>(`splits/${id}/publish`)
+		return response.split
 	} catch (err) {
 		throw new Error(err instanceof Error ? err.message : 'Failed to publish split')
 	}
