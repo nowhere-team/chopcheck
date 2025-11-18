@@ -10,11 +10,19 @@
 		open?: boolean
 		onclose: () => void
 		title?: string
+		subtitle?: string
 		height?: number
 		children?: Snippet
 	}
 
-	let { open = $bindable(false), onclose, title, height = 60, children }: Props = $props()
+	let {
+		open = $bindable(false),
+		onclose,
+		title,
+		subtitle,
+		height = 60,
+		children
+	}: Props = $props()
 
 	const swipeContext = getSwipeContext()
 
@@ -190,7 +198,12 @@
 
 			{#if title}
 				<div class="header">
-					<h2>{title}</h2>
+					<div class="header-content">
+						<h2>{title}</h2>
+						{#if subtitle}
+							<p class="subtitle">{subtitle}</p>
+						{/if}
+					</div>
 					<button class="close-btn" onclick={close} type="button">
 						<X size={24} />
 					</button>
@@ -215,7 +228,6 @@
 		pointer-events: all;
 	}
 
-	/*noinspection CssOverwrittenProperties*/
 	.sheet {
 		width: 100%;
 		background: var(--color-bg-surface);
@@ -223,7 +235,6 @@
 		border-radius: var(--radius-default) var(--radius-default) 0 0;
 		display: flex;
 		flex-direction: column;
-		transform: translateY(0);
 		transition: transform 200ms ease-out;
 		max-height: 90vh;
 		position: relative;
@@ -254,15 +265,29 @@
 		flex-shrink: 0;
 		cursor: grab;
 		user-select: none;
+		gap: var(--spacing-3-m);
 	}
 
 	.header:active {
 		cursor: grabbing;
 	}
 
+	.header-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-1-m);
+	}
+
 	.header h2 {
 		font-size: var(--text-lg);
 		font-weight: var(--font-semibold);
+		user-select: none;
+	}
+
+	.subtitle {
+		font-size: var(--text-base);
+		color: var(--color-text-secondary);
 		user-select: none;
 	}
 
@@ -277,6 +302,7 @@
 		-webkit-tap-highlight-color: transparent;
 		border-radius: var(--radius-default);
 		padding: var(--spacing-2-m);
+		flex-shrink: 0;
 	}
 
 	.close-btn:active {

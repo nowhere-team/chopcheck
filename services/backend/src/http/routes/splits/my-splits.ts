@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { validate } from '@/http/utils'
+
 const querySchema = z.object({
 	grouped: z.coerce.boolean().default(false),
 	offset: z.coerce.number().int().min(0).default(0),
@@ -10,11 +12,11 @@ const querySchema = z.object({
 })
 
 export function createMySplitsRoute() {
-	return new Hono().get('/my', async c => {
+	return new Hono().get('/my', validate('query', querySchema), async c => {
 		const authContext = c.get('authContext')!
 		const services = c.get('services')
 
-		const query = querySchema.parse(c.req.query())
+		const query = c.req.valid('query')
 
 		// period sorting
 		if (query.grouped) {

@@ -7,6 +7,8 @@ const schema = z.object({
 	NODE_ENV: z.enum(['development', 'production']).default('production'),
 	APP_NAME: z.string().default('chopcheck-bot'),
 
+	HTTP_PORT: z.coerce.number().min(1).max(65535).default(8081),
+
 	LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 	LOG_FORMAT: z.enum(LOG_FORMATS).default('json'),
 

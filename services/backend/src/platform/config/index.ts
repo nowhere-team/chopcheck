@@ -28,6 +28,8 @@ const schema = z.object({
 	JWT_AUDIENCE: z.string().default('chopcheck'),
 
 	TELEGRAM_BOT_TOKEN: z.string().nonempty(),
+	TELEGRAM_SERVICE_URL: z.url().nonempty(),
+	TELEGRAM_WEB_APP_URL: z.url().nonempty(),
 
 	PORT: z.coerce.number().min(1).max(65535).default(8080),
 })

@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { validate } from '@/http/utils'
+
 const addItemsSchema = z.object({
 	items: z.array(
 		z.object({
@@ -14,13 +16,11 @@ const addItemsSchema = z.object({
 })
 
 export function createAddItemsRoute() {
-	return new Hono().post('/:id/items', async c => {
+	return new Hono().post('/:id/items', validate('json', addItemsSchema), async c => {
 		const authContext = c.get('authContext')!
 		const services = c.get('services')
 		const splitId = c.req.param('id')
-
-		const body = await c.req.json()
-		const { items } = addItemsSchema.parse(body)
+		const { items } = c.req.valid('json')
 
 		const split = await services.splits.addItems(splitId, authContext.userId, items)
 

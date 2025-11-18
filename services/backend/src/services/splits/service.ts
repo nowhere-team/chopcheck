@@ -31,16 +31,16 @@ export class SplitsService {
 		private logger: Logger,
 	) {}
 
-	async getById(splitId: string, includeCalculations = true): Promise<SplitResponse | null> {
-		this.logger.debug('fetching split', { splitId })
-
-		const [split, items, participants] = await Promise.all([
-			this.splitsRepo.findById(splitId),
-			this.itemsRepo.findBySplitId(splitId),
-			this.participantsRepo.findBySplitId(splitId),
-		])
-
+	private async fetchSplitWithRelations(
+		split: Split | null,
+		includeCalculations: boolean,
+	): Promise<SplitResponse | null> {
 		if (!split) return null
+
+		const [items, participants] = await Promise.all([
+			this.itemsRepo.findBySplitId(split.id),
+			this.participantsRepo.findBySplitId(split.id),
+		])
 
 		const response: SplitResponse = { split, items, participants }
 
@@ -49,6 +49,20 @@ export class SplitsService {
 		}
 
 		return response
+	}
+
+	async getById(rawId: string, includeCalculations = true): Promise<SplitResponse | null> {
+		this.logger.debug('fetching split', { id: rawId })
+
+		const split = await this.splitsRepo.findById(rawId)
+		return this.fetchSplitWithRelations(split, includeCalculations)
+	}
+
+	async getByShortId(shortId: string, includeCalculations = true): Promise<SplitResponse | null> {
+		this.logger.debug('fetching split', { shortId })
+
+		const split = await this.splitsRepo.findByShortId(shortId)
+		return this.fetchSplitWithRelations(split, includeCalculations)
 	}
 
 	async getMySplitsGrouped(userId: string): Promise<SplitsByPeriod> {
@@ -231,7 +245,6 @@ export class SplitsService {
 		return await this.create(userId, dto)
 	}
 
-	// new method: publish draft split
 	async publishDraft(splitId: string, userId: string): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
@@ -313,6 +326,50 @@ export class SplitsService {
 		const result = await this.getById(splitId, true)
 		if (!result) {
 			throw new NotFoundError('Split not found after adding items')
+		}
+
+		return result
+	}
+
+	async replaceItems(
+		splitId: string,
+		userId: string,
+		items: Array<Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>>,
+	): Promise<SplitResponse> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('Split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ForbiddenError('Only owner can replace items')
+		}
+
+		if (split.status !== 'draft') {
+			throw new ForbiddenError('Can only replace items in draft splits')
+		}
+
+		// delete all existing items
+		const currentItems = await this.itemsRepo.findBySplitId(splitId)
+		for (const item of currentItems) {
+			await this.itemsRepo.softDelete(item.id, splitId)
+		}
+
+		// create new items
+		if (items.length > 0) {
+			await this.itemsRepo.createMany(splitId, items)
+		}
+
+		this.logger.info('items replaced in split', {
+			splitId,
+			userId,
+			oldCount: currentItems.length,
+			newCount: items.length,
+		})
+
+		const result = await this.getById(splitId, true)
+		if (!result) {
+			throw new NotFoundError('Split not found after replacing items')
 		}
 
 		return result

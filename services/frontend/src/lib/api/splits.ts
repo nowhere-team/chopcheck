@@ -85,3 +85,15 @@ export async function getMyParticipation(splitId: string): Promise<MyParticipati
 	const response = await api.get<{ splits: MyParticipation }>(`splits/${splitId}/my`)
 	return response.splits
 }
+
+export async function createShareMessage(splitId: string): Promise<{
+	preparedMessageId: string
+	splitId: string
+	shortId: string
+}> {
+	return await api.post<{
+		preparedMessageId: string
+		splitId: string
+		shortId: string
+	}>(`splits/${splitId}/share`)
+}

@@ -1,25 +1,33 @@
 import { Hono } from 'hono'
-import { z } from 'zod'
 
+import { createSplitSchema } from '@/common/types'
 import { requirePermission } from '@/http/middleware/auth'
-import { uuidParam } from '@/http/utils'
-
-const updateSplitSchema = z.object({
-	name: z.string().min(1).max(255).optional(),
-	currency: z.string().length(3).optional(),
-})
+import { uuidParam, validate } from '@/http/utils'
 
 export function createUpdateSplitRoute() {
-	return new Hono().patch('/:id', requirePermission('splits:write'), uuidParam('id'), async c => {
-		const authContext = c.get('authContext')!
-		const services = c.get('services')
-		const splitId = c.req.param('id')
+	return new Hono().patch(
+		'/:id',
+		validate('json', createSplitSchema),
+		requirePermission('splits:write'),
+		uuidParam('id'),
+		async c => {
+			const authContext = c.get('authContext')!
+			const services = c.get('services')
+			const logger = c.get('logger')
+			const splitId = c.req.param('id')
 
-		const body = await c.req.json()
-		const data = updateSplitSchema.parse(body)
+			const dto = c.req.valid('json')
 
-		const split = await services.splits.updateSplit(splitId, authContext.userId, data)
+			logger.info('updating split via PATCH api', {
+				userId: authContext.userId,
+				splitId,
+				name: dto.name,
+				itemsCount: dto.items?.length || 0,
+			})
 
-		return c.json(split)
-	})
+			const split = await services.splits.createOrUpdate(authContext.userId, { ...dto, id: splitId })
+
+			return c.json(split)
+		},
+	)
 }

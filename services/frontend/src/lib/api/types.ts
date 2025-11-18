@@ -23,6 +23,7 @@ export interface AuthResponse {
 
 export interface Split {
 	id: string
+	shortId: string
 	name: string
 	icon?: string
 	currency: string
