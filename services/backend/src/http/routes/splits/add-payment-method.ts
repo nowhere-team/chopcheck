@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { uuidParam, validate } from '@/http/utils'
 
 const addPaymentMethodToSplitSchema = z.object({
-	paymentMethodId: z.string().uuid(),
+	paymentMethodId: z.uuid(),
 	comment: z.string().max(2048).optional(),
 	isPreferred: z.boolean().optional(),
 })

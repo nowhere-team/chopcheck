@@ -126,5 +126,14 @@
 	"qr_scan_unavailable": "QR сканер недоступен на вашем устройстве",
 	"qr_scan_title": "Отсканируйте QR-код чека",
 	"qr_scan_success": "QR-код отсканирован: {data}",
-	"qr_scan_failed": "Не удалось отсканировать QR-код"
+	"qr_scan_failed": "Не удалось отсканировать QR-код",
+
+	"split_created_title": "Сплит создан!",
+	"split_created_message": "Поделитесь ссылкой с участниками",
+	"send_link_to_chat": "Отправить в чат",
+	"go_to_split": "Перейти в сплит",
+	"link_copied": "Ссылка скопирована в буфер обмена",
+	"link_copy_failed": "Не удалось скопировать ссылку",
+	"share_link_unavailable": "Шаринг недоступен в этом окружении",
+	"share_link_message_creation_failed": "Не удалось создать сообщение"
 }
