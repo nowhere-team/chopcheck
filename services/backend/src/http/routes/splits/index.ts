@@ -14,6 +14,7 @@ import { createMyParticipationRoute } from './my-participation'
 import { createMySplitsRoute } from './my-splits'
 import { createPublishRoute } from './publish'
 import { createRemovePaymentMethodFromSplitRoute } from './remove-payment-method'
+import { createReplaceItemsRoute } from './replace-items'
 import { createSelectItemsRoute } from './select-items'
 import { createUpdateSplitRoute } from './update'
 import { createUpdateItemRoute } from './update-item'
@@ -27,6 +28,7 @@ function createPrivateSplitsRoutes() {
 		.route('/', createCreateSplitRoute())
 		.route('/', createUpdateSplitRoute())
 		.route('/', createAddItemsRoute())
+		.route('/', createReplaceItemsRoute())
 		.route('/', createSelectItemsRoute())
 		.route('/', createDeleteItemRoute())
 		.route('/', createUpdateItemRoute())

@@ -31,15 +31,31 @@ export async function saveDraft(data: {
 	}>
 }): Promise<Split> {
 	if (data.id) {
+		// Update split metadata
 		const response = await api.patch<SplitResponse>(`splits/${data.id}`, {
 			name: data.name,
 			icon: data.icon,
-			currency: data.currency,
-			items: data.items
+			currency: data.currency
 		})
+
+		// Replace all items if provided
+		if (data.items !== undefined) {
+			const itemsResponse = await api.put<SplitResponse>(`splits/${data.id}/items`, {
+				items: data.items.map(item => ({
+					name: item.name,
+					price: item.price,
+					quantity: item.quantity,
+					type: item.type || 'product',
+					defaultDivisionMethod: item.defaultDivisionMethod
+				}))
+			})
+			return itemsResponse.split
+		}
+
 		return response.split
 	}
 
+	// Create new split with items
 	const response = await api.post<SplitResponse>('splits', data)
 	return response.split
 }

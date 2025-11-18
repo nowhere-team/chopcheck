@@ -64,6 +64,10 @@ class ApiClient {
 		return this.request<T>(endpoint, { ...options, method: 'patch', json })
 	}
 
+	put<T>(endpoint: string, json?: unknown, options?: Options): Promise<T> {
+		return this.request<T>(endpoint, { ...options, method: 'put', json })
+	}
+
 	delete<T>(endpoint: string, options?: Options): Promise<T> {
 		return this.request<T>(endpoint, { ...options, method: 'delete' })
 	}

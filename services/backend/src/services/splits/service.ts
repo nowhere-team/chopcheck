@@ -318,6 +318,50 @@ export class SplitsService {
 		return result
 	}
 
+	async replaceItems(
+		splitId: string,
+		userId: string,
+		items: Array<Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>>,
+	): Promise<SplitResponse> {
+		const split = await this.splitsRepo.findById(splitId)
+		if (!split) {
+			throw new NotFoundError('Split not found')
+		}
+
+		if (split.ownerId !== userId) {
+			throw new ForbiddenError('Only owner can replace items')
+		}
+
+		if (split.status !== 'draft') {
+			throw new ForbiddenError('Can only replace items in draft splits')
+		}
+
+		// Delete all existing items
+		const currentItems = await this.itemsRepo.findBySplitId(splitId)
+		for (const item of currentItems) {
+			await this.itemsRepo.softDelete(item.id, splitId)
+		}
+
+		// Create new items
+		if (items.length > 0) {
+			await this.itemsRepo.createMany(splitId, items)
+		}
+
+		this.logger.info('items replaced in split', {
+			splitId,
+			userId,
+			oldCount: currentItems.length,
+			newCount: items.length,
+		})
+
+		const result = await this.getById(splitId, true)
+		if (!result) {
+			throw new NotFoundError('Split not found after replacing items')
+		}
+
+		return result
+	}
+
 	async selectItems(
 		splitId: string,
 		participantId: string,
@@ -370,7 +414,7 @@ export class SplitsService {
 	async updateSplit(
 		splitId: string,
 		userId: string,
-		data: { name?: string; currency?: string },
+		data: { name?: string; currency?: string; icon?: string },
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
