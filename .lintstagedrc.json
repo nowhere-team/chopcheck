@@ -11,5 +11,5 @@
 		"bun --cwd=./services/telegram prettier --write",
 		"bun --cwd=./services/telegram eslint --fix"
 	],
-	"*.{json,yml,yaml}": ["prettier --write"]
+	"*.{json,yml,yaml}": ["bunx prettier --write"]
 }
