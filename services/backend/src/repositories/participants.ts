@@ -55,7 +55,12 @@ export class ParticipantsRepository extends BaseRepository {
 		return participants || null
 	}
 
-	async join(splitId: string, userId: string, displayName?: string): Promise<Participant> {
+	async join(
+		splitId: string,
+		userId: string,
+		displayName?: string,
+		isAnonymous: boolean = false,
+	): Promise<Participant> {
 		const existing = await this.findByUserAndSplit(userId, splitId)
 		if (existing) {
 			return existing
@@ -69,6 +74,7 @@ export class ParticipantsRepository extends BaseRepository {
 				displayName,
 				isReady: false,
 				hasPaid: false,
+				isAnonymous,
 			})
 			.returning()
 

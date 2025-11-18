@@ -35,3 +35,9 @@ export const uuidParam = (...paramNames: string[]) => {
 	const schema = z.object(schemaObject)
 	return validate('param', schema)
 }
+
+export const booleanQueryParam = () =>
+	z
+		.enum(['true', 'false'])
+		.optional()
+		.transform(val => val === 'true')
