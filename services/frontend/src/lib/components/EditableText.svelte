@@ -138,6 +138,10 @@
 		text-overflow: clip;
 	}
 
+	.editable-input::placeholder {
+		color: var(--color-text-secondary);
+	}
+
 	.editable-input:focus {
 		outline: none;
 	}
