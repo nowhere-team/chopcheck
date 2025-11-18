@@ -22,7 +22,7 @@
 	"create_split_error": "Не удалось создать сплит",
 	"create_split_icon_label": "Иконка",
 	"create_split_name_label": "Название",
-	"create_split_name_placeholder": "Ужин в ресторане",
+	"create_split_name_placeholder": "Введите название",
 	"create_split_participants_label": "Участники",
 	"create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
 	"create_split_positions_title": "Позиции",
