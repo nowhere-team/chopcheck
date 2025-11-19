@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { validate } from '@/http/utils'
+import { anonymizeSplitResponse } from '@/http/utils'
 
 const addItemsSchema = z.object({
 	items: z.array(
@@ -24,6 +25,6 @@ export function createAddItemsRoute() {
 
 		const split = await services.splits.addItems(splitId, authContext.userId, items)
 
-		return c.json(split)
+		return c.json(anonymizeSplitResponse(split))
 	})
 }
