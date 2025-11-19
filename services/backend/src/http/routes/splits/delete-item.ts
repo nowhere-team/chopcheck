@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
 import { NotFoundError } from '@/common/errors'
-import { uuidParam } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam } from '@/http/utils'
 
 export function createDeleteItemRoute() {
 	return new Hono().delete('/:id/items/:itemId', uuidParam('id'), uuidParam('itemId'), async c => {
@@ -19,6 +19,6 @@ export function createDeleteItemRoute() {
 			throw new NotFoundError('split or item not found')
 		}
 
-		return c.json(split)
+		return c.json(anonymizeSplitResponse(split))
 	})
 }

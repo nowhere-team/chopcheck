@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { NotFoundError } from '@/common/errors'
-import { uuidParam, validate } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
 
 const selectItemsSchema = z.object({
 	participantId: z.uuid().optional(),
@@ -34,6 +34,7 @@ export function createSelectItemsRoute() {
 			})())
 
 		const split = await services.splits.selectItems(splitId, participantId, selections)
-		return c.json(split)
+
+		return c.json(anonymizeSplitResponse(split))
 	})
 }

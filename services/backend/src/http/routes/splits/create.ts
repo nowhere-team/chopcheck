@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 
 import { createSplitSchema } from '@/common/types'
 import { requirePermission } from '@/http/middleware/auth'
-import { validate } from '@/http/utils'
+import { anonymizeSplitResponse, validate } from '@/http/utils'
 
 export function createCreateSplitRoute() {
 	return new Hono().post('/', validate('json', createSplitSchema), requirePermission('splits:create'), async c => {
@@ -20,6 +20,6 @@ export function createCreateSplitRoute() {
 
 		const split = await services.splits.createOrUpdate(authContext.userId, dto)
 
-		return c.json(split, dto.id ? 200 : 201)
+		return c.json(anonymizeSplitResponse(split), dto.id ? 200 : 201)
 	})
 }

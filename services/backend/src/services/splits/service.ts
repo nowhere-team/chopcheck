@@ -280,7 +280,12 @@ export class SplitsService {
 		return result
 	}
 
-	async join(splitId: string, userId: string): Promise<SplitResponse> {
+	async join(
+		splitId: string,
+		userId: string,
+		displayName?: string,
+		isAnonymous: boolean = false,
+	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('Split not found')
@@ -293,9 +298,9 @@ export class SplitsService {
 			}
 		}
 
-		await this.participantsRepo.join(splitId, userId)
+		await this.participantsRepo.join(splitId, userId, displayName, isAnonymous)
 
-		this.logger.info('user joined split', { splitId, userId })
+		this.logger.info('user joined split', { splitId, userId, isAnonymous, displayName })
 
 		const result = await this.getById(splitId, false)
 		if (!result) {

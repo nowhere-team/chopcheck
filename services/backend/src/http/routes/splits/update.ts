@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 
 import { createSplitSchema } from '@/common/types'
 import { requirePermission } from '@/http/middleware/auth'
-import { uuidParam, validate } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
 
 export function createUpdateSplitRoute() {
 	return new Hono().patch(
@@ -27,7 +27,7 @@ export function createUpdateSplitRoute() {
 
 			const split = await services.splits.createOrUpdate(authContext.userId, { ...dto, id: splitId })
 
-			return c.json(split)
+			return c.json(anonymizeSplitResponse(split))
 		},
 	)
 }

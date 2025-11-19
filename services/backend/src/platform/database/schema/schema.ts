@@ -145,6 +145,7 @@ export const splitParticipants = pgTable(
 
 		isReady: boolean('is_ready').notNull().default(false),
 		hasPaid: boolean('has_paid').notNull().default(false),
+		isAnonymous: boolean('is_anonymous').notNull().default(false),
 
 		overriddenPermissions: jsonb('overridden_permissions').notNull().default({}),
 

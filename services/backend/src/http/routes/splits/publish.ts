@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
 import { requirePermission } from '@/http/middleware/auth'
-import { uuidParam } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam } from '@/http/utils'
 
 export function createPublishRoute() {
 	return new Hono().post('/:id/publish', requirePermission('splits:write'), uuidParam('id'), async c => {
@@ -11,6 +11,6 @@ export function createPublishRoute() {
 
 		const split = await services.splits.publishDraft(splitId, authContext.userId)
 
-		return c.json(split)
+		return c.json(anonymizeSplitResponse(split))
 	})
 }

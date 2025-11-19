@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
 import { NotFoundError } from '@/common/errors'
-import { uuidParam } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam } from '@/http/utils'
 
 export function createGetSplitRoute() {
 	return new Hono().get('/:id', uuidParam('id'), async c => {
@@ -14,6 +14,6 @@ export function createGetSplitRoute() {
 			throw new NotFoundError('split not found')
 		}
 
-		return c.json(split)
+		return c.json(anonymizeSplitResponse(split))
 	})
 }

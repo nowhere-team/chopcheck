@@ -1,0 +1,1 @@
+ALTER TABLE "split_participants" ADD COLUMN "is_anonymous" boolean DEFAULT false NOT NULL;
