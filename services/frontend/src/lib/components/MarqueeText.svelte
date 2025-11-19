@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte'
-	import { onMount } from 'svelte'
 
 	interface Props {
 		speed?: number
@@ -9,27 +8,29 @@
 	}
 
 	const { speed = 30, fadeWidth = 15, children }: Props = $props()
+
 	let contentRef: HTMLSpanElement | undefined = $state()
 	let containerRef: HTMLDivElement | undefined = $state()
 	let needsMarquee = $state(false)
-	let duration = $state('0s')
+
+	const duration = $derived(
+		speed > 0 && contentRef && needsMarquee ? `${contentRef.scrollWidth / speed}s` : '0s'
+	)
 
 	function checkOverflow() {
 		if (!contentRef || !containerRef) return
-		const overflow = contentRef.scrollWidth > containerRef.clientWidth
-		needsMarquee = overflow
-		if (speed > 0 && contentRef && overflow) {
-			duration = `${contentRef.scrollWidth / speed}s`
-		}
+		needsMarquee = contentRef.scrollWidth > containerRef.clientWidth
 	}
 
-	onMount(() => {
+	$effect(() => {
+		if (!contentRef || !containerRef) return
+
 		checkOverflow()
-		const resizeObserver = new ResizeObserver(() => {
-			checkOverflow()
-		})
-		if (containerRef) resizeObserver.observe(containerRef)
-		if (contentRef) resizeObserver.observe(contentRef)
+
+		const resizeObserver = new ResizeObserver(checkOverflow)
+		resizeObserver.observe(containerRef)
+		resizeObserver.observe(contentRef)
+
 		return () => resizeObserver.disconnect()
 	})
 </script>
@@ -83,6 +84,7 @@
 			black calc(100% - var(--fade-width)),
 			transparent 100%
 		);
+		/*noinspection CssInvalidPropertyValue*/
 		-webkit-mask-image: linear-gradient(
 			to right,
 			transparent 0px,
