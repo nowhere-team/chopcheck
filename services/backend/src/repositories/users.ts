@@ -76,6 +76,14 @@ export class UsersRepository extends BaseRepository {
 		await this.invalidateCache(id, user?.telegramId)
 	}
 
+	async updatePreferences(id: string, preferences: Record<string, unknown>): Promise<void> {
+		const user = await this.findById(id)
+
+		await this.db.update(schema.users).set({ preferences, updatedAt: new Date() }).where(eq(schema.users.id, id))
+
+		await this.invalidateCache(id, user?.telegramId)
+	}
+
 	private async invalidateCache(userId: string, telegramId?: number | null): Promise<void> {
 		await this.cache.delete(this.getCacheKey(userId))
 		if (telegramId) {

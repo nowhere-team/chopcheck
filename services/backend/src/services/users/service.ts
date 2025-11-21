@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/common/errors'
 import type { User } from '@/common/types'
 import type { AuthClient } from '@/platform/auth'
 import type { Logger } from '@/platform/logger'
@@ -73,5 +74,21 @@ export class UsersService {
 		}
 
 		return localUser
+	}
+
+	async updatePreferences(userId: string, preferences: Record<string, unknown>): Promise<void> {
+		this.logger.info('updating user preferences', { userId })
+
+		const user = await this.usersRepo.findById(userId)
+		if (!user) {
+			throw new NotFoundError('user not found')
+		}
+
+		const updatedPreferences = {
+			...((user.preferences as Record<string, unknown>) || {}),
+			...preferences,
+		}
+
+		await this.usersRepo.updatePreferences(userId, updatedPreferences)
 	}
 }

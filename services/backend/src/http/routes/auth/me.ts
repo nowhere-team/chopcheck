@@ -19,6 +19,7 @@ export function createMeRoute() {
 			display_name: user.displayName,
 			avatar_url: user.avatarUrl,
 			telegram_id: user.telegramId,
+			preferences: user.preferences,
 			created_at: user.createdAt,
 		})
 	})
