@@ -5,7 +5,9 @@ import { auth } from '@/http/middleware/auth'
 import { validate } from '@/http/utils'
 
 const updatePreferencesSchema = z.object({
-	preferences: z.record(z.string(), z.unknown()),
+	preferences: z.record(z.string(), z.unknown()).refine(obj => Object.keys(obj).length <= 500, {
+		error: 'preferences object must not have more than 500 keys',
+	}),
 })
 
 export function createPreferencesRoute() {

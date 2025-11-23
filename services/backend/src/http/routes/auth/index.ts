@@ -10,5 +10,5 @@ export function createAuthRoutes() {
 		.route('/', createTelegramAuthRoute())
 		.route('/', createMeRoute())
 		.route('/', createStatsRoute())
-		.route('', createPreferencesRoute())
+		.route('/', createPreferencesRoute())
 }
