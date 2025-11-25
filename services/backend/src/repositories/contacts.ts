@@ -37,7 +37,13 @@ export class ContactsRepository extends BaseRepository {
 						this.db
 							.select({ id: sql`1` })
 							.from(sp2)
-							.where(and(eq(sp2.splitId, schema.splits.id), eq(sp2.userId, userId), eq(sp2.isDeleted, false))),
+							.where(
+								and(
+									eq(sp2.splitId, schema.splits.id),
+									eq(sp2.userId, userId),
+									eq(sp2.isDeleted, false),
+								),
+							),
 					),
 				),
 			)
@@ -65,7 +71,8 @@ export class ContactsRepository extends BaseRepository {
 		return contacts.map(c => ({
 			...c,
 			lastInteraction: typeof c.lastInteraction === 'string' ? new Date(c.lastInteraction) : c.lastInteraction,
-			firstInteraction: typeof c.firstInteraction === 'string' ? new Date(c.firstInteraction) : c.firstInteraction,
+			firstInteraction:
+				typeof c.firstInteraction === 'string' ? new Date(c.firstInteraction) : c.firstInteraction,
 		}))
 	}
 
@@ -84,7 +91,9 @@ export class ContactsRepository extends BaseRepository {
 
 		if (filter.query) {
 			const q = filter.query.toLowerCase()
-			filtered = filtered.filter(c => c.displayName.toLowerCase().includes(q) || c.username?.toLowerCase().includes(q))
+			filtered = filtered.filter(
+				c => c.displayName.toLowerCase().includes(q) || c.username?.toLowerCase().includes(q),
+			)
 		}
 
 		switch (filter.sortBy) {
