@@ -51,7 +51,10 @@ export class StatsRepository extends BaseRepository {
 				total: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)`,
 			})
 			.from(schema.splitItemParticipants)
-			.innerJoin(schema.splitParticipants, eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id))
+			.innerJoin(
+				schema.splitParticipants,
+				eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id),
+			)
 			.innerJoin(schema.splits, eq(schema.splitParticipants.splitId, schema.splits.id))
 			.where(
 				and(

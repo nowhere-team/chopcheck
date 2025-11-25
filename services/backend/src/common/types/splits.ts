@@ -7,11 +7,13 @@ import type { ItemCalculationResult } from '@/services/calculation/types'
 // DTO for incoming requests
 
 export const createSplitSchema = z.object({
+	id: z.uuid().optional(),
 	name: z.string().min(1).max(255),
 	currency: z.string().length(3).default('RUB'),
 	items: z
 		.array(
 			z.object({
+				id: z.uuid().optional(),
 				name: z.string().min(1).max(128),
 				price: z.number().int().positive(),
 				type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),

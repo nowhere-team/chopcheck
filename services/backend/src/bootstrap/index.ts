@@ -4,6 +4,7 @@ import { type Cache, createCache } from '@/platform/cache'
 import { type Config, createConfig } from '@/platform/config'
 import { createDatabase, type Database } from '@/platform/database'
 import { createLogger, type Logger } from '@/platform/logger'
+import { createTelegramClient, TelegramServiceClient } from '@/platform/telegram'
 import { createServices, type Services } from '@/services'
 
 export interface App {
@@ -14,6 +15,7 @@ export interface App {
 	auth: AuthClient
 	services: Services
 	server: Server
+	telegram: TelegramServiceClient
 }
 
 export async function start(): Promise<App> {
@@ -43,16 +45,24 @@ export async function start(): Promise<App> {
 	})
 	logger.info('auth client initialized', { devMode: config.AUTH_DEV_MODE })
 
+	const telegram = createTelegramClient(logger, config.TELEGRAM_SERVICE_URL)
+	logger.info('telegram client initialized')
+
 	const services = createServices(auth, database, cache, logger)
 	logger.info('services initialized')
 
-	const serverConfig = { port: config.PORT, telegramToken: config.TELEGRAM_BOT_TOKEN, development: config.isDev() }
-	const server = createServer(logger, database, auth, services, cache, serverConfig)
+	const serverConfig = {
+		port: config.PORT,
+		telegramToken: config.TELEGRAM_BOT_TOKEN,
+		webAppUrl: config.TELEGRAM_WEB_APP_URL,
+		development: config.isDev(),
+	}
+	const server = createServer(logger, database, auth, telegram, services, cache, serverConfig)
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')
 
-	return { config, logger, database, cache, auth, services, server }
+	return { config, logger, database, cache, auth, services, server, telegram }
 }
 
 export async function stop(app: App) {

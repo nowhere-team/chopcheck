@@ -23,6 +23,7 @@ export interface AuthResponse {
 
 export interface Split {
 	id: string
+	shortId: string
 	name: string
 	icon?: string
 	currency: string
@@ -50,20 +51,25 @@ export interface SplitItem {
 	price: number
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity: string
-	defaultDivisionMethod: 'custom' | 'fixed' | 'equal' | 'shares' | 'proportional'
+	defaultDivisionMethod: 'custom' | 'equal' | 'shares'
 }
 
 export interface Participant {
 	id: string
-	userId: string
-	displayName: string
-	avatarUrl?: string
+	userId: string | null
+	displayName?: string | null
 	joinedAt: string
+	user: {
+		id: string
+		displayName: string
+		username?: string
+		avatarUrl?: string
+	} | null
 }
 
 export interface ItemSelection {
 	itemId: string
-	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	divisionMethod: 'equal' | 'shares' | 'custom'
 	value?: string
 }
 
@@ -75,6 +81,12 @@ export interface MyParticipation {
 
 export interface MySplitsResponse {
 	splits: Split[]
+}
+
+export interface SplitResponse {
+	split: Split
+	items: SplitItem[]
+	participants: Participant[]
 }
 
 export interface CreateSplitDto {
@@ -124,4 +136,11 @@ export interface MySplitsResponse {
 		limit: number
 		hasMore: boolean
 	}
+}
+
+export interface DraftSplitDto {
+	id?: string
+	name: string
+	icon?: string
+	currency: string
 }

@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte'
 
 	import { goto } from '$app/navigation'
-	import Button from '$components/Button.svelte'
 	import CollapsibleSection from '$components/CollapsibleSection.svelte'
-	import Spinner from '$components/Spinner.svelte'
+	import IntersectionSentinel from '$components/IntersectionSentinel.svelte'
 	import SplitCard from '$components/SplitCard.svelte'
+	import SplitCardSkeleton from '$components/SplitCardSkeleton.svelte'
 	import { getSplitsHistoryContext } from '$lib/contexts/splits-history.svelte'
 	import { m } from '$lib/i18n'
 
@@ -14,6 +14,20 @@
 	onMount(() => {
 		history.fetch()
 	})
+
+	const BATCH_SIZE = 10
+
+	let thisWeekVisible = $state(BATCH_SIZE)
+	let thisMonthVisible = $state(BATCH_SIZE)
+
+	let thisWeekLoading = $state(false)
+	let thisMonthLoading = $state(false)
+
+	const thisWeekPaginated = $derived(history.thisWeek.slice(0, thisWeekVisible))
+	const thisMonthPaginated = $derived(history.thisMonth.slice(0, thisMonthVisible))
+
+	const hasMoreThisWeek = $derived(thisWeekVisible < history.thisWeek.length)
+	const hasMoreThisMonth = $derived(thisMonthVisible < history.thisMonth.length)
 
 	let thisMonthExpanded = $state(false)
 	let earlierExpanded = $state(false)
@@ -31,14 +45,36 @@
 		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto(`/split/${splitId}`)
 	}
+
+	async function loadMoreThisWeek() {
+		if (thisWeekLoading || !hasMoreThisWeek) return
+		thisWeekLoading = true
+
+		await new Promise(resolve => setTimeout(resolve, 100))
+
+		thisWeekVisible = Math.min(thisWeekVisible + BATCH_SIZE, history.thisWeek.length)
+		thisWeekLoading = false
+	}
+
+	async function loadMoreThisMonth() {
+		if (thisMonthLoading || !hasMoreThisMonth) return
+		thisMonthLoading = true
+
+		await new Promise(resolve => setTimeout(resolve, 100))
+
+		thisMonthVisible = Math.min(thisMonthVisible + BATCH_SIZE, history.thisMonth.length)
+		thisMonthLoading = false
+	}
 </script>
 
 <div class="page">
 	<h1 class="title">{m.app_title_history()}</h1>
 
 	{#if history.isLoading}
-		<div class="loading">
-			<Spinner size="lg" />
+		<div class="sections">
+			<div class="splits-list">
+				<SplitCardSkeleton count={5} />
+			</div>
 		</div>
 	{:else if history.error}
 		<div class="error">
@@ -49,9 +85,17 @@
 			{#if history.thisWeek.length > 0}
 				<CollapsibleSection title={m.section_this_week()} count={history.thisWeek.length}>
 					<div class="splits-list">
-						{#each history.thisWeek as split (split.id)}
+						{#each thisWeekPaginated as split (split.id)}
 							<SplitCard {split} onclick={() => handleSplitClick(split.id)} />
 						{/each}
+
+						{#if hasMoreThisWeek}
+							{#if thisWeekLoading}
+								<SplitCardSkeleton count={2} />
+							{:else}
+								<IntersectionSentinel onIntersect={loadMoreThisWeek} />
+							{/if}
+						{/if}
 					</div>
 				</CollapsibleSection>
 			{/if}
@@ -63,9 +107,17 @@
 					bind:expanded={thisMonthExpanded}
 				>
 					<div class="splits-list">
-						{#each history.thisMonth as split (split.id)}
+						{#each thisMonthPaginated as split (split.id)}
 							<SplitCard {split} onclick={() => handleSplitClick(split.id)} />
 						{/each}
+
+						{#if hasMoreThisMonth}
+							{#if thisMonthLoading}
+								<SplitCardSkeleton count={2} />
+							{:else}
+								<IntersectionSentinel onIntersect={loadMoreThisMonth} />
+							{/if}
+						{/if}
 					</div>
 				</CollapsibleSection>
 			{/if}
@@ -82,15 +134,13 @@
 						{/each}
 
 						{#if history.hasMore}
-							<Button
-								variant="secondary"
-								onclick={() => history.loadMore()}
-								loading={history.isLoadingMore}
-							>
-								{m.action_load_more()}
-							</Button>
+							{#if history.isLoadingMore}
+								<SplitCardSkeleton count={3} />
+							{:else}
+								<IntersectionSentinel onIntersect={() => history.loadMore()} />
+							{/if}
 						{:else if history.earlier.length > 0}
-							<p class="end">{m.all_splits_loaded()}</p>
+							<p class="end">все сплиты загружены</p>
 						{/if}
 					</div>
 				</CollapsibleSection>
@@ -104,7 +154,6 @@
 </div>
 
 <style>
-	.loading,
 	.error {
 		display: flex;
 		justify-content: center;
@@ -129,5 +178,6 @@
 		text-align: center;
 		padding: var(--spacing-6-m);
 		color: var(--color-text-tertiary);
+		font-size: var(--text-sm);
 	}
 </style>

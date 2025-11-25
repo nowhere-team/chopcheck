@@ -1,13 +1,20 @@
 import { and, desc, eq, exists, gte, or, sql } from 'drizzle-orm'
+import { customAlphabet } from 'nanoid'
 
 import type { Split, SplitsByPeriod } from '@/common/types'
 import { schema } from '@/platform/database'
+import { generateSplitId } from '@/platform/database/utils/split-id-generator'
 
 import { BaseRepository } from './base'
 
 type CreateSplitData = Pick<Split, 'name' | 'currency'>
 
+// custom alphabet without ambiguous characters (0, O, I, l, 1)
+const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz'
+
 export class SplitsRepository extends BaseRepository {
+	private nanoid = customAlphabet(alphabet, 8)
+
 	private getCacheKey(id: string, suffix: string = 'base'): string {
 		return `split:${id}:${suffix}`
 	}
@@ -16,6 +23,27 @@ export class SplitsRepository extends BaseRepository {
 		return this.getOrSet(this.getCacheKey(id), async () => {
 			const split = await this.db.query.splits.findFirst({
 				where: and(eq(schema.splits.id, id), eq(schema.splits.isDeleted, false)),
+				with: {
+					owner: {
+						columns: {
+							id: true,
+							displayName: true,
+							username: true,
+							avatarUrl: true,
+							isDeleted: true,
+						},
+					},
+				},
+			})
+
+			return split || null
+		})
+	}
+
+	async findByShortId(id: string): Promise<Split | null> {
+		return this.getOrSet(this.getCacheKey(`short:${id}`), async () => {
+			const split = await this.db.query.splits.findFirst({
+				where: and(eq(schema.splits.shortId, id), eq(schema.splits.isDeleted, false)),
 				with: {
 					owner: {
 						columns: {
@@ -148,12 +176,28 @@ export class SplitsRepository extends BaseRepository {
 			.limit(limit)
 	}
 
+	async findDraftByUser(userId: string): Promise<Split | null> {
+		const draft = await this.db.query.splits.findFirst({
+			where: and(
+				eq(schema.splits.ownerId, userId),
+				eq(schema.splits.status, 'draft'),
+				eq(schema.splits.isDeleted, false),
+			),
+			orderBy: (splits, { desc }) => [desc(splits.updatedAt)],
+		})
+
+		return draft || null
+	}
+
 	async create(ownerId: string, data: CreateSplitData): Promise<Split> {
 		return await this.db.transaction(async tx => {
+			const shortId = await generateSplitId(tx)
+
 			const [split] = await tx
 				.insert(schema.splits)
 				.values({
 					ownerId,
+					shortId,
 					name: data.name,
 					currency: data.currency || 'RUB',
 					status: 'draft',

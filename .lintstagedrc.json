@@ -1,0 +1,15 @@
+{
+	"services/frontend/**/*.{js,ts,svelte}": [
+		"bun --cwd=./services/frontend prettier --write",
+		"bun --cwd=./services/frontend eslint --fix"
+	],
+	"services/backend/**/*.{js,ts}": [
+		"bun --cwd=./services/backend prettier --write",
+		"bun --cwd=./services/backend eslint --fix"
+	],
+	"services/telegram/**/*.{js,ts}": [
+		"bun --cwd=./services/telegram prettier --write",
+		"bun --cwd=./services/telegram eslint --fix"
+	],
+	"*.{json,yml,yaml}": ["bunx prettier --write"]
+}

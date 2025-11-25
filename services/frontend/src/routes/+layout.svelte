@@ -10,9 +10,11 @@
 	import Navbar from '$components/Navbar.svelte'
 	import SwipeContainer from '$components/SwipeContainer.svelte'
 	import TelegramContext from '$components/TelegramContext.svelte'
+	import ToastContainer from '$components/ToastContainer.svelte'
 	import { setActiveSplitsContext } from '$lib/contexts/active-splits.svelte'
 	import { setSplitsHistoryContext } from '$lib/contexts/splits-history.svelte'
 	import { setStatsContext } from '$lib/contexts/stats.svelte'
+	import { setToastContext } from '$lib/contexts/toast.svelte'
 	import { getNavigationDirection } from '$lib/navigation/carousel'
 
 	const { children } = $props()
@@ -20,8 +22,8 @@
 	setStatsContext()
 	setActiveSplitsContext()
 	setSplitsHistoryContext()
+	setToastContext()
 
-	// add transition between pages
 	onNavigate(navigation => {
 		if (!document.startViewTransition) return
 
@@ -47,6 +49,7 @@
 			</div>
 		</SwipeContainer>
 		<Navbar />
+		<ToastContainer />
 	</TelegramContext>
 </div>
 

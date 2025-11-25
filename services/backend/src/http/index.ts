@@ -11,6 +11,7 @@ import { AuthClient } from '@/platform/auth'
 import type { Cache } from '@/platform/cache'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
+import { TelegramServiceClient } from '@/platform/telegram'
 import type { Services } from '@/services'
 
 export function createRouter(deps: ExternalDependencies) {
@@ -42,11 +43,12 @@ export function createServer(
 	logger: Logger,
 	database: Database,
 	auth: AuthClient,
+	telegram: TelegramServiceClient,
 	services: Services,
 	cache: Cache,
 	config: ServerConfig,
 ): Server {
-	const deps = { database, auth, services, cache, config, logger: logger.named('http') }
+	const deps = { database, auth, telegram, services, cache, config, logger: logger.named('http') }
 	const router = createRouter(deps)
 
 	const instance = Bun.serve({

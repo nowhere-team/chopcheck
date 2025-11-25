@@ -6,6 +6,7 @@
 		variant?: 'default' | 'secondary' | 'active'
 		padding?: 'none' | 'sm' | 'md' | 'lg'
 		interactive?: boolean
+		disabled?: boolean
 		onclick?: (e: MouseEvent) => void
 		children?: Snippet
 	}
@@ -14,6 +15,7 @@
 		variant = 'default',
 		padding = 'md',
 		interactive = false,
+		disabled = false,
 		onclick,
 		children,
 		...rest
@@ -27,11 +29,13 @@
 	class:secondary={variant === 'secondary'}
 	class:active={variant === 'active'}
 	class:interactive
+	class:disabled
 	class:p-none={padding === 'none'}
 	class:p-sm={padding === 'sm'}
 	class:p-md={padding === 'md'}
 	class:p-lg={padding === 'lg'}
 	type={interactive ? 'button' : undefined}
+	{disabled}
 	{onclick}
 	{...rest}
 >
@@ -42,6 +46,7 @@
 <style>
 	.box {
 		width: 100%;
+		min-width: 0;
 		color: var(--color-text-primary);
 		border-radius: var(--radius-default);
 		transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,25 +92,30 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.box.interactive:hover {
+	.box.interactive:hover:not(.disabled) {
 		background: var(--color-bg-surface-selected);
 	}
 
-	.box.interactive:active {
+	.box.interactive:active:not(.disabled) {
 		transform: scale(0.99);
 	}
 
-	.box.interactive.secondary:hover {
+	.box.interactive.secondary:hover:not(.disabled) {
 		background: var(--color-bg-surface);
 	}
 
-	.box.interactive.active:hover {
+	.box.interactive.active:hover:not(.disabled) {
 		opacity: 0.95;
+	}
+
+	.box.disabled {
+		pointer-events: none;
+		opacity: 1;
 	}
 
 	/* touch improvements */
 	@media (hover: none) {
-		.box.interactive:active {
+		.box.interactive:active:not(.disabled) {
 			transform: scale(0.98);
 		}
 	}

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { NotFoundError } from '@/common/errors'
-import { uuidParam, validate } from '@/http/utils'
+import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
 
 const updateItemSchema = z.object({
 	name: z.string().min(1).max(128).optional(),
@@ -35,7 +35,7 @@ export function createUpdateItemRoute() {
 				throw new NotFoundError('split or item not found')
 			}
 
-			return c.json(split)
+			return c.json(anonymizeSplitResponse(split))
 		},
 	)
 }

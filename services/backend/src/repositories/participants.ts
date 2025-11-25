@@ -19,7 +19,10 @@ export class ParticipantsRepository extends BaseRepository {
 	async findBySplitId(splitId: string): Promise<ParticipantWithSelections[]> {
 		return this.getOrSet(this.getCacheKey(splitId), async () => {
 			const participants = await this.db.query.splitParticipants.findMany({
-				where: and(eq(schema.splitParticipants.splitId, splitId), eq(schema.splitParticipants.isDeleted, false)),
+				where: and(
+					eq(schema.splitParticipants.splitId, splitId),
+					eq(schema.splitParticipants.isDeleted, false),
+				),
 				with: {
 					user: {
 						columns: {
@@ -52,7 +55,12 @@ export class ParticipantsRepository extends BaseRepository {
 		return participants || null
 	}
 
-	async join(splitId: string, userId: string, displayName?: string): Promise<Participant> {
+	async join(
+		splitId: string,
+		userId: string,
+		displayName?: string,
+		isAnonymous: boolean = false,
+	): Promise<Participant> {
 		const existing = await this.findByUserAndSplit(userId, splitId)
 		if (existing) {
 			return existing
@@ -66,6 +74,7 @@ export class ParticipantsRepository extends BaseRepository {
 				displayName,
 				isReady: false,
 				hasPaid: false,
+				isAnonymous,
 			})
 			.returning()
 
@@ -88,7 +97,9 @@ export class ParticipantsRepository extends BaseRepository {
 	async selectItems(participantId: string, splitId: string, selections: ItemSelectionData[]): Promise<void> {
 		await this.db.transaction(async tx => {
 			// remove old selections
-			await tx.delete(schema.splitItemParticipants).where(eq(schema.splitItemParticipants.participantId, participantId))
+			await tx
+				.delete(schema.splitItemParticipants)
+				.where(eq(schema.splitItemParticipants.participantId, participantId))
 
 			// add new selections
 			if (selections.length > 0) {

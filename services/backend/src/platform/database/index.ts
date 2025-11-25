@@ -27,3 +27,6 @@ export async function createDatabase(logger: Logger, config: DatabaseConfig) {
 
 export { schema }
 export type Database = Awaited<ReturnType<typeof createDatabase>>
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Tx = Parameters<Database['transaction']>[0] extends (tx: infer T) => any ? T : never

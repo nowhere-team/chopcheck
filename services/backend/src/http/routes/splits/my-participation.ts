@@ -8,8 +8,8 @@ export function createMyParticipationRoute() {
 		const services = c.get('services')
 		const splitId = c.req.param('id')
 
-		const splits = await services.splits.getMyParticipation(splitId, authContext.userId)
+		const participation = await services.splits.getMyParticipation(splitId, authContext.userId)
 
-		return c.json({ splits })
+		return c.json({ participation })
 	})
 }
