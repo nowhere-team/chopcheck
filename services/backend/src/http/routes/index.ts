@@ -5,6 +5,7 @@ import { createDevRoutes } from '@/http/routes/dev'
 import { createHealthRoutes } from '@/http/routes/health'
 import { createSplitsRoutes } from '@/http/routes/splits'
 import { createPaymentMethodsRoutes } from './payment-methods'
+import { createContactsRoutes } from './contacts'
 
 export function registerRoutes() {
 	return new Hono()
@@ -13,4 +14,5 @@ export function registerRoutes() {
 		.route('/splits', createSplitsRoutes())
 		.route('/dev', createDevRoutes())
 		.route('/payment-methods', createPaymentMethodsRoutes())
+		.route('/contacts', createContactsRoutes())
 }

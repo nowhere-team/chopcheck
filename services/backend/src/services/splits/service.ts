@@ -12,7 +12,9 @@ import type {
 	SplitResponse,
 	SplitsByPeriod,
 } from '@/common/types'
+import type { Cache } from '@/platform/cache'
 import type { Logger } from '@/platform/logger'
+import type { ContactsRepository } from '@/repositories/contacts'
 import type { ItemsRepository } from '@/repositories/items'
 import type { ParticipantsRepository } from '@/repositories/participants'
 import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
@@ -27,8 +29,10 @@ export class SplitsService {
 		private participantsRepo: ParticipantsRepository,
 		private paymentMethodsRepo: PaymentMethodsRepository,
 		private statsRepo: StatsRepository,
+		private contactsRepo: ContactsRepository,
 		private calcService: CalculationService,
 		private logger: Logger,
+		private cache: Cache,
 	) {}
 
 	async getById(splitId: string, includeCalculations = true): Promise<SplitResponse | null> {
@@ -187,6 +191,20 @@ export class SplitsService {
 		}
 
 		await this.participantsRepo.join(splitId, userId)
+
+		await this.contactsRepo.invalidateUserContacts(userId)
+
+		await this.contactsRepo.invalidateUserContacts(split.ownerId)
+
+		await this.cache.deletePattern(`split:${splitId}:participants`)
+
+		const participants = await this.participantsRepo.findBySplitId(splitId)
+
+		await Promise.all(
+			participants
+				.filter(p => p.userId && p.userId !== userId && p.userId !== split.ownerId)
+				.map(p => this.contactsRepo.invalidateUserContacts(p.userId!)),
+		)
 
 		this.logger.info('user joined split', { splitId, userId })
 

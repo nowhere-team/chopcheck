@@ -8,6 +8,7 @@ import { inject } from '@/http/middleware/inject'
 import { registerRoutes } from '@/http/routes'
 import type { ExternalDependencies, ServerConfig } from '@/http/types'
 import { AuthClient } from '@/platform/auth'
+import type { Cache } from '@/platform/cache'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 import type { Services } from '@/services'
@@ -42,9 +43,10 @@ export function createServer(
 	database: Database,
 	auth: AuthClient,
 	services: Services,
+	cache: Cache,
 	config: ServerConfig,
 ): Server {
-	const deps = { database, auth, services, config, logger: logger.named('http') }
+	const deps = { database, auth, services, cache, config, logger: logger.named('http') }
 	const router = createRouter(deps)
 
 	const instance = Bun.serve({

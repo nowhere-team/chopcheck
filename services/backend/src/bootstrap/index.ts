@@ -47,7 +47,7 @@ export async function start(): Promise<App> {
 	logger.info('services initialized')
 
 	const serverConfig = { port: config.PORT, telegramToken: config.TELEGRAM_BOT_TOKEN, development: config.isDev() }
-	const server = createServer(logger, database, auth, services, serverConfig)
+	const server = createServer(logger, database, auth, services, cache, serverConfig)
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')

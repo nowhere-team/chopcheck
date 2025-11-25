@@ -1,4 +1,5 @@
 import { AuthClient, type AuthContext } from '@/platform/auth'
+import type { Cache } from '@/platform/cache'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 import type { Services } from '@/services'
@@ -13,6 +14,7 @@ export interface ExternalDependencies {
 	logger: Logger
 	auth: AuthClient
 	database: Database
+	cache: Cache
 	services: Services
 	config: ServerConfig
 }
