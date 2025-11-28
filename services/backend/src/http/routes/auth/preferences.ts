@@ -27,10 +27,6 @@ export function createPreferencesRoute() {
 
 		const user = await services.users.getById(authContext.userId)
 
-		if (!user) {
-			return c.json({ error: 'user not found' }, 404)
-		}
-
 		return c.json({
 			id: user.id,
 			username: user.username,
