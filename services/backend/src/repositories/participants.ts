@@ -147,4 +147,9 @@ export class ParticipantsRepository extends BaseRepository {
 
 		await this.cache.deletePattern(this.getCacheKey(splitId))
 	}
+
+	async invalidateCache(splitId: string): Promise<void> {
+		await this.cache.deletePattern(this.getCacheKey(splitId))
+		this.logger.debug('invalidated participants cache', { splitId })
+	}
 }

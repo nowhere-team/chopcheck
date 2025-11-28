@@ -12,7 +12,6 @@ import type {
 	SplitResponse,
 	SplitsByPeriod,
 } from '@/common/types'
-import type { Cache } from '@/platform/cache'
 import type { Logger } from '@/platform/logger'
 import type { ContactsRepository } from '@/repositories/contacts'
 import type { ItemsRepository } from '@/repositories/items'
@@ -32,7 +31,6 @@ export class SplitsService {
 		private contactsRepo: ContactsRepository,
 		private calcService: CalculationService,
 		private logger: Logger,
-		private cache: Cache,
 	) {}
 
 	private async fetchSplitWithRelations(
@@ -284,31 +282,25 @@ export class SplitsService {
 		return result
 	}
 
-	async join(
-		splitId: string,
-		userId: string,
-		displayName?: string,
-		isAnonymous: boolean = false,
-	): Promise<SplitResponse> {
+	async join(splitId: string, userId: string): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('Split not found')
+			throw new NotFoundError('split not found')
 		}
 
 		if (split.maxParticipants) {
 			const currentCount = await this.participantsRepo.countParticipants(splitId)
 			if (currentCount >= split.maxParticipants) {
-				throw new Error('Split is full')
+				throw new Error('split is full')
 			}
 		}
 
-		await this.participantsRepo.join(splitId, userId, displayName, isAnonymous)
+		await this.participantsRepo.join(splitId, userId)
 
 		await this.contactsRepo.invalidateUserContacts(userId)
-
 		await this.contactsRepo.invalidateUserContacts(split.ownerId)
 
-		await this.cache.deletePattern(`split:${splitId}:participants`)
+		await this.participantsRepo.invalidateCache(splitId)
 
 		const participants = await this.participantsRepo.findBySplitId(splitId)
 
@@ -318,11 +310,11 @@ export class SplitsService {
 				.map(p => this.contactsRepo.invalidateUserContacts(p.userId!)),
 		)
 
-		this.logger.info('user joined split', { splitId, userId, isAnonymous, displayName })
+		this.logger.info('user joined split', { splitId, userId })
 
 		const result = await this.getById(splitId, false)
 		if (!result) {
-			throw new NotFoundError('Split not found after join')
+			throw new NotFoundError('split not found after join')
 		}
 
 		return result

@@ -13,9 +13,7 @@ export class ContactsService {
 
 		const contacts = await this.contactsRepo.findByUserId(userId, filter)
 
-		this.logger.debug('contacts found', { userId, count: contacts.length })
-
-		return filter.query ? contacts : contacts.filter(c => !c.isDeleted)
+		return contacts.filter(c => !c.isDeleted)
 	}
 
 	async getContactWithFinance(userId: string, contactId: string): Promise<Contact | null> {

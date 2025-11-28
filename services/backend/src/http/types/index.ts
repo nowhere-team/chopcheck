@@ -1,5 +1,4 @@
 import { AuthClient, type AuthContext } from '@/platform/auth'
-import type { Cache } from '@/platform/cache'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 import { TelegramServiceClient } from '@/platform/telegram'
@@ -17,7 +16,6 @@ export interface ExternalDependencies {
 	auth: AuthClient
 	telegram: TelegramServiceClient
 	database: Database
-	cache: Cache
 	services: Services
 	config: ServerConfig
 }

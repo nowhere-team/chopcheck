@@ -31,7 +31,6 @@ export function createServices(auth: AuthClient, db: Database, cache: Cache, log
 		repos.contacts,
 		calc,
 		logger.named('service/splits'),
-		cache,
 	)
 	const paymentMethods = new PaymentMethodsService(repos.paymentMethods, logger.named('service/payment-methods'))
 	const contacts = new ContactsService(repos.contacts, logger.named('service/contacts'))

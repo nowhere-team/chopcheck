@@ -9,7 +9,6 @@ export function inject(deps: ExternalDependencies): MiddlewareHandler {
 		c.set('services', deps.services)
 		c.set('database', deps.database)
 		c.set('telegram', deps.telegram)
-		c.set('cache', deps.cache)
 		c.set('config', deps.config)
 		await next()
 	}
