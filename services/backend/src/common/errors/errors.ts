@@ -39,10 +39,16 @@ export class ForbiddenError extends ApiError {
 	}
 }
 
+export class ConflictError extends ApiError {
+	constructor(message: string = 'resource conflict', details?: Record<string, unknown>) {
+		super('CONFLICT', 409, message, details)
+	}
+}
+
 export class InternalError extends ApiError {
 	override severity = ErrorSeverity.HIGH
 
-	constructor(message: string = 'internal router error', details?: Record<string, unknown>) {
+	constructor(message: string = 'internal error', details?: Record<string, unknown>) {
 		super('INTERNAL_ERROR', 500, message, details)
 	}
 }

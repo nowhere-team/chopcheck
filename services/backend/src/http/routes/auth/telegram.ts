@@ -1,68 +1,48 @@
-import { parse, validate } from '@tma.js/init-data-node'
+﻿import { parse, validate } from '@tma.js/init-data-node'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { validate as validateSchema } from '@/http/utils'
+import { validate as v } from '@/http/utils'
 
-const telegramAuthSchema = z.object({
-	initData: z.string().nonempty(),
-})
+const schema = z.object({ initData: z.string().nonempty() })
+
 export function createTelegramAuthRoute() {
-	return new Hono().post('/telegram', validateSchema('json', telegramAuthSchema), async c => {
+	return new Hono().post('/telegram', v('json', schema), async c => {
 		const { initData } = c.req.valid('json')
 		const auth = c.get('auth')
-		const logger = c.get('logger')
 		const services = c.get('services')
 		const config = c.get('config')
+		const logger = c.get('logger')
 
-		// step 1. validate sign
 		try {
-			validate(initData, config.telegramToken, {
-				expiresIn: 3600, // 1 hour
-			})
-		} catch (err) {
-			logger.warn('invalid telegram init data', { error: err })
+			validate(initData, config.telegramToken, { expiresIn: 3600 })
+		} catch {
 			return c.json({ error: 'invalid init data' }, 401)
 		}
 
-		// step 2. parse init data
 		const data = parse(initData)
+		if (!data.user) return c.json({ error: 'user data not found' }, 400)
 
-		// step 3. extract user info
-		if (!data.user) {
-			return c.json({ error: 'user data not found' }, 400)
-		}
-
-		const { id, username, first_name: firstName, photo_url: photoUrl } = data.user
+		const { id, username, first_name, photo_url } = data.user
 		logger.debug('telegram auth', { id, username })
 
-		// step 4. find or create user (вся логика в сервисе)
 		const user = await services.users.findOrCreateFromTelegram({
 			id,
 			username,
-			firstName,
-			photoUrl,
+			firstName: first_name,
+			photoUrl: photo_url,
 		})
 
-		// step 5. create token
 		const token = await auth.createToken({
 			user_id: user.id,
 			requested_by: 'chopcheck',
 			permissions: ['cc:splits:read', 'cc:splits:write', 'cc:splits:create'],
-			client_info: {
-				user_agent: c.req.header('user-agent'),
-				platform: 'telegram',
-			},
+			client_info: { user_agent: c.req.header('user-agent'), platform: 'telegram' },
 		})
 
 		return c.json({
 			accessToken: token.access_token,
-			user: {
-				id: user.id,
-				displayName: user.displayName,
-				username: user.username,
-				avatarUrl: user.avatarUrl,
-			},
+			user: { id: user.id, displayName: user.displayName, username: user.username, avatarUrl: user.avatarUrl },
 		})
 	})
 }

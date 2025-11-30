@@ -1,4 +1,4 @@
-import { zValidator as zv } from '@hono/zod-validator'
+﻿import { zValidator as zv } from '@hono/zod-validator'
 import type { ValidationTargets } from 'hono'
 import z, { type ZodType } from 'zod'
 
@@ -14,7 +14,6 @@ export const validate = <T extends ZodType, Target extends keyof ValidationTarge
 			}))
 
 			const mainMessage = `validation failed for ${target}`
-
 			const details = { target, issues: result.error.issues }
 
 			throw new ValidationError(mainMessage, fields, details)

@@ -1,1 +1,1 @@
-export * from './service'
+﻿export { ContactsService } from './service'

@@ -1,9 +1,9 @@
-import type { Logger } from '@/platform/logger'
+﻿import type { Logger } from '@/platform/logger'
 
 import { TelegramServiceClient } from './client'
 
 export function createTelegramClient(logger: Logger, serviceUrl: string) {
-	return new TelegramServiceClient(serviceUrl, logger.named('telegram-service'))
+	return new TelegramServiceClient(serviceUrl, logger.named('telegram'))
 }
 
-export * from './client'
+export { TelegramServiceClient } from './client'

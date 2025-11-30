@@ -1,98 +1,89 @@
-import type { ParticipantWithSelections } from '@/common/types'
-import type { SplitData } from '@/common/types/splits'
+﻿import type { ParticipantWithSelections, SplitData } from '@/common/types'
 import type { Logger } from '@/platform/logger'
 
 import { StrategyFactory } from './strategy-factory'
-import type { ItemCalculationResult } from './types'
-
-export interface ParticipantCalculation {
-	participantId: string
-	displayName: string
-	totalBaseAmount: number
-	totalDiscountAmount: number
-	totalAmount: number
-	items: ItemCalculationResult[] // массив для удобства итерации
-}
-
-export interface CalculatedSplit extends SplitData {
-	calculations: ParticipantCalculation[]
-	totalSplitAmount: number
-	totalCollected: number
-	difference: number
-}
+import type { ItemCalculationResult, ParticipantTotal, SplitCalculationResult } from './types'
 
 export class CalculationService {
-	private strategyFactory = new StrategyFactory()
+	private factory = new StrategyFactory()
 
-	constructor(private logger: Logger) {}
+	constructor(private readonly logger: Logger) {}
 
-	calculate(data: SplitData): CalculatedSplit {
+	calculate(data: SplitData): SplitCalculationResult {
 		this.logger.debug('calculating split', {
 			splitId: data.split.id,
-			participantsCount: data.participants.length,
-			itemsCount: data.items.length,
+			items: data.items.length,
+			participants: data.participants.length,
 		})
 
-		const calculations = data.participants.map(participant => this.calculateForParticipant(participant, data))
+		const itemResults: ItemCalculationResult[] = []
 
-		const totalCollected = calculations.reduce((sum, calc) => sum + calc.totalAmount, 0)
+		for (const item of data.items) {
+			const participations = data.participants.flatMap(p =>
+				p.itemParticipations.filter(ip => ip.itemId === item.id),
+			)
 
-		const totalSplitAmount = data.items.reduce((sum, item) => sum + item.price, 0)
+			for (const participation of participations) {
+				const strategy = this.factory.getStrategy(participation.divisionMethod)
+				const result = strategy.calculate({
+					item,
+					participation,
+					allParticipations: participations,
+					totalDiscount: data.split.totalDiscount || 0,
+					totalDiscountPercent: data.split.totalDiscountPercent || '0',
+				})
 
-		const difference = totalSplitAmount - totalCollected
-
-		return {
-			...data,
-			calculations,
-			totalSplitAmount,
-			totalCollected,
-			difference,
+				itemResults.push({ ...result, participantId: participation.participantId })
+			}
 		}
+
+		const participantTotals = this.aggregate(itemResults, data.participants)
+		const splitTotal = data.items.reduce((sum, item) => sum + item.price, 0)
+		const collected = participantTotals.reduce((sum, p) => sum + p.totalFinal, 0)
+
+		return { itemResults, participantTotals, splitTotal, collected, difference: splitTotal - collected }
 	}
 
-	private calculateForParticipant(participant: ParticipantWithSelections, data: SplitData): ParticipantCalculation {
-		// take their choices (which items they selected)
-		const selections = participant.itemParticipations
+	calculateForItems(data: SplitData, itemIds: string[]): ItemCalculationResult[] {
+		const results: ItemCalculationResult[] = []
+		const items = data.items.filter(i => itemIds.includes(i.id))
 
-		const items = selections.map(selection => {
-			const item = data.items.find(i => i.id === selection.itemId)
-			if (!item) {
-				this.logger.error('item not found for participation', {
-					itemId: selection.itemId,
-					participantId: participant.id,
+		for (const item of items) {
+			const participations = data.participants.flatMap(p =>
+				p.itemParticipations.filter(ip => ip.itemId === item.id),
+			)
+
+			for (const participation of participations) {
+				const strategy = this.factory.getStrategy(participation.divisionMethod)
+				const result = strategy.calculate({
+					item,
+					participation,
+					allParticipations: participations,
+					totalDiscount: data.split.totalDiscount || 0,
+					totalDiscountPercent: data.split.totalDiscountPercent || '0',
 				})
-				throw new Error(`item ${selection.itemId} not found`)
+
+				results.push({ ...result, participantId: participation.participantId })
 			}
-
-			// who else selected this item?
-			const allParticipations = data.participants
-				.flatMap(p => p.itemParticipations)
-				.filter(ip => ip.itemId === item.id)
-
-			// get a strategy using the division method
-			const strategy = this.strategyFactory.getStrategy(selection.divisionMethod)
-
-			return strategy.calculate({
-				item,
-				participation: selection,
-				allParticipations,
-				totalDiscount: data.split.totalDiscount || 0,
-				totalDiscountPercent: data.split.totalDiscountPercent || '0',
-			})
-		})
-
-		// summarize all the participant's items
-		const totalBaseAmount = items.reduce((sum, i) => sum + i.baseAmount, 0)
-		const totalDiscountAmount = items.reduce((sum, i) => sum + i.discountAmount, 0)
-		const totalAmount = items.reduce((sum, i) => sum + i.finalAmount, 0)
-
-		return {
-			participantId: participant.id,
-			displayName: participant.displayName || participant.user?.displayName || 'unknown',
-			totalBaseAmount,
-			totalDiscountAmount,
-			totalAmount,
-			items,
 		}
+
+		return results
+	}
+
+	private aggregate(results: ItemCalculationResult[], participants: ParticipantWithSelections[]): ParticipantTotal[] {
+		const totals = new Map<string, ParticipantTotal>(
+			participants.map(p => [p.id, { participantId: p.id, totalBase: 0, totalDiscount: 0, totalFinal: 0 }]),
+		)
+
+		for (const r of results) {
+			const t = totals.get(r.participantId)
+			if (t) {
+				t.totalBase += r.baseAmount
+				t.totalDiscount += r.discountAmount
+				t.totalFinal += r.finalAmount
+			}
+		}
+
+		return Array.from(totals.values())
 	}
 }

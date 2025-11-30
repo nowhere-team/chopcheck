@@ -1,76 +1,65 @@
-import { and, count, eq, gte, sql } from 'drizzle-orm'
+﻿import { and, count, eq, gte, sql } from 'drizzle-orm'
 
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-export interface UserStatsData {
+export interface UserStats {
 	totalJoinedSplits: number
 	monthlySpent: number
 }
 
 export class StatsRepository extends BaseRepository {
-	private getUserStatsCacheKey(userId: string): string {
-		const currentMonth = new Date()
-		const monthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth() + 1}`
-		return `user:${userId}:stats:${monthKey}`
-	}
+	async getUserStats(userId: string): Promise<UserStats> {
+		const monthKey = `${new Date().getFullYear()}-${new Date().getMonth() + 1}`
+		const key = `user:${userId}:stats:${monthKey}`
 
-	async getUserStats(userId: string): Promise<UserStatsData> {
-		return this.getOrSet(
-			this.getUserStatsCacheKey(userId),
+		return this.cached(
+			key,
 			async () => {
-				const [totalJoinedSplits, monthlySpent] = await Promise.all([
-					this.countUserJoinedSplits(userId),
-					this.getUserMonthlySpent(userId),
+				const [totalResult, monthlyResult] = await Promise.all([
+					this.db
+						.select({ count: count() })
+						.from(schema.splitParticipants)
+						.where(
+							and(
+								eq(schema.splitParticipants.userId, userId),
+								eq(schema.splitParticipants.isDeleted, false),
+							),
+						),
+
+					this.db
+						.select({ total: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)` })
+						.from(schema.splitItemParticipants)
+						.innerJoin(
+							schema.splitParticipants,
+							eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id),
+						)
+						.innerJoin(schema.splits, eq(schema.splitParticipants.splitId, schema.splits.id))
+						.where(
+							and(
+								eq(schema.splitParticipants.userId, userId),
+								eq(schema.splitParticipants.isDeleted, false),
+								eq(schema.splits.isDeleted, false),
+								gte(
+									schema.splits.createdAt,
+									new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+								),
+							),
+						),
 				])
 
-				return { totalJoinedSplits, monthlySpent }
+				return {
+					totalJoinedSplits: Number(totalResult[0]?.count ?? 0),
+					monthlySpent: Number(monthlyResult[0]?.total ?? 0),
+				}
 			},
-			600, // 10 minutes ttl
+			600,
 		)
 	}
 
-	private async countUserJoinedSplits(userId: string): Promise<number> {
-		const result = await this.db
-			.select({ count: count() })
-			.from(schema.splitParticipants)
-			.where(and(eq(schema.splitParticipants.userId, userId), eq(schema.splitParticipants.isDeleted, false)))
-
-		return Number(result[0]?.count ?? 0)
-	}
-
-	private async getUserMonthlySpent(userId: string): Promise<number> {
-		// get start of current calendar month
-		const currentMonthStart = new Date()
-		currentMonthStart.setDate(1)
-		currentMonthStart.setHours(0, 0, 0, 0)
-
-		const result = await this.db
-			.select({
-				total: sql<number>`COALESCE(SUM(${schema.splitItemParticipants.calculatedSum}), 0)`,
-			})
-			.from(schema.splitItemParticipants)
-			.innerJoin(
-				schema.splitParticipants,
-				eq(schema.splitItemParticipants.participantId, schema.splitParticipants.id),
-			)
-			.innerJoin(schema.splits, eq(schema.splitParticipants.splitId, schema.splits.id))
-			.where(
-				and(
-					eq(schema.splitParticipants.userId, userId),
-					eq(schema.splitParticipants.isDeleted, false),
-					eq(schema.splitItemParticipants.isDeleted, false),
-					eq(schema.splits.isDeleted, false),
-					gte(schema.splits.createdAt, currentMonthStart),
-				),
-			)
-
-		return Number(result[0]?.total ?? 0)
-	}
-
 	async invalidateUserStats(userId: string): Promise<void> {
-		await this.cache.delete(this.getUserStatsCacheKey(userId))
-		this.logger.debug('invalidated user stats cache', { userId })
+		const monthKey = `${new Date().getFullYear()}-${new Date().getMonth() + 1}`
+		await this.invalidate(`user:${userId}:stats:${monthKey}`)
 	}
 }
