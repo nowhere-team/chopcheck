@@ -1,23 +1,31 @@
-import { and, count, eq } from 'drizzle-orm'
+﻿import { and, count, eq } from 'drizzle-orm'
 
 import type { Participant, ParticipantWithSelections } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-interface ItemSelectionData {
+interface SelectionInput {
 	itemId: string
 	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
 	value?: string
 }
 
+interface CalculationUpdate {
+	participantId: string
+	itemId: string
+	calculatedBase: number
+	calculatedDiscount: number
+	calculatedSum: number
+}
+
 export class ParticipantsRepository extends BaseRepository {
-	private getCacheKey(splitId: string, suffix: string = 'participants'): string {
-		return `split:${splitId}:${suffix}`
+	private key(splitId: string) {
+		return `split:${splitId}:participants`
 	}
 
 	async findBySplitId(splitId: string): Promise<ParticipantWithSelections[]> {
-		return this.getOrSet(this.getCacheKey(splitId), async () => {
+		return this.cached(this.key(splitId), async () => {
 			const participants = await this.db.query.splitParticipants.findMany({
 				where: and(
 					eq(schema.splitParticipants.splitId, splitId),
@@ -25,34 +33,26 @@ export class ParticipantsRepository extends BaseRepository {
 				),
 				with: {
 					user: {
-						columns: {
-							id: true,
-							displayName: true,
-							username: true,
-							avatarUrl: true,
-							isDeleted: true,
-						},
+						columns: { id: true, displayName: true, username: true, avatarUrl: true, isDeleted: true },
 					},
 					itemParticipations: {
 						where: eq(schema.splitItemParticipants.isDeleted, false),
 					},
 				},
 			})
-
 			return participants as ParticipantWithSelections[]
 		})
 	}
 
 	async findByUserAndSplit(userId: string, splitId: string): Promise<Participant | null> {
-		const participants = await this.db.query.splitParticipants.findFirst({
+		const participant = await this.db.query.splitParticipants.findFirst({
 			where: and(
 				eq(schema.splitParticipants.splitId, splitId),
 				eq(schema.splitParticipants.userId, userId),
 				eq(schema.splitParticipants.isDeleted, false),
 			),
 		})
-
-		return participants || null
+		return participant || null
 	}
 
 	async join(
@@ -61,65 +61,33 @@ export class ParticipantsRepository extends BaseRepository {
 		displayName?: string,
 		isAnonymous: boolean = false,
 	): Promise<Participant> {
-		this.logger.debug('join called', { splitId, userId, displayName, isAnonymous })
-
 		const existing = await this.findByUserAndSplit(userId, splitId)
-		if (existing) {
-			this.logger.debug('updating existing participant', { participantId: existing.id })
 
+		if (existing) {
 			await this.db
 				.update(schema.splitParticipants)
-				.set({
-					isAnonymous,
-					displayName: displayName || existing.displayName,
-				})
+				.set({ isAnonymous, displayName: displayName || existing.displayName })
 				.where(eq(schema.splitParticipants.id, existing.id))
 
-			await this.cache.deletePattern(this.getCacheKey(splitId))
-
+			await this.invalidate(this.key(splitId))
 			return existing
 		}
 
-		this.logger.debug('creating new participant', { userId, isAnonymous })
-
 		const [participant] = await this.db
 			.insert(schema.splitParticipants)
-			.values({
-				splitId,
-				userId,
-				displayName,
-				isReady: false,
-				hasPaid: false,
-				isAnonymous,
-			})
+			.values({ splitId, userId, displayName, isAnonymous })
 			.returning()
 
-		this.logger.debug('participant created', { participantId: participant!.id, userId: participant!.userId })
-
-		await this.cache.deletePattern(this.getCacheKey(splitId))
-
+		await this.invalidate(this.key(splitId))
 		return participant!
 	}
 
-	async addParticipant(splitId: string, userId: string | null, displayName?: string): Promise<Participant> {
-		const [participant] = await this.db
-			.insert(schema.splitParticipants)
-			.values({ splitId, userId, displayName, isReady: false, hasPaid: false })
-			.returning()
-
-		await this.cache.deletePattern(this.getCacheKey(splitId))
-
-		return participant!
-	}
-
-	async selectItems(participantId: string, splitId: string, selections: ItemSelectionData[]): Promise<void> {
+	async selectItems(participantId: string, splitId: string, selections: SelectionInput[]): Promise<void> {
 		await this.db.transaction(async tx => {
-			// remove old selections
 			await tx
 				.delete(schema.splitItemParticipants)
 				.where(eq(schema.splitItemParticipants.participantId, participantId))
 
-			// add new selections
 			if (selections.length > 0) {
 				await tx.insert(schema.splitItemParticipants).values(
 					selections.map(s => ({
@@ -133,7 +101,37 @@ export class ParticipantsRepository extends BaseRepository {
 			}
 		})
 
-		await this.cache.deletePattern(this.getCacheKey(splitId))
+		await this.invalidate(this.key(splitId))
+	}
+
+	async updateCalculations(splitId: string, updates: CalculationUpdate[]): Promise<void> {
+		await this.db.transaction(async tx => {
+			for (const u of updates) {
+				await tx
+					.update(schema.splitItemParticipants)
+					.set({
+						calculatedBase: u.calculatedBase,
+						calculatedDiscount: u.calculatedDiscount,
+						calculatedSum: u.calculatedSum,
+					})
+					.where(
+						and(
+							eq(schema.splitItemParticipants.participantId, u.participantId),
+							eq(schema.splitItemParticipants.itemId, u.itemId),
+						),
+					)
+			}
+		})
+
+		await this.invalidate(this.key(splitId))
+	}
+
+	async updateParticipantTotal(participantId: string, splitId: string, total: number): Promise<void> {
+		await this.db
+			.update(schema.splitParticipants)
+			.set({ cachedTotal: total })
+			.where(eq(schema.splitParticipants.id, participantId))
+		await this.invalidate(this.key(splitId))
 	}
 
 	async countParticipants(splitId: string): Promise<number> {
@@ -145,29 +143,7 @@ export class ParticipantsRepository extends BaseRepository {
 		return Number(result[0]?.count || 0)
 	}
 
-	async updateCalculatedSums(
-		splitId: string,
-		calculations: Array<{ participantId: string; itemId: string; calculatedSum: number }>,
-	): Promise<void> {
-		await this.db.transaction(async tx => {
-			for (const calc of calculations) {
-				await tx
-					.update(schema.splitItemParticipants)
-					.set({ calculatedSum: calc.calculatedSum })
-					.where(
-						and(
-							eq(schema.splitItemParticipants.participantId, calc.participantId),
-							eq(schema.splitItemParticipants.itemId, calc.itemId),
-						),
-					)
-			}
-		})
-
-		await this.cache.deletePattern(this.getCacheKey(splitId))
-	}
-
 	async invalidateCache(splitId: string): Promise<void> {
-		await this.cache.deletePattern(this.getCacheKey(splitId))
-		this.logger.debug('invalidated participants cache', { splitId })
+		await this.invalidate(this.key(splitId))
 	}
 }

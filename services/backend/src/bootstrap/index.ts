@@ -1,27 +1,27 @@
-import { createServer, type Server } from '@/http'
-import { AuthClient, createAuthClient } from '@/platform/auth'
-import { type Cache, createCache } from '@/platform/cache'
-import { type Config, createConfig } from '@/platform/config'
-import { createDatabase, type Database } from '@/platform/database'
-import { createLogger, type Logger } from '@/platform/logger'
-import { createTelegramClient, TelegramServiceClient } from '@/platform/telegram'
-import { createServices, type Services } from '@/services'
+﻿import { createServer } from '@/http'
+import { createAuthClient } from '@/platform/auth'
+import { createCache } from '@/platform/cache'
+import { createCatalogClient } from '@/platform/catalog'
+import { createConfig } from '@/platform/config'
+import { createDatabase } from '@/platform/database'
+import { createFnsClient } from '@/platform/fns'
+import { createLogger } from '@/platform/logger'
+import { createTelegramClient } from '@/platform/telegram'
+import { createTracer } from '@/platform/tracing'
+import { createServices } from '@/services'
 
-export interface App {
-	config: Config
-	logger: Logger
-	database: Database
-	cache: Cache
-	auth: AuthClient
-	services: Services
-	server: Server
-	telegram: TelegramServiceClient
-}
-
-export async function start(): Promise<App> {
+export async function start() {
 	const config = createConfig(process.env)
 	const logger = createLogger({ format: config.LOG_FORMAT, level: config.LOG_LEVEL })
 	logger.info('starting application', { env: config.NODE_ENV })
+
+	const tracer = createTracer({
+		enabled: config.TRACING_ENABLED,
+		serviceName: config.SERVICE_NAME,
+		exporterType: config.TRACING_EXPORTER,
+		exporterUrl: config.TRACING_ENDPOINT,
+	})
+	logger.info('tracer initialized', { enabled: tracer.enabled })
 
 	const database = await createDatabase(logger, { url: config.DATABASE_URL })
 	logger.info('database initialized')
@@ -48,7 +48,26 @@ export async function start(): Promise<App> {
 	const telegram = createTelegramClient(logger, config.TELEGRAM_SERVICE_URL)
 	logger.info('telegram client initialized')
 
-	const services = createServices(auth, database, cache, logger)
+	const fns = createFnsClient(
+		{
+			apiUrl: config.FNS_API_URL,
+			tokens: config.fnsTokens,
+			rotationMinutes: config.FNS_TOKEN_ROTATION_MINUTES,
+			requestTimeout: config.FNS_REQUEST_TIMEOUT,
+		},
+		logger,
+		tracer,
+	)
+	logger.info('fns client initialized', { tokenCount: config.fnsTokens.length })
+
+	const catalog = createCatalogClient(
+		{ serviceUrl: config.CATALOG_SERVICE_URL, requestTimeout: config.CATALOG_REQUEST_TIMEOUT },
+		logger,
+		tracer,
+	)
+	logger.info('catalog client initialized')
+
+	const services = createServices(auth, database, cache, fns, catalog, logger)
 	logger.info('services initialized')
 
 	const serverConfig = {
@@ -57,20 +76,32 @@ export async function start(): Promise<App> {
 		webAppUrl: config.TELEGRAM_WEB_APP_URL,
 		development: config.isDev(),
 	}
-	const server = createServer(logger, database, auth, telegram, services, serverConfig)
+	const server = createServer(
+		{
+			database,
+			auth,
+			telegram,
+			fns,
+			catalog,
+			services,
+			config: serverConfig,
+			logger: logger.named('http'),
+			tracer,
+		},
+		serverConfig,
+	)
 	logger.info('http server started', { port: config.PORT })
 
 	logger.info('application is ready')
 
-	return { config, logger, database, cache, auth, services, server, telegram }
+	return { config, logger, tracer, database, cache, auth, fns, catalog, services, server, telegram }
 }
 
-export async function stop(app: App) {
-	app.logger.info('shutting down application')
-
+export async function stop(app: Awaited<ReturnType<typeof start>>) {
+	app.logger.info('shutting down')
 	await app.server.instance.stop()
-
+	await app.tracer.shutdown()
 	await app.database.$client.end()
-
+	await app.cache.disconnect()
 	app.logger.info('application stopped')
 }

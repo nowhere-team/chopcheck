@@ -1,22 +1,13 @@
-import type { ParticipantWithSelections, SplitResponse } from '@/common/types'
+﻿import type { ParticipantWithSelections, SplitResponse } from '@/common/types'
 
-function getStableAnonymousName(participantId: string): string {
+function getAnonymousName(participantId: string): string {
 	const hash = participantId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-	const number = (hash % 999) + 1
-	return `Guest ${number}`
+	return `Guest ${(hash % 999) + 1}`
 }
 
-export function anonymizeParticipant(participant: ParticipantWithSelections): ParticipantWithSelections {
-	if (!participant.isAnonymous) {
-		return participant
-	}
-
-	return {
-		...participant,
-		userId: null,
-		displayName: participant.displayName || getStableAnonymousName(participant.id),
-		user: null,
-	}
+export function anonymizeParticipant(p: ParticipantWithSelections): ParticipantWithSelections {
+	if (!p.isAnonymous) return p
+	return { ...p, userId: null, displayName: p.displayName || getAnonymousName(p.id), user: null }
 }
 
 export function anonymizeSplitResponse(response: SplitResponse): SplitResponse {
@@ -27,15 +18,10 @@ export function anonymizeSplitResponse(response: SplitResponse): SplitResponse {
 			? {
 					...response.calculations,
 					participants: response.calculations.participants.map(calc => {
-						const participant = response.participants.find(p => p.id === calc.participantId)
-
-						if (participant?.isAnonymous) {
-							return {
-								...calc,
-								displayName: participant.displayName || getStableAnonymousName(participant.id),
-							}
+						const p = response.participants.find(p => p.id === calc.participantId)
+						if (p?.isAnonymous) {
+							return { ...calc, displayName: p.displayName || getAnonymousName(p.id) }
 						}
-
 						return calc
 					}),
 				}

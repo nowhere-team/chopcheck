@@ -1,94 +1,73 @@
-import { NotFoundError } from '@/common/errors'
+﻿import { NotFoundError } from '@/common/errors'
 import type { User } from '@/common/types'
 import type { AuthClient } from '@/platform/auth'
 import type { Logger } from '@/platform/logger'
-import type { UsersRepository } from '@/repositories/users'
+import type { UsersRepository } from '@/repositories'
 
 import type { TelegramUserData } from './types'
 
 export class UsersService {
 	constructor(
-		private usersRepo: UsersRepository,
-		private auth: AuthClient,
-		private logger: Logger,
+		private readonly repo: UsersRepository,
+		private readonly auth: AuthClient,
+		private readonly logger: Logger,
 	) {}
 
 	async getById(userId: string): Promise<User | null> {
-		return await this.usersRepo.findById(userId)
+		return this.repo.findById(userId)
 	}
 
-	async findOrCreateFromTelegram(telegramUser: TelegramUserData): Promise<User> {
-		this.logger.debug('finding or creating user from telegram', {
-			telegramId: telegramUser.id,
-			username: telegramUser.username,
-		})
+	async findOrCreateFromTelegram(data: TelegramUserData): Promise<User> {
+		this.logger.debug('finding or creating user from telegram', { telegramId: data.id })
 
-		// step 1. search local user
-		let localUser = await this.usersRepo.findByTelegramId(telegramUser.id)
-
-		// step 2: save it to auth service
-		let authUser = await this.auth.findUserByIntegration('telegram', telegramUser.id.toString())
+		let localUser = await this.repo.findByTelegramId(data.id)
+		let authUser = await this.auth.findUserByIntegration('telegram', data.id.toString())
 
 		if (!authUser) {
 			authUser = await this.auth.createUser({
-				custom_display_name: telegramUser.firstName,
+				custom_display_name: data.firstName,
 				integrations: [
 					{
 						type: 'telegram',
-						external_id: telegramUser.id.toString(),
+						external_id: data.id.toString(),
 						external_data: {
-							username: telegramUser.username,
-							first_name: telegramUser.firstName,
-							last_name: telegramUser.lastName,
-							photo_url: telegramUser.photoUrl,
+							username: data.username,
+							first_name: data.firstName,
+							last_name: data.lastName,
+							photo_url: data.photoUrl,
 						},
 						is_primary: true,
 					},
 				],
 			})
-
-			this.logger.debug('created user in auth service', {
-				userId: authUser.user_id,
-			})
+			this.logger.debug('created user in auth service', { userId: authUser.user_id })
 		}
 
-		// step 3: save or update local copy
 		if (!localUser) {
-			localUser = await this.usersRepo.create({
+			localUser = await this.repo.create({
 				id: authUser.user_id,
-				telegramId: telegramUser.id,
-				username: telegramUser.username,
-				displayName: telegramUser.firstName || telegramUser.username || 'Anonymous',
-				avatarUrl: telegramUser.photoUrl,
+				telegramId: data.id,
+				username: data.username,
+				displayName: data.firstName || data.username || 'Anonymous',
+				avatarUrl: data.photoUrl,
 			})
-
 			this.logger.debug('created local user', { userId: localUser.id })
 		} else {
-			await this.usersRepo.update(localUser.id, {
-				displayName: telegramUser.firstName || localUser.displayName,
-				avatarUrl: telegramUser.photoUrl || localUser.avatarUrl,
+			await this.repo.update(localUser.id, {
+				displayName: data.firstName || localUser.displayName,
+				avatarUrl: data.photoUrl || localUser.avatarUrl,
 				lastSeenAt: new Date(),
 			})
-
-			this.logger.debug('updated existing user', { userId: localUser.id })
 		}
 
 		return localUser
 	}
 
 	async updatePreferences(userId: string, preferences: Record<string, unknown>): Promise<void> {
-		this.logger.info('updating user preferences', { userId })
+		const user = await this.repo.findById(userId)
+		if (!user) throw new NotFoundError('user not found')
 
-		const user = await this.usersRepo.findById(userId)
-		if (!user) {
-			throw new NotFoundError('user not found')
-		}
-
-		const updatedPreferences = {
-			...((user.preferences as Record<string, unknown>) || {}),
-			...preferences,
-		}
-
-		await this.usersRepo.updatePreferences(userId, updatedPreferences)
+		const merged = { ...((user.preferences as Record<string, unknown>) || {}), ...preferences }
+		await this.repo.updatePreferences(userId, merged)
 	}
 }

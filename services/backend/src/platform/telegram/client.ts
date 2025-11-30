@@ -1,4 +1,4 @@
-import ky, { type KyInstance } from 'ky'
+﻿import ky, { type KyInstance } from 'ky'
 
 import type { Logger } from '@/platform/logger'
 
@@ -12,11 +12,7 @@ export class TelegramServiceClient {
 		this.api = ky.create({
 			prefixUrl: serviceUrl,
 			timeout: 10000,
-			retry: {
-				limit: 2,
-				methods: ['post'],
-				statusCodes: [408, 429, 500, 502, 503, 504],
-			},
+			retry: { limit: 2, methods: ['post'], statusCodes: [408, 429, 500, 502, 503, 504] },
 		})
 	}
 
@@ -26,22 +22,10 @@ export class TelegramServiceClient {
 		splitShortId: string,
 		webAppUrl: string,
 	): Promise<string> {
-		this.logger.debug('creating share message via telegram service', {
-			userId,
-			splitShortId,
-		})
-
+		this.logger.debug('creating share message', { userId, splitShortId })
 		const response = await this.api
-			.post('api/share-message', {
-				json: {
-					userId,
-					splitName,
-					splitShortId,
-					webAppUrl,
-				},
-			})
+			.post('api/share-message', { json: { userId, splitName, splitShortId, webAppUrl } })
 			.json<{ preparedMessageId: string }>()
-
 		return response.preparedMessageId
 	}
 }

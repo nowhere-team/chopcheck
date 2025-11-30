@@ -1,11 +1,8 @@
-import { start, stop } from '@/bootstrap'
+﻿import { start, stop } from '@/bootstrap'
 
 const app = await start()
 
-// graceful shutdown
-const SHUTDOWN_SIGNALS = ['SIGTERM', 'SIGINT', 'SIGKILL'] as const
-
-for (const signal of SHUTDOWN_SIGNALS) {
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
 	process.on(signal, async () => {
 		try {
 			await stop(app)

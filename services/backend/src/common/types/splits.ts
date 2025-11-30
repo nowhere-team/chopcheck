@@ -1,10 +1,6 @@
-import { z } from 'zod'
+﻿import { z } from 'zod'
 
-import type { Item, Split } from '@/common/types'
-import type { ParticipantWithSelections } from '@/common/types/entities'
-import type { ItemCalculationResult } from '@/services/calculation/types'
-
-// DTO for incoming requests
+import type { Item, ParticipantWithSelections, Split } from './entities'
 
 export const createSplitSchema = z.object({
 	id: z.uuid().optional(),
@@ -22,11 +18,10 @@ export const createSplitSchema = z.object({
 			}),
 		)
 		.optional(),
+	receiptIds: z.array(z.uuid()).optional(),
 })
 
 export type CreateSplitDto = z.infer<typeof createSplitSchema>
-
-// basic types
 
 export interface SplitData {
 	split: Split
@@ -34,29 +29,36 @@ export interface SplitData {
 	participants: ParticipantWithSelections[]
 }
 
-// for api answers
-
-export interface ParticipantCalculationData {
+export interface ParticipantCalculation {
 	participantId: string
-	totalBaseAmount: number
-	totalDiscountAmount: number
-	totalAmount: number
-	items: Record<string, Omit<ItemCalculationResult, 'itemId'>> // itemId is key already
+	displayName: string
+	totalBase: number
+	totalDiscount: number
+	totalFinal: number
+	items: Record<
+		string,
+		{
+			baseAmount: number
+			discountAmount: number
+			finalAmount: number
+			divisionMethod: string
+			participationValue?: string
+		}
+	>
 }
 
-export interface CalculationTotals {
-	splitAmount: number
-	collected: number
-	difference: number
-}
-
-export interface Calculations {
-	participants: ParticipantCalculationData[]
-	totals: CalculationTotals
+export interface SplitCalculations {
+	participants: ParticipantCalculation[]
+	totals: {
+		splitAmount: number
+		collected: number
+		difference: number
+	}
 }
 
 export interface SplitResponse extends SplitData {
-	calculations?: Calculations
+	calculations?: SplitCalculations
+	receipts?: Array<{ id: string; placeName?: string | null; total: number; createdAt: Date }>
 }
 
 export interface SplitsByPeriod {

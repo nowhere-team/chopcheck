@@ -1,4 +1,4 @@
-import type { ErrorHandler } from 'hono'
+﻿import type { ErrorHandler } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 
 import { ApiError, ErrorSeverity, InternalError, NotFoundError, ValidationError } from '@/common/errors'
@@ -23,14 +23,13 @@ function transformError(err: Error, path: string): ApiError {
 		originalMessage: err.message,
 		errorName: err.name,
 		stack: err.stack,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		cause: 'cause' in err ? (err as any).cause : undefined,
 		path,
 	})
 }
 
-function logError(logger: Logger, error: ApiError, path: string) {
-	const baseContext = { path, code: error.code, severity: error.severity }
+function logError(logger: Logger, error: ApiError, path: string, traceId?: string) {
+	const baseContext = { path, code: error.code, severity: error.severity, traceId }
 
 	switch (error.severity) {
 		case ErrorSeverity.LOW:
@@ -40,16 +39,9 @@ function logError(logger: Logger, error: ApiError, path: string) {
 			logger.warn(error.message, baseContext)
 			break
 		case ErrorSeverity.HIGH:
+		case ErrorSeverity.CRITICAL:
 			logger.error(error.message, {
 				...baseContext,
-				details: error.details,
-				stack: error.stack,
-			})
-			break
-		case ErrorSeverity.CRITICAL:
-			logger.error('CRITICAL ERROR', {
-				...baseContext,
-				message: error.message,
 				details: error.details,
 				stack: error.stack,
 			})
@@ -60,9 +52,15 @@ function logError(logger: Logger, error: ApiError, path: string) {
 export const errorHandler: ErrorHandler = (err, c) => {
 	const logger = c.get('logger')
 	const path = c.req.path
+	const traceId = c.get('traceId')
 
 	const error = transformError(err, path)
-	logError(logger, error, path)
+	logError(logger, error, path, traceId)
 
-	return c.json(error.toResponse(), error.status)
+	const response = error.toResponse()
+	if (traceId) {
+		;(response as any).traceId = traceId
+	}
+
+	return c.json(response, error.status)
 }

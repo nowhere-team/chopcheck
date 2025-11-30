@@ -1,21 +1,23 @@
-import { and, eq } from 'drizzle-orm'
+﻿import { and, eq } from 'drizzle-orm'
 
 import type { Item } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
-export type CreateItemData = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & {
+type NewItem = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & {
 	id?: string
+	receiptItemId?: string
+	icon?: string
 }
 
 export class ItemsRepository extends BaseRepository {
-	private getCacheKey(splitId: string, suffix: string = 'items'): string {
-		return `split:${splitId}:${suffix}`
+	private key(splitId: string) {
+		return `split:${splitId}:items`
 	}
 
 	async findBySplitId(splitId: string): Promise<Item[]> {
-		return this.getOrSet(this.getCacheKey(splitId), async () => {
+		return this.cached(this.key(splitId), async () => {
 			return this.db.query.splitItems.findMany({
 				where: and(eq(schema.splitItems.splitId, splitId), eq(schema.splitItems.isDeleted, false)),
 				orderBy: (items, { asc }) => [asc(items.displayOrder)],
@@ -23,34 +25,35 @@ export class ItemsRepository extends BaseRepository {
 		})
 	}
 
-	async createMany(splitId: string, items: CreateItemData[]): Promise<Item[]> {
+	async findById(id: string): Promise<Item | null> {
+		const item = await this.db.query.splitItems.findFirst({
+			where: and(eq(schema.splitItems.id, id), eq(schema.splitItems.isDeleted, false)),
+		})
+		return item || null
+	}
+
+	async createMany(splitId: string, items: NewItem[]): Promise<Item[]> {
+		if (items.length === 0) return []
+
 		const created = await this.db
 			.insert(schema.splitItems)
 			.values(
 				items.map((item, index) => ({
 					splitId,
+					receiptItemId: item.receiptItemId,
 					name: item.name,
 					price: item.price,
 					type: item.type || 'product',
 					quantity: item.quantity || '1',
+					icon: item.icon,
 					displayOrder: index,
 					defaultDivisionMethod: item.defaultDivisionMethod || 'equal',
 				})),
 			)
 			.returning()
 
-		await this.cache.deletePattern(this.getCacheKey(splitId))
-
+		await this.invalidate(this.key(splitId))
 		return created
-	}
-
-	async softDelete(id: string, splitId: string): Promise<void> {
-		await this.db
-			.update(schema.splitItems)
-			.set({ isDeleted: true, updatedAt: new Date() })
-			.where(and(eq(schema.splitItems.id, id), eq(schema.splitItems.splitId, splitId)))
-
-		await this.cache.deletePattern(this.getCacheKey(splitId))
 	}
 
 	async update(id: string, splitId: string, data: Partial<Item>): Promise<void> {
@@ -59,14 +62,24 @@ export class ItemsRepository extends BaseRepository {
 			.set({ ...data, updatedAt: new Date() })
 			.where(eq(schema.splitItems.id, id))
 
-		await this.cache.deletePattern(this.getCacheKey(splitId))
+		await this.invalidate(this.key(splitId))
 	}
 
-	async findById(id: string): Promise<Item | null> {
-		const item = await this.db.query.splitItems.findFirst({
-			where: and(eq(schema.splitItems.id, id), eq(schema.splitItems.isDeleted, false)),
-		})
+	async softDelete(id: string, splitId: string): Promise<void> {
+		await this.db
+			.update(schema.splitItems)
+			.set({ isDeleted: true, deletedAt: new Date(), updatedAt: new Date() })
+			.where(eq(schema.splitItems.id, id))
 
-		return item || null
+		await this.invalidate(this.key(splitId))
+	}
+
+	async deleteAllForSplit(splitId: string): Promise<void> {
+		await this.db
+			.update(schema.splitItems)
+			.set({ isDeleted: true, deletedAt: new Date(), updatedAt: new Date() })
+			.where(and(eq(schema.splitItems.splitId, splitId), eq(schema.splitItems.isDeleted, false)))
+
+		await this.invalidate(this.key(splitId))
 	}
 }

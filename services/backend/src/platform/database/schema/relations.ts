@@ -1,12 +1,17 @@
+﻿// noinspection JSUnusedGlobalSymbols
+
 import { relations } from 'drizzle-orm'
 
 import {
+	receiptItems,
+	receipts,
 	splitAuditLog,
 	splitItemParticipants,
 	splitItems,
 	splitParticipants,
 	splitPaymentMethods,
 	splitPayments,
+	splitReceipts,
 	splits,
 	userPaymentMethods,
 	users,
@@ -17,6 +22,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	ownedSplits: many(splits, { relationName: 'splitOwner' }),
 	participations: many(splitParticipants),
 	invitedParticipants: many(splitParticipants, { relationName: 'inviter' }),
+	receipts: many(receipts),
 	auditActions: many(splitAuditLog),
 }))
 
@@ -27,6 +33,23 @@ export const userPaymentMethodsRelations = relations(userPaymentMethods, ({ one,
 	}),
 	splitPaymentMethods: many(splitPaymentMethods),
 	payments: many(splitPayments),
+}))
+
+export const receiptsRelations = relations(receipts, ({ one, many }) => ({
+	user: one(users, {
+		fields: [receipts.userId],
+		references: [users.id],
+	}),
+	items: many(receiptItems),
+	splitReceipts: many(splitReceipts),
+}))
+
+export const receiptItemsRelations = relations(receiptItems, ({ one, many }) => ({
+	receipt: one(receipts, {
+		fields: [receiptItems.receiptId],
+		references: [receipts.id],
+	}),
+	splitItems: many(splitItems),
 }))
 
 export const splitsRelations = relations(splits, ({ one, many }) => ({
@@ -43,8 +66,20 @@ export const splitsRelations = relations(splits, ({ one, many }) => ({
 	childSplits: many(splits, { relationName: 'parentChildSplit' }),
 	participants: many(splitParticipants),
 	items: many(splitItems),
+	splitReceipts: many(splitReceipts),
 	paymentMethods: many(splitPaymentMethods),
 	auditLogs: many(splitAuditLog),
+}))
+
+export const splitReceiptsRelations = relations(splitReceipts, ({ one }) => ({
+	split: one(splits, {
+		fields: [splitReceipts.splitId],
+		references: [splits.id],
+	}),
+	receipt: one(receipts, {
+		fields: [splitReceipts.receiptId],
+		references: [receipts.id],
+	}),
 }))
 
 export const splitParticipantsRelations = relations(splitParticipants, ({ one, many }) => ({
@@ -69,6 +104,10 @@ export const splitItemsRelations = relations(splitItems, ({ one, many }) => ({
 	split: one(splits, {
 		fields: [splitItems.splitId],
 		references: [splits.id],
+	}),
+	receiptItem: one(receiptItems, {
+		fields: [splitItems.receiptItemId],
+		references: [receiptItems.id],
 	}),
 	participations: many(splitItemParticipants),
 }))

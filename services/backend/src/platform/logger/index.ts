@@ -1,5 +1,5 @@
-import { PinoLogger } from './pino'
-import type { Logger, LoggerConfig } from './types.ts'
+﻿import { PinoLogger } from './pino'
+import type { Logger, LoggerConfig } from './types'
 
 export function createLogger(config: LoggerConfig): Logger {
 	return new PinoLogger(config)

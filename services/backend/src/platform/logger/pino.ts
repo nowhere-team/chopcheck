@@ -1,4 +1,4 @@
-import pino, { type Logger as Pino, type LoggerOptions } from 'pino'
+﻿import pino, { type Logger as Pino, type LoggerOptions } from 'pino'
 import pinoPretty from 'pino-pretty'
 
 import type { LogContext, Logger, LoggerConfig } from './types'
@@ -54,5 +54,9 @@ export class PinoLogger implements Logger {
 
 	named(name: string): Logger {
 		return new PinoLogger({ ...this.config, name })
+	}
+
+	withTraceId(traceId: string): Logger {
+		return new PinoLogger(this.config, this.instance.child({ traceId }))
 	}
 }

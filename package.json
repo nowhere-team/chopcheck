@@ -1,9 +1,11 @@
 {
 	"name": "chopcheck",
+	"devDependencies": {
+		"concurrently": "^9.2.1",
+		"lefthook": "^2.0.4",
+		"lint-staged": "^16.2.6"
+	},
 	"private": true,
-	"workspaces": [
-		"services/*"
-	],
 	"scripts": {
 		"dev": "bun run --filter='./services/*' dev",
 		"dev:front": "bun run --cwd=./services/frontend dev",
@@ -19,9 +21,7 @@
 		"check": "cd services/frontend && bun run check",
 		"fix": "bun run format && bun run lint:fix"
 	},
-	"devDependencies": {
-		"concurrently": "^9.2.1",
-		"lefthook": "^2.0.4",
-		"lint-staged": "^16.2.6"
-	}
+	"workspaces": [
+		"services/*"
+	]
 }

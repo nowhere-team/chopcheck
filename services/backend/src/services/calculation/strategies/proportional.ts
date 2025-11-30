@@ -1,11 +1,10 @@
-import type { ItemCalculationContext, ItemCalculationResult } from '../types'
+﻿import type { ItemCalculationContext, ItemCalculationResult } from '../types'
 import { DivisionStrategy } from './base'
 
-export class ProportionalDivisionStrategy extends DivisionStrategy {
-	calculate(ctx: ItemCalculationContext): ItemCalculationResult {
+export class ProportionalStrategy extends DivisionStrategy {
+	calculate(ctx: ItemCalculationContext): Omit<ItemCalculationResult, 'participantId'> {
 		const percent = Number(ctx.participation.participationValue || 0)
 		const baseAmount = Math.round(ctx.item.price * (percent / 100))
-
 		const { discountAmount, finalAmount } = this.applyDiscounts(baseAmount, ctx)
 
 		return {

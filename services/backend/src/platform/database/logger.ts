@@ -1,4 +1,4 @@
-import type { Logger as DrizzleLogger } from 'drizzle-orm/logger'
+﻿import type { Logger as DrizzleLogger } from 'drizzle-orm/logger'
 
 import type { Logger } from '@/platform/logger'
 

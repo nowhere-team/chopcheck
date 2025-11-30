@@ -1,4 +1,4 @@
-import { pgEnum } from 'drizzle-orm/pg-core'
+﻿import { pgEnum } from 'drizzle-orm/pg-core'
 
 export const divisionMethodEnum = pgEnum('division_method', ['equal', 'shares', 'fixed', 'proportional', 'custom'])
 
@@ -19,3 +19,7 @@ export const paymentMethodTypeEnum = pgEnum('payment_method_type', [
 	'crypto',
 	'custom',
 ])
+
+export const receiptSourceEnum = pgEnum('receipt_source', ['qr', 'image', 'manual'])
+
+export const receiptStatusEnum = pgEnum('receipt_status', ['pending', 'processing', 'enriched', 'failed'])

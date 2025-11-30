@@ -1,7 +1,20 @@
-import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+﻿import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 
-import { divisionMethodEnum, itemTypeEnum, paymentMethodTypeEnum, paymentStatusEnum, splitPhaseEnum, splitStatusEnum } from './enums'
+import {
+	divisionMethodEnum,
+	itemTypeEnum,
+	paymentMethodTypeEnum,
+	paymentStatusEnum,
+	receiptSourceEnum,
+	receiptStatusEnum,
+	splitPhaseEnum,
+	splitStatusEnum,
+} from './enums'
 import { decimal, money, timestamptz } from './utils'
+
+// ============================================================================
+// USERS
+// ============================================================================
 
 export const users = pgTable(
 	'users',
@@ -27,14 +40,14 @@ export const users = pgTable(
 	table => [
 		unique('unique_telegram_id').on(table.telegramId),
 		unique('unique_username').on(table.username),
-
 		index('idx_users_username').on(table.username),
-		index('idx_users_display_name').on(table.displayName),
-		index('idx_users_last_seen_at').on(table.lastSeenAt),
-		index('idx_users_active').on(table.isDeleted),
 		index('idx_users_telegram_active').on(table.telegramId, table.isDeleted),
 	],
 )
+
+// ============================================================================
+// PAYMENT METHODS
+// ============================================================================
 
 export const userPaymentMethods = pgTable(
 	'user_payment_methods',
@@ -51,7 +64,6 @@ export const userPaymentMethods = pgTable(
 		isDefault: boolean('is_default').notNull().default(false),
 		displayOrder: integer('display_order').notNull().default(0),
 
-		// soft delete fields
 		isDeleted: boolean('is_deleted').notNull().default(false),
 		deletedAt: timestamptz('deleted_at'),
 
@@ -64,13 +76,122 @@ export const userPaymentMethods = pgTable(
 			columns: [table.userId],
 			foreignColumns: [users.id],
 		}).onDelete('restrict'),
-
 		index('idx_user_payment_methods_user_id').on(table.userId),
 		index('idx_user_payment_methods_active').on(table.userId, table.isDeleted),
-		index('idx_user_payment_methods_default').on(table.userId, table.isDefault),
-		index('idx_user_payment_methods_temporary').on(table.isTemporary, table.createdAt),
 	],
 )
+
+// ============================================================================
+// RECEIPTS
+// ============================================================================
+
+export const receipts = pgTable(
+	'receipts',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id').notNull(),
+
+		// source info
+		source: receiptSourceEnum('source').notNull(),
+		status: receiptStatusEnum('status').notNull().default('pending'),
+
+		// qr data (from fns)
+		qrRaw: varchar('qr_raw', { length: 512 }),
+		fiscalNumber: varchar('fiscal_number', { length: 32 }),
+		fiscalDocument: varchar('fiscal_document', { length: 32 }),
+		fiscalSign: varchar('fiscal_sign', { length: 32 }),
+
+		// place info
+		placeName: varchar('place_name', { length: 255 }),
+		placeAddress: varchar('place_address', { length: 512 }),
+		placeInn: varchar('place_inn', { length: 12 }),
+
+		// totals
+		currency: varchar('currency', { length: 3 }).notNull().default('RUB'),
+		subtotal: money('subtotal'),
+		discountTotal: money('discount_total'),
+		serviceFeesTotal: money('service_fees_total'),
+		taxTotal: money('tax_total'),
+		total: money('total').notNull(),
+
+		// timestamps from receipt
+		receiptDate: timestamptz('receipt_date'),
+
+		// raw fns response
+		fnsData: jsonb('fns_data'),
+
+		// enrichment result from catalog
+		enrichmentData: jsonb('enrichment_data'),
+		enrichedAt: timestamptz('enriched_at'),
+
+		// error tracking
+		lastError: varchar('last_error', { length: 2048 }),
+		retryCount: integer('retry_count').notNull().default(0),
+
+		createdAt: timestamptz('created_at').notNull().defaultNow(),
+		updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+	},
+	table => [
+		foreignKey({
+			name: 'fk_receipts_user_id',
+			columns: [table.userId],
+			foreignColumns: [users.id],
+		}).onDelete('restrict'),
+		index('idx_receipts_user_id').on(table.userId),
+		index('idx_receipts_status').on(table.status),
+		index('idx_receipts_fiscal').on(table.fiscalNumber, table.fiscalDocument),
+		index('idx_receipts_user_created').on(table.userId, table.createdAt),
+	],
+)
+
+export const receiptItems = pgTable(
+	'receipt_items',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		receiptId: uuid('receipt_id').notNull(),
+
+		// raw data from fns/ocr
+		rawName: varchar('raw_name', { length: 512 }).notNull(),
+
+		// enriched data
+		name: varchar('name', { length: 256 }),
+		category: varchar('category', { length: 64 }),
+		subcategory: varchar('subcategory', { length: 64 }),
+		emoji: varchar('emoji', { length: 8 }),
+		tags: jsonb('tags').default('[]'),
+
+		// pricing
+		price: money('price').notNull(),
+		quantity: decimal('quantity', 10, 3).notNull().default('1'),
+		unit: varchar('unit', { length: 32 }).default('piece'),
+		sum: money('sum').notNull(),
+		discount: money('discount').default(0),
+
+		// split method suggestion
+		suggestedSplitMethod: divisionMethodEnum('suggested_split_method'),
+
+		// ordering
+		displayOrder: integer('display_order').notNull().default(0),
+
+		// catalog reference
+		catalogItemId: uuid('catalog_item_id'),
+
+		createdAt: timestamptz('created_at').notNull().defaultNow(),
+	},
+	table => [
+		foreignKey({
+			name: 'fk_receipt_items_receipt_id',
+			columns: [table.receiptId],
+			foreignColumns: [receipts.id],
+		}).onDelete('cascade'),
+		index('idx_receipt_items_receipt_id').on(table.receiptId),
+		index('idx_receipt_items_order').on(table.receiptId, table.displayOrder),
+	],
+)
+
+// ============================================================================
+// SPLITS
+// ============================================================================
 
 export const splits = pgTable(
 	'splits',
@@ -92,6 +213,11 @@ export const splits = pgTable(
 
 		totalDiscount: money('total_discount').default(0),
 		totalDiscountPercent: decimal('total_discount_percent', 5, 2).default('0'),
+
+		// cached totals for fast access
+		cachedTotal: money('cached_total'),
+		cachedCollected: money('cached_collected'),
+		calculatedAt: timestamptz('calculated_at'),
 
 		defaultPermissions: jsonb('default_permissions').notNull().default({
 			can_edit_items: false,
@@ -121,16 +247,40 @@ export const splits = pgTable(
 			columns: [table.ownerId],
 			foreignColumns: [users.id],
 		}).onDelete('restrict'),
-
 		unique('unique_short_id').on(table.shortId),
-
 		index('idx_splits_owner_id').on(table.ownerId),
 		index('idx_splits_status').on(table.status),
-		index('idx_splits_phase').on(table.phase),
 		index('idx_splits_owner_active').on(table.ownerId, table.isDeleted),
-		index('idx_splits_parent_id').on(table.parentSplitId),
-		index('idx_splits_payment_deadline').on(table.paymentDeadline),
 		index('idx_splits_updated_at').on(table.updatedAt),
+	],
+)
+
+// link splits to receipts (many-to-many)
+export const splitReceipts = pgTable(
+	'split_receipts',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		splitId: uuid('split_id').notNull(),
+		receiptId: uuid('receipt_id').notNull(),
+
+		displayOrder: integer('display_order').notNull().default(0),
+
+		createdAt: timestamptz('created_at').notNull().defaultNow(),
+	},
+	table => [
+		foreignKey({
+			name: 'fk_split_receipts_split_id',
+			columns: [table.splitId],
+			foreignColumns: [splits.id],
+		}).onDelete('cascade'),
+		foreignKey({
+			name: 'fk_split_receipts_receipt_id',
+			columns: [table.receiptId],
+			foreignColumns: [receipts.id],
+		}).onDelete('cascade'),
+		unique('unique_split_receipt').on(table.splitId, table.receiptId),
+		index('idx_split_receipts_split_id').on(table.splitId),
+		index('idx_split_receipts_receipt_id').on(table.receiptId),
 	],
 )
 
@@ -146,6 +296,9 @@ export const splitParticipants = pgTable(
 		isReady: boolean('is_ready').notNull().default(false),
 		hasPaid: boolean('has_paid').notNull().default(false),
 		isAnonymous: boolean('is_anonymous').notNull().default(false),
+
+		// cached calculation result
+		cachedTotal: money('cached_total'),
 
 		overriddenPermissions: jsonb('overridden_permissions').notNull().default({}),
 
@@ -172,14 +325,10 @@ export const splitParticipants = pgTable(
 			columns: [table.invitedBy],
 			foreignColumns: [users.id],
 		}).onDelete('set null'),
-
 		unique('unique_split_user').on(table.splitId, table.userId),
-
 		index('idx_split_participants_split_id').on(table.splitId),
 		index('idx_split_participants_user_id').on(table.userId),
 		index('idx_split_participants_split_active').on(table.splitId, table.isDeleted),
-		index('idx_split_participants_has_paid').on(table.splitId, table.hasPaid, table.isDeleted),
-		index('idx_split_participants_is_ready').on(table.splitId, table.isReady, table.isDeleted),
 	],
 )
 
@@ -188,6 +337,9 @@ export const splitItems = pgTable(
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 		splitId: uuid('split_id').notNull(),
+
+		// optional link to receipt item
+		receiptItemId: uuid('receipt_item_id'),
 
 		type: itemTypeEnum('type').notNull().default('product'),
 		name: varchar('name', { length: 128 }).notNull(),
@@ -198,8 +350,7 @@ export const splitItems = pgTable(
 		displayOrder: integer('display_order').default(0),
 
 		price: money('price').notNull(),
-		// @ts-expect-error drizzle don't know how to serialize bigint, so use string
-		itemDiscount: money('item_discount').default('0'),
+		itemDiscount: money('item_discount').default(0),
 
 		quantity: decimal('quantity', 8, 3).default('1'),
 		unit: varchar('unit', { length: 32 }).default('piece'),
@@ -218,11 +369,14 @@ export const splitItems = pgTable(
 			columns: [table.splitId],
 			foreignColumns: [splits.id],
 		}).onDelete('restrict'),
-
+		foreignKey({
+			name: 'fk_split_items_receipt_item_id',
+			columns: [table.receiptItemId],
+			foreignColumns: [receiptItems.id],
+		}).onDelete('set null'),
 		index('idx_split_items_split_id').on(table.splitId),
 		index('idx_split_items_split_active').on(table.splitId, table.isDeleted),
 		index('idx_split_items_order').on(table.splitId, table.displayOrder, table.isDeleted),
-		index('idx_split_items_type').on(table.splitId, table.type, table.isDeleted),
 	],
 )
 
@@ -239,6 +393,10 @@ export const splitItemParticipants = pgTable(
 		participationValue: decimal('participation_value', 12, 4),
 
 		applyTotalDiscount: boolean('apply_total_discount').notNull().default(true),
+
+		// calculated result
+		calculatedBase: money('calculated_base'),
+		calculatedDiscount: money('calculated_discount'),
 		calculatedSum: money('calculated_sum'),
 
 		isDeleted: boolean('is_deleted').notNull().default(false),
@@ -257,9 +415,7 @@ export const splitItemParticipants = pgTable(
 			columns: [table.itemId],
 			foreignColumns: [splitItems.id],
 		}).onDelete('restrict'),
-
 		unique('unique_participant_item').on(table.participantId, table.itemId),
-
 		index('idx_split_item_participants_participant_id').on(table.participantId),
 		index('idx_split_item_participants_item_id').on(table.itemId),
 		index('idx_split_item_participants_active').on(table.participantId, table.itemId, table.isDeleted),
@@ -291,11 +447,8 @@ export const splitPaymentMethods = pgTable(
 			columns: [table.paymentMethodId],
 			foreignColumns: [userPaymentMethods.id],
 		}).onDelete('cascade'),
-
 		unique('unique_split_payment_method').on(table.splitId, table.paymentMethodId),
-
 		index('idx_split_payment_methods_split_id').on(table.splitId),
-		index('idx_split_payment_methods_preferred').on(table.splitId, table.isPreferred),
 	],
 )
 
@@ -325,14 +478,8 @@ export const splitPayments = pgTable(
 			columns: [table.paymentMethodId],
 			foreignColumns: [userPaymentMethods.id],
 		}).onDelete('set null'),
-
 		index('idx_split_payments_participant_id').on(table.participantId),
 		index('idx_split_payments_status').on(table.status),
-		index('idx_split_payments_pending').on(table.participantId, table.status),
-		index('idx_split_payments_created_at').on(table.createdAt),
-
-		// cleanup job
-		index('idx_split_payments_old').on(table.createdAt, table.status),
 	],
 )
 
@@ -363,12 +510,7 @@ export const splitAuditLog = pgTable(
 			columns: [table.userId],
 			foreignColumns: [users.id],
 		}).onDelete('set null'),
-
 		index('idx_split_audit_log_split_id').on(table.splitId),
-		index('idx_split_audit_log_user_id').on(table.userId),
 		index('idx_split_audit_log_split_time').on(table.splitId, table.createdAt),
-		index('idx_split_audit_log_created_at').on(table.createdAt),
-
-		index('idx_split_audit_log_cleanup').on(table.createdAt, table.splitId),
 	],
 )
