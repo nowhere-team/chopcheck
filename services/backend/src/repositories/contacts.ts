@@ -31,6 +31,7 @@ export class ContactsRepository extends BaseRepository {
 			.where(
 				and(
 					eq(schema.splitParticipants.isDeleted, false),
+					eq(schema.splitParticipants.isAnonymous, false),
 					eq(schema.splits.isDeleted, false),
 					sql`${schema.splitParticipants.userId} != ${userId}`,
 					exists(
@@ -143,6 +144,7 @@ export class ContactsRepository extends BaseRepository {
 					.where(
 						and(
 							eq(schema.splitParticipants.userId, contactId),
+							eq(schema.splitParticipants.isAnonymous, false),
 							eq(schema.splitParticipants.isDeleted, false),
 							eq(schema.splitParticipants.hasPaid, false),
 						),
@@ -168,6 +170,7 @@ export class ContactsRepository extends BaseRepository {
 					.where(
 						and(
 							eq(schema.splitParticipants.userId, userId),
+							eq(schema.splitParticipants.isAnonymous, false),
 							eq(schema.splitParticipants.isDeleted, false),
 							eq(schema.splitParticipants.hasPaid, false),
 						),

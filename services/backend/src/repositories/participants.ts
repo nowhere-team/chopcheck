@@ -61,10 +61,26 @@ export class ParticipantsRepository extends BaseRepository {
 		displayName?: string,
 		isAnonymous: boolean = false,
 	): Promise<Participant> {
+		this.logger.debug('join called', { splitId, userId, displayName, isAnonymous })
+
 		const existing = await this.findByUserAndSplit(userId, splitId)
 		if (existing) {
+			this.logger.debug('updating existing participant', { participantId: existing.id })
+
+			await this.db
+				.update(schema.splitParticipants)
+				.set({
+					isAnonymous,
+					displayName: displayName || existing.displayName,
+				})
+				.where(eq(schema.splitParticipants.id, existing.id))
+
+			await this.cache.deletePattern(this.getCacheKey(splitId))
+
 			return existing
 		}
+
+		this.logger.debug('creating new participant', { userId, isAnonymous })
 
 		const [participant] = await this.db
 			.insert(schema.splitParticipants)
@@ -77,6 +93,8 @@ export class ParticipantsRepository extends BaseRepository {
 				isAnonymous,
 			})
 			.returning()
+
+		this.logger.debug('participant created', { participantId: participant!.id, userId: participant!.userId })
 
 		await this.cache.deletePattern(this.getCacheKey(splitId))
 

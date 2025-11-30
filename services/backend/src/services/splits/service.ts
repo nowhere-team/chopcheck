@@ -266,10 +266,9 @@ export class SplitsService {
 			throw new ValidationError('Cannot publish split without items')
 		}
 
-		// change status to active
 		await this.splitsRepo.update(splitId, {
 			status: 'active',
-			phase: 'voting', // participants can now select their items
+			phase: 'voting',
 		})
 
 		this.logger.info('split published', { splitId, userId })
@@ -282,7 +281,12 @@ export class SplitsService {
 		return result
 	}
 
-	async join(splitId: string, userId: string): Promise<SplitResponse> {
+	async join(
+		splitId: string,
+		userId: string,
+		displayName?: string,
+		isAnonymous: boolean = false,
+	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
 			throw new NotFoundError('split not found')
@@ -295,7 +299,7 @@ export class SplitsService {
 			}
 		}
 
-		await this.participantsRepo.join(splitId, userId)
+		await this.participantsRepo.join(splitId, userId, displayName, isAnonymous)
 
 		await this.contactsRepo.invalidateUserContacts(userId)
 		await this.contactsRepo.invalidateUserContacts(split.ownerId)
@@ -310,7 +314,7 @@ export class SplitsService {
 				.map(p => this.contactsRepo.invalidateUserContacts(p.userId!)),
 		)
 
-		this.logger.info('user joined split', { splitId, userId })
+		this.logger.info('user joined split', { splitId, userId, isAnonymous })
 
 		const result = await this.getById(splitId, false)
 		if (!result) {
@@ -364,13 +368,11 @@ export class SplitsService {
 			throw new ForbiddenError('Can only replace items in draft splits')
 		}
 
-		// delete all existing items
 		const currentItems = await this.itemsRepo.findBySplitId(splitId)
 		for (const item of currentItems) {
 			await this.itemsRepo.softDelete(item.id, splitId)
 		}
 
-		// create new items
 		if (items.length > 0) {
 			await this.itemsRepo.createMany(splitId, items)
 		}
