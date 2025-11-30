@@ -5,6 +5,7 @@ import { createDevRoutes } from '@/http/routes/dev'
 import { createHealthRoutes } from '@/http/routes/health'
 import { createSplitsRoutes } from '@/http/routes/splits'
 
+import { createContactsRoutes } from './contacts'
 import { createPaymentMethodsRoutes } from './payment-methods'
 
 export function registerRoutes() {
@@ -14,4 +15,5 @@ export function registerRoutes() {
 		.route('/splits', createSplitsRoutes())
 		.route('/dev', createDevRoutes())
 		.route('/payment-methods', createPaymentMethodsRoutes())
+		.route('/contacts', createContactsRoutes())
 }

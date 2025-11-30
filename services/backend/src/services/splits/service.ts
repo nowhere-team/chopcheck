@@ -13,6 +13,7 @@ import type {
 	SplitsByPeriod,
 } from '@/common/types'
 import type { Logger } from '@/platform/logger'
+import type { ContactsRepository } from '@/repositories/contacts'
 import type { ItemsRepository } from '@/repositories/items'
 import type { ParticipantsRepository } from '@/repositories/participants'
 import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
@@ -27,6 +28,7 @@ export class SplitsService {
 		private participantsRepo: ParticipantsRepository,
 		private paymentMethodsRepo: PaymentMethodsRepository,
 		private statsRepo: StatsRepository,
+		private contactsRepo: ContactsRepository,
 		private calcService: CalculationService,
 		private logger: Logger,
 	) {}
@@ -264,10 +266,9 @@ export class SplitsService {
 			throw new ValidationError('Cannot publish split without items')
 		}
 
-		// change status to active
 		await this.splitsRepo.update(splitId, {
 			status: 'active',
-			phase: 'voting', // participants can now select their items
+			phase: 'voting',
 		})
 
 		this.logger.info('split published', { splitId, userId })
@@ -288,23 +289,36 @@ export class SplitsService {
 	): Promise<SplitResponse> {
 		const split = await this.splitsRepo.findById(splitId)
 		if (!split) {
-			throw new NotFoundError('Split not found')
+			throw new NotFoundError('split not found')
 		}
 
 		if (split.maxParticipants) {
 			const currentCount = await this.participantsRepo.countParticipants(splitId)
 			if (currentCount >= split.maxParticipants) {
-				throw new Error('Split is full')
+				throw new Error('split is full')
 			}
 		}
 
 		await this.participantsRepo.join(splitId, userId, displayName, isAnonymous)
 
-		this.logger.info('user joined split', { splitId, userId, isAnonymous, displayName })
+		await this.contactsRepo.invalidateUserContacts(userId)
+		await this.contactsRepo.invalidateUserContacts(split.ownerId)
+
+		await this.participantsRepo.invalidateCache(splitId)
+
+		const participants = await this.participantsRepo.findBySplitId(splitId)
+
+		await Promise.all(
+			participants
+				.filter(p => p.userId && p.userId !== userId && p.userId !== split.ownerId)
+				.map(p => this.contactsRepo.invalidateUserContacts(p.userId!)),
+		)
+
+		this.logger.info('user joined split', { splitId, userId, isAnonymous })
 
 		const result = await this.getById(splitId, false)
 		if (!result) {
-			throw new NotFoundError('Split not found after join')
+			throw new NotFoundError('split not found after join')
 		}
 
 		return result
@@ -354,13 +368,11 @@ export class SplitsService {
 			throw new ForbiddenError('Can only replace items in draft splits')
 		}
 
-		// delete all existing items
 		const currentItems = await this.itemsRepo.findBySplitId(splitId)
 		for (const item of currentItems) {
 			await this.itemsRepo.softDelete(item.id, splitId)
 		}
 
-		// create new items
 		if (items.length > 0) {
 			await this.itemsRepo.createMany(splitId, items)
 		}

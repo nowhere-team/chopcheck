@@ -2,6 +2,7 @@ import type { Cache } from '@/platform/cache'
 import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 
+import { ContactsRepository } from './contacts'
 import { ItemsRepository } from './items'
 import { ParticipantsRepository } from './participants'
 import { PaymentMethodsRepository } from './payment-methods'
@@ -16,6 +17,7 @@ export interface Repositories {
 	paymentMethods: PaymentMethodsRepository
 	users: UsersRepository
 	stats: StatsRepository
+	contacts: ContactsRepository
 }
 
 export function createRepositories(db: Database, cache: Cache, logger: Logger): Repositories {
@@ -25,5 +27,6 @@ export function createRepositories(db: Database, cache: Cache, logger: Logger): 
 	const users = new UsersRepository(db, cache, logger.named('repository/users'))
 	const stats = new StatsRepository(db, cache, logger.named('repository/stats'))
 	const paymentMethods = new PaymentMethodsRepository(db, cache, logger.named('repository/payment-methods'))
-	return { splits, items, participants, paymentMethods, users, stats }
+	const contacts = new ContactsRepository(db, cache, logger.named('repository/contacts'))
+	return { splits, items, participants, paymentMethods, users, stats, contacts }
 }
