@@ -3,6 +3,7 @@ import { retrieveLaunchParams, type RetrieveLPResult as LaunchParams } from '@te
 import { createLogger } from '$lib/shared/logger'
 import { type AsyncResult, err, ok } from '$lib/shared/types'
 
+import { applySafeArea, applyThemeColors, calculateIsDark } from '../theme'
 import type {
 	HapticImpact,
 	HapticNotification,
@@ -11,9 +12,8 @@ import type {
 	PlatformFeature,
 	PlatformHaptic,
 	PlatformStorage,
-	PlatformTheme,
-	PlatformUser,
-	PlatformViewport
+	PlatformViewport,
+	SafeArea
 } from '../types'
 import { WebStorage } from '../web/storage'
 import { TelegramCloudStorage } from './storage'
@@ -32,7 +32,6 @@ export class TelegramPlatform implements Platform {
 	private launchParams: LaunchParams | null = null
 
 	private _haptic: TelegramHaptic | null = null
-	private _theme: TelegramTheme | null = null
 	private _viewport: TelegramViewport | null = null
 
 	get ready() {
@@ -47,10 +46,6 @@ export class TelegramPlatform implements Platform {
 		return this._haptic ?? new NoopHaptic()
 	}
 
-	get theme(): PlatformTheme {
-		return this._theme ?? DEFAULT_THEME
-	}
-
 	get viewport(): PlatformViewport {
 		return this._viewport ?? DEFAULT_VIEWPORT
 	}
@@ -59,58 +54,43 @@ export class TelegramPlatform implements Platform {
 		try {
 			log.debug('retrieving launch params')
 			this.launchParams = retrieveLaunchParams()
-			log.debug('launch params retrieved', {
-				platform: this.launchParams.tgWebAppPlatform,
-				hasUser: !!this.launchParams.tgWebAppData?.user
-			})
 
 			log.debug('importing sdk')
 			this.sdk = await import('@telegram-apps/sdk')
 			this.sdk.init()
-			log.debug('sdk initialized')
 
-			// mount viewport
 			if (this.sdk.viewport.mount.isAvailable()) {
 				await this.sdk.viewport.mount()
-				log.debug('viewport mounted')
 			}
 
 			if (this.sdk.viewport.expand.isAvailable()) {
 				await this.sdk.viewport.expand()
-				log.debug('viewport expanded')
 			}
 
-			// signal ready to telegram
 			if (this.sdk.miniApp.mount.isAvailable()) {
 				await this.sdk.miniApp.mount()
 			}
 			if (this.sdk.miniApp.ready.isAvailable()) {
 				this.sdk.miniApp.ready()
-				log.debug('miniApp ready signaled')
 			}
 
-			// init cloud storage
 			this.cloudStorage = new TelegramCloudStorage()
 			const storageOk = await this.cloudStorage.init()
 			if (!storageOk) {
 				log.warn('cloud storage unavailable, using localStorage')
 				this.cloudStorage = null
-			} else {
-				log.debug('cloud storage initialized')
 			}
 
-			// init feature providers
 			this._haptic = new TelegramHaptic(this.sdk)
-			this._theme = new TelegramTheme(this.sdk)
 			this._viewport = new TelegramViewport(this.sdk)
 
-			this._theme.apply()
+			this.applyTheme()
 			this._ready = true
 
-			log.info('platform initialized successfully')
+			log.info('initialized')
 			return ok(undefined)
 		} catch (e) {
-			log.error('initialization failed', e)
+			log.error('init failed', e)
 			return err(e instanceof Error ? e : new Error('telegram init failed'))
 		}
 	}
@@ -121,15 +101,45 @@ export class TelegramPlatform implements Platform {
 			this.sdk.miniApp.unmount()
 		}
 		this._ready = false
-		log.debug('disposed')
 	}
 
-	getUser(): PlatformUser | null {
-		const webAppUser = this.launchParams?.tgWebAppData?.user
-		if (!webAppUser) {
-			log.debug('no user in launch params')
-			return null
+	applyTheme(): void {
+		if (!this.sdk) return
+
+		const root = document.documentElement
+		root.dataset.platform = 'telegram'
+
+		try {
+			const tp = this.sdk.themeParams
+			const bgColor = tp.backgroundColor?.() ?? '#ffffff'
+			const isDark = calculateIsDark(bgColor)
+
+			applyThemeColors(
+				{
+					bg: bgColor,
+					bgSecondary: tp.secondaryBackgroundColor?.(),
+					bgElevated: tp.sectionBackgroundColor?.(),
+					text: tp.textColor?.(),
+					textSecondary: tp.subtitleTextColor?.(),
+					textTertiary: tp.hintColor?.(),
+					primary: tp.buttonColor?.(),
+					primaryText: tp.buttonTextColor?.(),
+					accent: tp.linkColor?.()
+				},
+				isDark
+			)
+
+			const safeArea = this.sdk.viewport.safeAreaInsets()
+			applySafeArea(safeArea)
+		} catch (e) {
+			log.warn('failed to apply theme', e)
+			applyThemeColors({}, false)
 		}
+	}
+
+	getUser() {
+		const webAppUser = this.launchParams?.tgWebAppData?.user
+		if (!webAppUser) return null
 
 		return {
 			id: String(webAppUser.id),
@@ -144,12 +154,9 @@ export class TelegramPlatform implements Platform {
 
 	getAuthPayload(): PlatformAuthPayload | null {
 		const webAppData = this.launchParams?.tgWebAppData
-		if (!webAppData?.user) {
-			log.warn('no tgWebAppData.user in launch params')
-			return null
-		}
+		if (!webAppData?.user) return null
 
-		const payload: PlatformAuthPayload = {
+		return {
 			platform: 'telegram',
 			data: JSON.stringify({
 				telegram_id: webAppData.user.id,
@@ -161,9 +168,6 @@ export class TelegramPlatform implements Platform {
 				hash: webAppData.hash
 			})
 		}
-
-		log.debug('auth payload created', { telegramId: webAppData.user.id })
-		return payload
 	}
 
 	hasFeature(feature: PlatformFeature): boolean {
@@ -174,8 +178,6 @@ export class TelegramPlatform implements Platform {
 				return this.cloudStorage !== null
 			case 'haptic':
 				return this.sdk.hapticFeedback.isSupported()
-			case 'theme':
-				return true
 			case 'qr_scanner':
 				return this.sdk.qrScanner.isSupported()
 			case 'share':
@@ -187,8 +189,6 @@ export class TelegramPlatform implements Platform {
 		}
 	}
 }
-
-// haptic
 
 class NoopHaptic implements PlatformHaptic {
 	impact() {}
@@ -218,66 +218,6 @@ class TelegramHaptic implements PlatformHaptic {
 	}
 }
 
-// theme
-
-class TelegramTheme implements PlatformTheme {
-	constructor(private sdk: TelegramSDK) {}
-
-	get isDark(): boolean {
-		try {
-			const bg = this.sdk.themeParams.backgroundColor?.() ?? '#ffffff'
-			return calculateIsDark(bg)
-		} catch {
-			return false
-		}
-	}
-
-	get colors() {
-		try {
-			const tp = this.sdk.themeParams
-			return {
-				bg: tp.backgroundColor?.() ?? '#ffffff',
-				text: tp.textColor?.() ?? '#000000',
-				hint: tp.hintColor?.() ?? '#999999',
-				link: tp.linkColor?.() ?? '#3390ec',
-				button: tp.buttonColor?.() ?? '#3390ec',
-				buttonText: tp.buttonTextColor?.() ?? '#ffffff',
-				secondaryBg: tp.secondaryBackgroundColor?.() ?? '#f0f0f0'
-			}
-		} catch {
-			return DEFAULT_THEME.colors
-		}
-	}
-
-	get safeArea() {
-		try {
-			const sa = this.sdk.viewport.safeAreaInsets()
-			return { top: sa.top, bottom: sa.bottom, left: sa.left, right: sa.right }
-		} catch {
-			return { top: 0, bottom: 0, left: 0, right: 0 }
-		}
-	}
-
-	apply(): void {
-		const root = document.documentElement
-		root.dataset.platform = 'telegram'
-		root.dataset.theme = this.isDark ? 'dark' : 'light'
-
-		const colors = this.colors
-		Object.entries(colors).forEach(([key, value]) => {
-			root.style.setProperty(`--color-${key}`, value)
-		})
-
-		const { top, bottom, left, right } = this.safeArea
-		root.style.setProperty('--safe-area-top', `${top}px`)
-		root.style.setProperty('--safe-area-bottom', `${bottom}px`)
-		root.style.setProperty('--safe-area-left', `${left}px`)
-		root.style.setProperty('--safe-area-right', `${right}px`)
-	}
-}
-
-// viewport
-
 class TelegramViewport implements PlatformViewport {
 	constructor(private sdk: TelegramSDK) {}
 
@@ -285,7 +225,7 @@ class TelegramViewport implements PlatformViewport {
 		try {
 			return this.sdk.viewport.width()
 		} catch {
-			return typeof window !== 'undefined' ? window.innerWidth : 0
+			return window.innerWidth
 		}
 	}
 
@@ -293,7 +233,7 @@ class TelegramViewport implements PlatformViewport {
 		try {
 			return this.sdk.viewport.height()
 		} catch {
-			return typeof window !== 'undefined' ? window.innerHeight : 0
+			return window.innerHeight
 		}
 	}
 
@@ -305,47 +245,30 @@ class TelegramViewport implements PlatformViewport {
 		}
 	}
 
+	get safeArea(): SafeArea {
+		try {
+			const sa = this.sdk.viewport.safeAreaInsets()
+			return { top: sa.top, bottom: sa.bottom, left: sa.left, right: sa.right }
+		} catch {
+			return { top: 0, bottom: 0, left: 0, right: 0 }
+		}
+	}
+
 	async expand(): Promise<void> {
 		try {
 			if (this.sdk.viewport.expand.isAvailable()) {
-				await this.sdk.viewport.expand()
+				this.sdk.viewport.expand()
 			}
-		} catch (e) {
-			log.warn('failed to expand viewport', e)
+		} catch {
+			/* bimbembam */
 		}
 	}
-}
-
-// helpers
-
-function calculateIsDark(bgColor: string): boolean {
-	const rgb = parseInt(bgColor.slice(1), 16)
-	const r = (rgb >> 16) & 0xff
-	const g = (rgb >> 8) & 0xff
-	const b = rgb & 0xff
-	const brightness = (r * 299 + g * 587 + b * 114) / 1000
-	return brightness < 128
-}
-
-// defaults
-
-const DEFAULT_THEME: PlatformTheme = {
-	isDark: false,
-	colors: {
-		bg: '#ffffff',
-		text: '#000000',
-		hint: '#999999',
-		link: '#3390ec',
-		button: '#3390ec',
-		buttonText: '#ffffff',
-		secondaryBg: '#f0f0f0'
-	},
-	safeArea: { top: 0, bottom: 0, left: 0, right: 0 }
 }
 
 const DEFAULT_VIEWPORT: PlatformViewport = {
 	width: typeof window !== 'undefined' ? window.innerWidth : 0,
 	height: typeof window !== 'undefined' ? window.innerHeight : 0,
 	isExpanded: true,
+	safeArea: { top: 0, bottom: 0, left: 0, right: 0 },
 	expand: async () => {}
 }

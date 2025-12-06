@@ -1,7 +1,10 @@
 import type { PlatformStorage } from '$lib/platform/types'
 import { API_BASE_URL, API_TIMEOUT, STORAGE_KEYS } from '$lib/shared/constants'
+import { createLogger } from '$lib/shared/logger'
 
 import { ApiError, type ApiRequestOptions } from './types'
+
+const log = createLogger('api')
 
 export class ApiClient {
 	private readonly baseUrl: string
@@ -28,6 +31,11 @@ export class ApiClient {
 		if (this.storage) {
 			await this.storage.remove(STORAGE_KEYS.AUTH_TOKEN)
 		}
+	}
+
+	async hasToken(): Promise<boolean> {
+		const token = await this.getToken()
+		return token !== null
 	}
 
 	private async getToken(): Promise<string | null> {
@@ -67,6 +75,8 @@ export class ApiClient {
 		const timeoutId = setTimeout(() => controller.abort(), timeout)
 
 		try {
+			log.debug(`${method} ${endpoint}`)
+
 			const response = await fetch(url, {
 				method,
 				headers,
@@ -78,49 +88,51 @@ export class ApiClient {
 			clearTimeout(timeoutId)
 
 			if (!response.ok) {
-				if (response.status === 401) {
-					await this.clearToken()
-				}
-
-				let errorData: {
-					message?: string
-					code?: string
-					details?: Record<string, unknown>
-				} = {}
-				try {
-					errorData = await response.json()
-				} catch {
-					// ignore json parse errors
-				}
-
-				throw new ApiError(
-					errorData.message || `HTTP ${response.status}`,
-					response.status,
-					errorData.code,
-					errorData.details
-				)
+				await this.handleErrorResponse(response)
 			}
 
-			// handle empty responses
 			const text = await response.text()
 			if (!text) return undefined as T
 
 			return JSON.parse(text) as T
 		} catch (error) {
 			clearTimeout(timeoutId)
-
-			if (error instanceof ApiError) throw error
-
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw new ApiError('Request timeout', 408, 'TIMEOUT')
-			}
-
-			throw new ApiError(
-				error instanceof Error ? error.message : 'Unknown error',
-				0,
-				'NETWORK_ERROR'
-			)
+			throw this.normalizeError(error)
 		}
+	}
+
+	private async handleErrorResponse(response: Response): Promise<never> {
+		if (response.status === 401) {
+			await this.clearToken()
+		}
+
+		let errorData: { message?: string; code?: string; details?: Record<string, unknown> } = {}
+		try {
+			errorData = await response.json()
+		} catch {
+			// ignore
+		}
+
+		throw new ApiError(
+			errorData.message || `HTTP ${response.status}`,
+			response.status,
+			errorData.code,
+			errorData.details
+		)
+	}
+
+	private normalizeError(error: unknown): ApiError {
+		if (error instanceof ApiError) return error
+
+		if (error instanceof Error && error.name === 'AbortError') {
+			return new ApiError('Request timeout', 408, 'TIMEOUT')
+		}
+
+		return new ApiError(
+			error instanceof Error ? error.message : 'Unknown error',
+			0,
+			'NETWORK_ERROR'
+		)
 	}
 
 	get<T>(endpoint: string, options?: ApiRequestOptions): Promise<T> {
@@ -140,5 +152,4 @@ export class ApiClient {
 	}
 }
 
-// singleton instance
 export const api = new ApiClient()

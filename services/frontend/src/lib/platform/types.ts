@@ -1,6 +1,6 @@
+// file: services/frontend/src/lib/platform/types.ts
 import type { AsyncResult } from '$lib/shared/types'
 
-// user data normalized across platforms
 export interface PlatformUser {
 	id: string
 	platformId: number
@@ -11,14 +11,12 @@ export interface PlatformUser {
 	languageCode?: string
 }
 
-// auth data that will be sent to backend for verification
 export interface PlatformAuthPayload {
 	platform: 'telegram' | 'web'
 	data: string
 	signature?: string
 }
 
-// storage interface - simplified
 export interface PlatformStorage {
 	get(key: string): AsyncResult<string | null>
 	set(key: string, value: string): AsyncResult<void>
@@ -26,8 +24,7 @@ export interface PlatformStorage {
 	clear(): AsyncResult<void>
 }
 
-// haptic feedback
-export type HapticImpact = 'light' | 'medium' | 'heavy'
+export type HapticImpact = 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'
 export type HapticNotification = 'success' | 'warning' | 'error'
 
 export interface PlatformHaptic {
@@ -36,61 +33,39 @@ export interface PlatformHaptic {
 	selection(): void
 }
 
-// theme from platform
-export interface PlatformTheme {
-	isDark: boolean
-	colors: {
-		bg: string
-		text: string
-		hint: string
-		link: string
-		button: string
-		buttonText: string
-		secondaryBg: string
-	}
-	safeArea: {
-		top: number
-		bottom: number
-		left: number
-		right: number
-	}
+export interface SafeArea {
+	top: number
+	bottom: number
+	left: number
+	right: number
 }
 
-// viewport control
 export interface PlatformViewport {
 	readonly width: number
 	readonly height: number
 	readonly isExpanded: boolean
+	readonly safeArea: SafeArea
 	expand(): Promise<void>
 }
 
-// main platform adapter interface
 export interface Platform {
 	readonly type: 'telegram' | 'web'
 	readonly ready: boolean
 
-	// lifecycle
 	init(): AsyncResult<void>
 	dispose(): Promise<void>
 
-	// auth
 	getUser(): PlatformUser | null
 	getAuthPayload(): PlatformAuthPayload | null
 
-	// features
 	readonly storage: PlatformStorage
 	readonly haptic: PlatformHaptic
-	readonly theme: PlatformTheme
 	readonly viewport: PlatformViewport
 
-	// capabilities
 	hasFeature(feature: PlatformFeature): boolean
+
+	// theme is applied directly to css variables, no js interface needed
+	applyTheme(): void
 }
 
-export type PlatformFeature =
-	| 'cloud_storage'
-	| 'haptic'
-	| 'theme'
-	| 'qr_scanner'
-	| 'share'
-	| 'biometry'
+export type PlatformFeature = 'cloud_storage' | 'haptic' | 'qr_scanner' | 'share' | 'biometry'

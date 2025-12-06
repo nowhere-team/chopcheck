@@ -1,0 +1,83 @@
+/* view transition animations for page navigation */
+
+::view-transition-old(page),
+::view-transition-new(page) {
+	animation-duration: var(--duration-slow);
+	animation-timing-function: var(--ease-out);
+}
+
+/* forward navigation - slide left */
+:root[data-nav-direction='forward'] {
+	&::view-transition-old(page) {
+		animation-name: slide-out-left;
+	}
+	&::view-transition-new(page) {
+		animation-name: slide-in-right;
+	}
+}
+
+/* backward navigation - slide right */
+:root[data-nav-direction='backward'] {
+	&::view-transition-old(page) {
+		animation-name: slide-out-right;
+	}
+	&::view-transition-new(page) {
+		animation-name: slide-in-left;
+	}
+}
+
+/* no direction - simple fade */
+:root[data-nav-direction='none'] {
+	&::view-transition-old(page) {
+		animation-name: fade-out;
+	}
+	&::view-transition-new(page) {
+		animation-name: fade-in;
+	}
+}
+
+@keyframes slide-out-left {
+	to {
+		transform: translateX(-30%);
+		opacity: 0;
+	}
+}
+
+@keyframes slide-in-right {
+	from {
+		transform: translateX(30%);
+		opacity: 0;
+	}
+}
+
+@keyframes slide-out-right {
+	to {
+		transform: translateX(30%);
+		opacity: 0;
+	}
+}
+
+@keyframes slide-in-left {
+	from {
+		transform: translateX(-30%);
+		opacity: 0;
+	}
+}
+
+@keyframes fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+}
+
+/* navbar stays in place */
+::view-transition-old(navbar),
+::view-transition-new(navbar) {
+	animation: none;
+}

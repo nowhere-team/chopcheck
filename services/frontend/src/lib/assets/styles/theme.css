@@ -1,0 +1,39 @@
+/* file: services/frontend/src/lib/ui/styles/theme.css */
+/*
+ * semantic color tokens
+ * platforms override these via js (applyTheme)
+ * default values are light theme fallbacks
+ */
+:root {
+	/* backgrounds */
+	--color-bg: #ffffff;
+	--color-bg-secondary: #f8fafc;
+	--color-bg-tertiary: #f1f5f9;
+	--color-bg-elevated: #ffffff;
+	--color-bg-selected: #f1f5f9;
+
+	/* text */
+	--color-text: #0f172a;
+	--color-text-secondary: #475569;
+	--color-text-tertiary: #64748b;
+	--color-text-muted: #94a3b8;
+
+	/* borders */
+	--color-border: #e2e8f0;
+	--color-border-subtle: #f1f5f9;
+
+	/* interactive */
+	--color-primary: #0f172a;
+	--color-primary-text: #ffffff;
+	--color-accent: #3b82f6;
+
+	/* semantic */
+	--color-success: #10b981;
+	--color-warning: #f59e0b;
+	--color-error: #ef4444;
+
+	/* icons */
+	--color-icon: #64748b;
+	--color-icon-active: #0f172a;
+	--color-icon-muted: #94a3b8;
+}

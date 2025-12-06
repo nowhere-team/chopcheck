@@ -1,9 +1,15 @@
 <script lang="ts">
+	import '$lib/assets/styles/base.css'
+
 	import { onMount } from 'svelte'
 
+	import { onNavigate } from '$app/navigation'
 	import { app, setPlatformContext } from '$lib/app/context.svelte'
+	import { getNavigationDirection } from '$lib/navigation/routes'
 	import { createPlatform } from '$lib/platform/create'
 	import { createLogger } from '$lib/shared/logger'
+	import AppShell from '$lib/ui/layouts/AppShell.svelte'
+	import Navbar from '$lib/ui/layouts/Navbar.svelte'
 	import ConsentScreen from '$lib/ui/screens/ConsentScreen.svelte'
 	import ErrorScreen from '$lib/ui/screens/ErrorScreen.svelte'
 	import LoadingScreen from '$lib/ui/screens/LoadingScreen.svelte'
@@ -37,6 +43,22 @@
 		}
 	})
 
+	// view transitions for navigation
+	onNavigate(navigation => {
+		if (!document.startViewTransition) return
+
+		const from = navigation.from?.url.pathname || '/'
+		const to = navigation.to?.url.pathname || '/'
+		document.documentElement.dataset.navDirection = getNavigationDirection(from, to)
+
+		return new Promise(resolve => {
+			document.startViewTransition(async () => {
+				resolve()
+				await navigation.complete
+			})
+		})
+	})
+
 	function handleRetry() {
 		window.location.reload()
 	}
@@ -58,54 +80,13 @@
 {:else if app.state.status === 'authenticating'}
 	<LoadingScreen message="авторизация..." />
 {:else if app.state.status === 'ready'}
-	{@render children?.()}
+	<AppShell>
+		{#snippet navbar()}
+			<Navbar />
+		{/snippet}
+
+		{@render children?.()}
+	</AppShell>
 {:else}
 	<LoadingScreen />
 {/if}
-
-<style>
-	:global(:root) {
-		--color-bg: #ffffff;
-		--color-text: #0f172a;
-		--color-hint: #64748b;
-		--color-link: #3b82f6;
-		--color-button: #0f172a;
-		--color-buttonText: #ffffff;
-		--color-secondaryBg: #f1f5f9;
-		--safe-area-top: 0px;
-		--safe-area-bottom: 0px;
-		--safe-area-left: 0px;
-		--safe-area-right: 0px;
-	}
-
-	:global([data-theme='dark']) {
-		--color-bg: #1a1a1a;
-		--color-text: #ffffff;
-		--color-hint: #8b8b8b;
-		--color-button: #ffffff;
-		--color-buttonText: #1a1a1a;
-		--color-secondaryBg: #2a2a2a;
-	}
-
-	:global(html, body) {
-		margin: 0;
-		padding: 0;
-		height: 100%;
-	}
-
-	:global(body) {
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		background: var(--color-bg);
-		color: var(--color-text);
-		min-height: 100vh;
-		min-height: 100dvh;
-		padding-top: var(--safe-area-top);
-		padding-bottom: var(--safe-area-bottom);
-		padding-left: var(--safe-area-left);
-		padding-right: var(--safe-area-right);
-	}
-
-	:global(*) {
-		box-sizing: border-box;
-	}
-</style>

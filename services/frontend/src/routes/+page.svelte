@@ -1,28 +1,25 @@
-<!-- file: services/frontend/src/routes/+page.svelte -->
 <script lang="ts">
 	import { getApp, getPlatform } from '$lib/app/context.svelte'
+	import { Button, Card } from '$lib/ui/components'
+	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const platform = getPlatform()
 	const app = getApp()
 
-	function testHaptic() {
-		platform.haptic.impact('medium')
+	function testHaptic(style: 'light' | 'medium' | 'heavy') {
+		platform.haptic.impact(style)
 	}
 </script>
 
-<div class="home">
-	<header>
-		<h1>🍔 chopcheck</h1>
-	</header>
-
+<Page title="chopcheck">
 	{#if app.user}
-		<section class="card">
-			<div class="user">
+		<Card>
+			<div class="user-card">
 				{#if app.user.avatarUrl}
 					<img src={app.user.avatarUrl} alt="" class="avatar" />
 				{:else}
 					<div class="avatar placeholder">
-						{app.user.displayName}
+						{app.user.displayName.slice(0, 2).toUpperCase()}
 					</div>
 				{/if}
 				<div class="user-info">
@@ -32,78 +29,42 @@
 					{/if}
 				</div>
 			</div>
-		</section>
+		</Card>
 	{/if}
 
-	<section class="card">
-		<h2>информация</h2>
-		<dl class="info">
-			<dt>платформа</dt>
+	<Card>
+		<h2 class="section-title">платформа</h2>
+		<dl class="info-grid">
+			<dt>тип</dt>
 			<dd>{platform.type}</dd>
 			<dt>haptic</dt>
-			<dd>{platform.hasFeature('haptic') ? '✓' : '✗'}</dd>
+			<dd>{platform.hasFeature('haptic') ? '✓' : '—'}</dd>
 			<dt>cloud storage</dt>
-			<dd>{platform.hasFeature('cloud_storage') ? '✓' : '✗'}</dd>
+			<dd>{platform.hasFeature('cloud_storage') ? '✓' : '—'}</dd>
 			<dt>qr scanner</dt>
-			<dd>{platform.hasFeature('qr_scanner') ? '✓' : '✗'}</dd>
+			<dd>{platform.hasFeature('qr_scanner') ? '✓' : '—'}</dd>
 		</dl>
-	</section>
+	</Card>
 
-	<section class="actions">
-		<button onclick={testHaptic}>тест haptic</button>
-		<button class="secondary" onclick={() => app.logout()}>выйти</button>
-	</section>
+	<div class="actions">
+		<Button variant="secondary" onclick={() => testHaptic('light')}>light</Button>
+		<Button variant="secondary" onclick={() => testHaptic('medium')}>medium</Button>
+		<Button variant="secondary" onclick={() => testHaptic('heavy')}>heavy</Button>
+	</div>
 
-	{#if app.debugLog.length > 0}
-		<section class="card debug">
-			<h2>лог</h2>
-			<div class="log">
-				{#each app.debugLog as line, i (i)}
-					<div>{JSON.stringify(line)}</div>
-				{/each}
-			</div>
-		</section>
-	{/if}
-</div>
+	<Button variant="ghost" onclick={() => app.logout()}>выйти</Button>
+</Page>
 
 <style>
-	.home {
-		padding: 1.5rem;
-		max-width: 480px;
-		margin: 0 auto;
-	}
-
-	header {
-		margin-bottom: 1.5rem;
-	}
-
-	h1 {
-		font-size: 1.5rem;
-		margin: 0;
-	}
-
-	h2 {
-		font-size: 1rem;
-		margin: 0 0 1rem;
-		color: var(--color-hint);
-	}
-
-	.card {
-		padding: 1rem;
-		background: var(--color-secondaryBg);
-		border-radius: 12px;
-		margin-bottom: 1rem;
-	}
-
-	.user {
+	.user-card {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: var(--space-4);
 	}
 
 	.avatar {
-		width: 48px;
-		height: 48px;
+		width: 56px;
+		height: 56px;
 		border-radius: 50%;
 		object-fit: cover;
 	}
@@ -112,10 +73,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--color-button);
-		color: var(--color-buttonText);
-		font-weight: 600;
-		font-size: 1.25rem;
+		background: var(--color-primary);
+		color: var(--color-primary-text);
+		font-weight: var(--font-semibold);
+		font-size: var(--text-lg);
 	}
 
 	.user-info {
@@ -123,73 +84,42 @@
 	}
 
 	.name {
-		margin: 0;
-		font-weight: 600;
+		font-weight: var(--font-semibold);
+		font-size: var(--text-lg);
 	}
 
 	.username {
-		margin: 0.25rem 0 0;
-		color: var(--color-hint);
-		font-size: 0.875rem;
+		color: var(--color-text-tertiary);
+		font-size: var(--text-sm);
 	}
 
-	.info {
+	.section-title {
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: var(--color-text-tertiary);
+		margin-bottom: var(--space-3);
+	}
+
+	.info-grid {
 		display: grid;
 		grid-template-columns: auto 1fr;
-		gap: 0.5rem 1rem;
-		margin: 0;
+		gap: var(--space-2) var(--space-4);
 	}
 
-	.info dt {
-		color: var(--color-hint);
+	.info-grid dt {
+		color: var(--color-text-secondary);
 	}
 
-	.info dd {
+	.info-grid dd {
 		margin: 0;
 	}
 
 	.actions {
 		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 1rem;
+		gap: var(--space-2);
 	}
 
-	button {
+	.actions :global(button) {
 		flex: 1;
-		padding: 0.75rem 1rem;
-		background: var(--color-button);
-		color: var(--color-buttonText);
-		border: none;
-		border-radius: 8px;
-		font-size: 0.875rem;
-		cursor: pointer;
-	}
-
-	button.secondary {
-		background: transparent;
-		color: var(--color-text);
-		border: 1px solid var(--color-hint);
-	}
-
-	button:active {
-		opacity: 0.8;
-	}
-
-	.debug {
-		font-size: 0.75rem;
-	}
-
-	.log {
-		font-family: monospace;
-		font-size: 0.625rem;
-		max-height: 200px;
-		overflow-y: auto;
-		background: var(--color-bg);
-		padding: 0.5rem;
-		border-radius: 4px;
-	}
-
-	.log div {
-		white-space: nowrap;
 	}
 </style>
