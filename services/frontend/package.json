@@ -48,6 +48,7 @@
 		"@telegram-apps/bridge": "^2.11.0",
 		"@telegram-apps/sdk": "^3.11.8",
 		"@telegram-apps/signals": "^1.1.2",
+		"@tma.js/sdk": "^3.1.2",
 		"@twemoji/api": "^16.0.1",
 		"grammy": "^1.38.3",
 		"ky": "^1.14.0",
