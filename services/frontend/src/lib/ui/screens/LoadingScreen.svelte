@@ -12,7 +12,6 @@
 </div>
 
 <style>
-	/*noinspection CssOverwrittenProperties*/
 	.screen {
 		display: flex;
 		flex-direction: column;
@@ -21,12 +20,13 @@
 		min-height: 100vh;
 		min-height: 100dvh;
 		gap: 1rem;
+		background: var(--color-bg);
 	}
 
 	.spinner {
 		width: 32px;
 		height: 32px;
-		border: 3px solid var(--color-bg-tertiary);
+		border: 3px solid var(--color-border);
 		border-top-color: var(--color-primary);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;

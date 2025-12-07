@@ -1,4 +1,3 @@
-// file: services/frontend/src/lib/platform/types.ts
 import type { AsyncResult } from '$lib/shared/types'
 
 export interface PlatformUser {

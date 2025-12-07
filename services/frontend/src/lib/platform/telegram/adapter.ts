@@ -2,8 +2,9 @@ import { retrieveLaunchParams, type RetrieveLPResult as LaunchParams } from '@te
 
 import { createLogger } from '$lib/shared/logger'
 import { type AsyncResult, err, ok } from '$lib/shared/types'
+import { applySafeArea, applyThemePalette } from '$lib/theme/injector'
+import type { ThemePalette } from '$lib/theme/types'
 
-import { applySafeArea, applyThemeColors, calculateIsDark } from '../theme'
 import type {
 	HapticImpact,
 	HapticNotification,
@@ -88,6 +89,7 @@ export class TelegramPlatform implements Platform {
 			this._ready = true
 
 			log.info('initialized')
+
 			return ok(undefined)
 		} catch (e) {
 			log.error('init failed', e)
@@ -103,37 +105,51 @@ export class TelegramPlatform implements Platform {
 		this._ready = false
 	}
 
+	// Helper to unwrap signals/functions from Telegram SDK
+	private getColor(prop: any, fallback: string): string {
+		if (!prop) return fallback
+		const value = typeof prop === 'function' ? prop() : prop
+		return value || fallback
+	}
+
 	applyTheme(): void {
 		if (!this.sdk) return
 
-		const root = document.documentElement
-		root.dataset.platform = 'telegram'
-
 		try {
 			const tp = this.sdk.themeParams
-			const bgColor = tp.backgroundColor?.() ?? '#ffffff'
-			const isDark = calculateIsDark(bgColor)
 
-			applyThemeColors(
-				{
-					bg: bgColor,
-					bgSecondary: tp.secondaryBackgroundColor?.(),
-					bgElevated: tp.sectionBackgroundColor?.(),
-					text: tp.textColor?.(),
-					textSecondary: tp.subtitleTextColor?.(),
-					textTertiary: tp.hintColor?.(),
-					primary: tp.buttonColor?.(),
-					primaryText: tp.buttonTextColor?.(),
-					accent: tp.linkColor?.()
-				},
-				isDark
-			)
+			const bg = this.getColor(tp.backgroundColor, '#ffffff')
+			const text = this.getColor(tp.textColor, '#000000')
+			const hint = this.getColor(tp.hintColor, '#999999')
+			const button = this.getColor(tp.buttonColor, '#3b82f6')
+			const buttonText = this.getColor(tp.buttonTextColor, '#ffffff')
+			const secondaryBg = this.getColor(tp.secondaryBackgroundColor, '#f1f5f9')
 
-			const safeArea = this.sdk.viewport.safeAreaInsets()
-			applySafeArea(safeArea)
+			const palette: ThemePalette = {
+				bg: bg,
+				// sections should use secondary bg or slightly off-white
+				bgSecondary: this.getColor(tp.sectionBackgroundColor, secondaryBg),
+				// tertiary is for borders/secondary buttons.
+				// FIXED: "Black button" issue - mix hint with bg instead of using raw secondary values that might be dark
+				bgTertiary: `color-mix(in srgb, ${hint} 15%, ${bg})`,
+
+				text: text,
+				textSecondary: this.getColor(tp.subtitleTextColor, hint),
+				textTertiary: `color-mix(in srgb, ${hint} 60%, ${bg})`,
+
+				primary: button,
+				primaryText: buttonText,
+
+				error: '#ef4444',
+				success: '#10b981'
+			}
+
+			applyThemePalette(palette)
+
+			const sa = this.sdk.viewport.safeAreaInsets()
+			applySafeArea({ top: sa.top, bottom: sa.bottom, left: sa.left, right: sa.right })
 		} catch (e) {
 			log.warn('failed to apply theme', e)
-			applyThemeColors({}, false)
 		}
 	}
 
@@ -260,7 +276,7 @@ class TelegramViewport implements PlatformViewport {
 				this.sdk.viewport.expand()
 			}
 		} catch {
-			/* bimbembam */
+			/* ignore */
 		}
 	}
 }

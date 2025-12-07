@@ -1,8 +1,9 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte'
+	import type { Component, Snippet } from 'svelte'
+	import { getContext } from 'svelte'
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 
-	import { getPlatform } from '$lib/app/context.svelte'
+	import type { Platform } from '$lib/platform/types'
 
 	type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 	type Size = 'sm' | 'md' | 'lg'
@@ -11,8 +12,10 @@
 		variant?: Variant
 		size?: Size
 		loading?: boolean
-		icon?: Snippet
+		icon?: Component
+		iconSize?: number
 		children?: Snippet
+		'aria-label'?: string
 	}
 
 	const {
@@ -20,43 +23,59 @@
 		size = 'md',
 		loading = false,
 		disabled = false,
-		icon,
+		icon: IconComponent,
+		iconSize = 20,
 		children,
 		onclick,
+		class: className,
+		'aria-label': ariaLabel,
 		...rest
 	}: Props = $props()
 
-	const platform = getPlatform()
+	const platform = getContext<Platform>(Symbol.for('platform'))
 
 	function handleClick(e: MouseEvent) {
-		if (loading || disabled) return
-		platform.haptic.impact('light')
+		if (loading || disabled) {
+			e.preventDefault()
+			e.stopPropagation()
+			return
+		}
+
+		platform?.haptic.impact('light')
+
 		if (onclick) {
 			;(onclick as (e: MouseEvent) => void)(e)
 		}
 	}
+
+	const computedAriaLabel = $derived(ariaLabel || (children ? undefined : 'button'))
 </script>
 
 <button
-	class="button {variant} {size}"
+	class="button {variant} {size} {className || ''}"
 	class:loading
-	class:icon-only={icon && !children}
+	class:icon-only={IconComponent && !children}
 	disabled={disabled || loading}
 	onclick={handleClick}
+	aria-label={computedAriaLabel}
+	aria-busy={loading}
 	{...rest}
 >
 	{#if loading}
-		<span class="spinner"></span>
-	{:else if icon}
-		<span class="icon">{@render icon()}</span>
-	{/if}
+		<span class="spinner" aria-hidden="true"></span>
+	{:else}
+		{#if IconComponent}
+			<span class="icon" aria-hidden="true">
+				<IconComponent size={iconSize} />
+			</span>
+		{/if}
 
-	{#if children}
-		<span class="label">{@render children()}</span>
+		{#if children}
+			<span class="label">{@render children()}</span>
+		{/if}
 	{/if}
 </button>
 
-<!--suppress CssUnusedSymbol -->
 <style>
 	.button {
 		display: inline-flex;
@@ -72,6 +91,9 @@
 			transform var(--duration-fast) var(--ease-out),
 			opacity var(--duration-fast) var(--ease-out),
 			background var(--duration-fast) var(--ease-out);
+
+		/* reset default border style */
+		border: 1px solid transparent;
 	}
 
 	/* sizes */
@@ -145,7 +167,6 @@
 		pointer-events: none;
 	}
 
-	/* inner elements */
 	.icon {
 		display: flex;
 		align-items: center;
@@ -171,12 +192,6 @@
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
-		}
-	}
-
-	@media (hover: none) {
-		.button:active:not(:disabled) {
-			transform: scale(0.95);
 		}
 	}
 </style>

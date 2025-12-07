@@ -4,6 +4,7 @@
 	import { page } from '$app/state'
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { swipeController } from '$lib/navigation/swipe.svelte'
+	import ToastContainer from '$lib/ui/features/toasts/ToastContainer.svelte'
 
 	interface Props {
 		navbar?: Snippet
@@ -13,54 +14,87 @@
 	const { navbar, children }: Props = $props()
 	const platform = getPlatform()
 
-	// init global swipe controller with platform access
 	$effect(() => {
 		swipeController.init(platform)
 		return () => swipeController.destroy()
 	})
 
-	// sync current path for navigation logic
-	$effect(() => {
-		swipeController.setPath(page.url.pathname)
-	})
+	$effect(() => swipeController.setPath(page.url.pathname))
 </script>
 
-<div class="app-shell">
-	<main class="content" style="view-transition-name: page">
-		{@render children?.()}
-	</main>
+<ToastContainer />
 
-	{#if navbar}
-		<nav class="navbar" style="view-transition-name: navbar">
+<div class="shell-layout">
+	<div class="viewport-constrain">
+		<!--
+           pan-y explicitly to hint the browser
+           that horizontal gestures are ours, improving the scrollbar fight
+        -->
+		<main class="content-scroller">
+			<div class="content-padder">
+				{@render children?.()}
+			</div>
+		</main>
+
+		{#if navbar}
 			{@render navbar()}
-		</nav>
-	{/if}
+		{/if}
+	</div>
 </div>
 
 <style>
-	.app-shell {
+	.shell-layout {
+		min-height: 100dvh;
+		display: flex;
+		justify-content: center;
+		background-color: var(--color-bg);
+		/* prevent horizontal scroll at root level */
+		overflow: hidden;
+	}
+
+	.viewport-constrain {
+		width: 100%;
+		max-width: 600px;
+		position: relative;
+		/* crucial: clean stacking context */
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
-		min-height: 100dvh;
-		padding-top: var(--safe-top);
-		padding-left: max(var(--safe-left), var(--space-4));
-		padding-right: max(var(--safe-right), var(--space-4));
+		height: 100dvh;
+		background: var(--color-bg);
 	}
 
-	.content {
+	.content-scroller {
 		flex: 1;
-		padding-bottom: calc(64px + var(--safe-bottom) + var(--space-2));
+		overflow-y: auto;
+		overflow-x: hidden; /* kill the horizontal scrollbar */
+		overscroll-behavior-y: contain;
+		position: relative;
+
+		/* hint for swipe handler */
+		touch-action: pan-y;
+
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+
+		/* transition group */
+		view-transition-name: page;
 	}
 
-	.navbar {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: calc(64px + var(--safe-bottom));
-		padding-bottom: var(--safe-bottom);
-		background: var(--color-bg-elevated);
-		border-top: 1px solid var(--color-border);
-		z-index: var(--z-sticky);
+	.content-scroller::-webkit-scrollbar {
+		display: none;
+	}
+
+	.content-padder {
+		/* increased bottom padding to account for floating navbar + safety */
+		padding: var(--safe-top) max(var(--safe-right), 16px) calc(90px + var(--safe-bottom))
+			max(var(--safe-left), 16px);
+		min-height: 100%;
+	}
+
+	:global(html) {
+		background: var(--color-bg);
+		/* prevents rubber-banding on ios body */
+		overscroll-behavior: none;
 	}
 </style>

@@ -1,66 +1,81 @@
-/* view transition animations for page navigation */
-
 ::view-transition-old(page),
 ::view-transition-new(page) {
-	animation-duration: var(--duration-slow);
-	animation-timing-function: var(--ease-out);
+	animation-duration: 0.22s;
+	animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+	mix-blend-mode: normal;
 }
 
-/* forward navigation - slide left */
+::view-transition-group(navbar) {
+	animation: none;
+	z-index: 10000;
+	mix-blend-mode: normal;
+}
+
+/* Forward Navigation */
 :root[data-nav-direction='forward'] {
 	&::view-transition-old(page) {
 		animation-name: slide-out-left;
 	}
 	&::view-transition-new(page) {
 		animation-name: slide-in-right;
+		z-index: 2;
 	}
 }
 
-/* backward navigation - slide right */
+/* Backward Navigation */
 :root[data-nav-direction='backward'] {
 	&::view-transition-old(page) {
 		animation-name: slide-out-right;
+		z-index: 2;
 	}
 	&::view-transition-new(page) {
 		animation-name: slide-in-left;
+		z-index: 1;
 	}
 }
 
-/* no direction - simple fade */
-:root[data-nav-direction='none'] {
-	&::view-transition-old(page) {
-		animation-name: fade-out;
-	}
-	&::view-transition-new(page) {
-		animation-name: fade-in;
-	}
-}
-
+/* forward */
 @keyframes slide-out-left {
 	to {
-		transform: translateX(-30%);
-		opacity: 0;
+		transform: translateX(-16%);
+		opacity: 0.9;
+		filter: brightness(0.95);
 	}
 }
 
 @keyframes slide-in-right {
 	from {
-		transform: translateX(30%);
-		opacity: 0;
+		transform: translateX(40%);
+		box-shadow: -8px 0 26px rgba(15, 23, 42, 0.18);
+	}
+	to {
+		transform: translateX(0);
 	}
 }
 
+/* backward */
 @keyframes slide-out-right {
+	from {
+		transform: translateX(0);
+		box-shadow: -8px 0 26px rgba(15, 23, 42, 0.18);
+	}
 	to {
-		transform: translateX(30%);
-		opacity: 0;
+		transform: translateX(40%);
+		opacity: 0.9;
+		filter: brightness(0.95);
 	}
 }
 
 @keyframes slide-in-left {
 	from {
-		transform: translateX(-30%);
-		opacity: 0;
+		transform: translateX(-16%);
+		opacity: 0.9;
+		filter: brightness(0.95);
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+		filter: brightness(1);
 	}
 }
 
@@ -69,15 +84,8 @@
 		opacity: 0;
 	}
 }
-
 @keyframes fade-in {
 	from {
 		opacity: 0;
 	}
-}
-
-/* navbar stays in place */
-::view-transition-old(navbar),
-::view-transition-new(navbar) {
-	animation: none;
 }

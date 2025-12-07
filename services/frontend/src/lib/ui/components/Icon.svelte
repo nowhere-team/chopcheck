@@ -5,12 +5,29 @@
 		icon: Component
 		size?: number
 		color?: string
+		'aria-hidden'?: boolean | 'true' | 'false'
+		'aria-label'?: string
 	}
 
-	const { icon: HostIcon, size = 24, color }: Props = $props()
+	// eslint-disable-next-line svelte/no-unused-props
+	const {
+		icon: HostIcon,
+		size = 24,
+		color,
+		'aria-hidden': ariaHidden = true,
+		'aria-label': ariaLabel
+	}: Props = $props()
 </script>
 
-<span class="icon" style:color style:width="{size}px" style:height="{size}px">
+<span
+	class="icon"
+	style:color
+	style:width="{size}px"
+	style:height="{size}px"
+	aria-hidden={!ariaLabel ? ariaHidden : undefined}
+	aria-label={ariaLabel}
+	role={ariaLabel ? 'img' : undefined}
+>
 	<HostIcon {size} />
 </span>
 

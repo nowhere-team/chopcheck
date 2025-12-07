@@ -1,3 +1,4 @@
+<!-- file: services/frontend/src/routes/+layout.svelte -->
 <script lang="ts">
 	import '$lib/assets/styles/base.css'
 
@@ -43,7 +44,6 @@
 		}
 	})
 
-	// view transitions for navigation
 	onNavigate(navigation => {
 		if (!document.startViewTransition) return
 
@@ -80,6 +80,8 @@
 {:else if app.state.status === 'authenticating'}
 	<LoadingScreen message="авторизация..." />
 {:else if app.state.status === 'ready'}
+	<div id="portal-root"></div>
+
 	<AppShell>
 		{#snippet navbar()}
 			<Navbar />
@@ -90,3 +92,10 @@
 {:else}
 	<LoadingScreen />
 {/if}
+
+<style>
+	#portal-root {
+		position: relative;
+		z-index: var(--z-modal);
+	}
+</style>

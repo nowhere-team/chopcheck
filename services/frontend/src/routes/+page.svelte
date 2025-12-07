@@ -1,125 +1,232 @@
 <script lang="ts">
-	import { getApp, getPlatform } from '$lib/app/context.svelte'
+	import { Gear } from 'phosphor-svelte'
+
 	import { Button, Card } from '$lib/ui/components'
+	import Avatar from '$lib/ui/components/Avatar.svelte'
+	import BottomSheet from '$lib/ui/components/BottomSheet.svelte'
+	import EditableText from '$lib/ui/components/EditableText.svelte'
+	import PriceInput from '$lib/ui/components/PriceInput.svelte'
+	import Select from '$lib/ui/components/Select.svelte'
+	import Toggle from '$lib/ui/components/Toggle.svelte'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
-	const platform = getPlatform()
-	const app = getApp()
+	// состояние для тестов
+	let splitName = $state('Шашлыки на даче')
+	let selectedMethod = $state('equal')
+	let priceValue = $state(125000) // в копейках
+	let isNotificationsEnabled = $state(true)
+	let isSheetOpen = $state(false)
 
-	function testHaptic(style: 'light' | 'medium' | 'heavy') {
-		platform.haptic.impact(style)
-	}
+	const methods = [
+		{ value: 'equal', label: 'Поровну' },
+		{ value: 'shares', label: 'По долям' },
+		{ value: 'exact', label: 'Точные суммы' }
+	]
 </script>
 
-<Page title="chopcheck">
-	{#if app.user}
-		<Card>
-			<div class="user-card">
-				{#if app.user.avatarUrl}
-					<img src={app.user.avatarUrl} alt="" class="avatar" />
-				{:else}
-					<div class="avatar placeholder">
-						{app.user.displayName.slice(0, 2).toUpperCase()}
-					</div>
-				{/if}
-				<div class="user-info">
-					<p class="name">{app.user.displayName}</p>
-					{#if app.user.username}
-						<p class="username">@{app.user.username}</p>
-					{/if}
-				</div>
-			</div>
-		</Card>
-	{/if}
+<Page>
+	<!-- Хедер с редактируемым заголовком -->
+	<section class="head">
+		<Avatar name={splitName} size={80} id="split-main" />
+		<EditableText bind:value={splitName} centered placeholder="Название сплита" />
+		<div class="status-badge">черновик</div>
+	</section>
 
-	<Card>
-		<h2 class="section-title">платформа</h2>
-		<dl class="info-grid">
-			<dt>тип</dt>
-			<dd>{platform.type}</dd>
-			<dt>haptic</dt>
-			<dd>{platform.hasFeature('haptic') ? '✓' : '—'}</dd>
-			<dt>cloud storage</dt>
-			<dd>{platform.hasFeature('cloud_storage') ? '✓' : '—'}</dd>
-			<dt>qr scanner</dt>
-			<dd>{platform.hasFeature('qr_scanner') ? '✓' : '—'}</dd>
-		</dl>
+	<!-- Секция настроек (Inputs test) -->
+	<Card variant="elevated">
+		<div class="row header-row">
+			<h2 class="section-title">Параметры</h2>
+			<Button variant="ghost" size="sm" icon={Gear} />
+		</div>
+
+		<div class="form-grid">
+			<Select label="Метод разделения" bind:value={selectedMethod} options={methods} />
+
+			<PriceInput label="Общая сумма" bind:value={priceValue} currencySymbol="₽" />
+
+			<div class="row setting-row">
+				<span class="label">Уведомлять участников</span>
+				<Toggle bind:checked={isNotificationsEnabled} />
+			</div>
+		</div>
 	</Card>
 
-	<div class="actions">
-		<Button variant="secondary" onclick={() => testHaptic('light')}>light</Button>
-		<Button variant="secondary" onclick={() => testHaptic('medium')}>medium</Button>
-		<Button variant="secondary" onclick={() => testHaptic('heavy')}>heavy</Button>
-	</div>
+	<!-- Демо участников (List test) -->
+	<Card>
+		<div class="row header-row">
+			<h3>Участники</h3>
+			<span class="badge">3</span>
+		</div>
 
-	<Button variant="ghost" onclick={() => app.logout()}>выйти</Button>
+		<div class="participants">
+			<div class="row item">
+				<div class="left">
+					<Avatar name="Мария Иванова" id="u1" size={40} />
+					<div class="info">
+						<span class="name">Мария (Вы)</span>
+						<span class="role">Организатор</span>
+					</div>
+				</div>
+				<span class="money positive">+500 ₽</span>
+			</div>
+
+			<div class="row item">
+				<div class="left">
+					<Avatar name="Алексей К." id="u2" size={40} />
+					<div class="info">
+						<span class="name">Алексей</span>
+					</div>
+				</div>
+				<!-- <span class="money negative">-250 ₽</span> -->
+			</div>
+		</div>
+
+		<div class="actions-row">
+			<Button variant="secondary" size="sm" onclick={() => (isSheetOpen = true)}>
+				Открыть меню
+			</Button>
+		</div>
+	</Card>
+
+	<!-- Кнопки действий -->
+	<div class="floating-actions">
+		<Button variant="primary" size="lg">Сохранить изменения</Button>
+	</div>
 </Page>
 
+<!-- Bottom Sheet Test -->
+<BottomSheet bind:open={isSheetOpen} title="Действия" onclose={() => {}}>
+	<div class="sheet-content">
+		<Button variant="secondary" size="lg">Поделиться ссылкой</Button>
+		<Button variant="danger" size="lg">Удалить сплит</Button>
+	</div>
+</BottomSheet>
+
 <style>
-	.user-card {
+	.head {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		gap: var(--space-4);
+		gap: var(--space-3);
+		padding: var(--space-4) 0;
 	}
 
-	.avatar {
-		width: 56px;
-		height: 56px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-
-	.avatar.placeholder {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-primary);
-		color: var(--color-primary-text);
-		font-weight: var(--font-semibold);
-		font-size: var(--text-lg);
-	}
-
-	.user-info {
-		flex: 1;
-	}
-
-	.name {
-		font-weight: var(--font-semibold);
-		font-size: var(--text-lg);
-	}
-
-	.username {
-		color: var(--color-text-tertiary);
-		font-size: var(--text-sm);
+	.status-badge {
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		background: var(--color-bg-secondary);
+		padding: 4px 8px;
+		border-radius: 6px;
+		color: var(--color-text-secondary);
+		letter-spacing: 0.05em;
+		font-weight: 600;
 	}
 
 	.section-title {
 		font-size: var(--text-sm);
-		font-weight: var(--font-medium);
-		color: var(--color-text-tertiary);
-		margin-bottom: var(--space-3);
-	}
-
-	.info-grid {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: var(--space-2) var(--space-4);
-	}
-
-	.info-grid dt {
 		color: var(--color-text-secondary);
-	}
-
-	.info-grid dd {
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 600;
 		margin: 0;
 	}
 
-	.actions {
+	.form-grid {
 		display: flex;
-		gap: var(--space-2);
+		flex-direction: column;
+		gap: var(--space-5);
 	}
 
-	.actions :global(button) {
-		flex: 1;
+	.row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.row.header-row {
+		margin-bottom: var(--space-4);
+	}
+
+	.row.item {
+		padding: 10px 0;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.row.item:last-child {
+		border-bottom: none;
+	}
+
+	.row.setting-row {
+		padding: 4px 0;
+	}
+
+	.left {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+	}
+
+	.badge {
+		background: var(--color-bg-secondary);
+		padding: 2px 8px;
+		border-radius: 10px;
+		font-size: var(--text-sm);
+		font-weight: bold;
+		color: var(--color-text-primary);
+	}
+
+	.participants {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.name {
+		font-weight: 500;
+	}
+	.role {
+		font-size: var(--text-xs);
+		color: var(--color-text-tertiary);
+	}
+
+	.money {
+		font-weight: 600;
+		font-size: var(--text-sm);
+		font-variant-numeric: tabular-nums;
+	}
+	.money.positive {
+		color: var(--color-success);
+	}
+
+	.actions-row {
+		margin-top: var(--space-4);
+		display: flex;
+	}
+
+	.actions-row :global(button) {
+		width: 100%;
+	}
+
+	.floating-actions {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		padding-bottom: var(--space-4);
+	}
+
+	.sheet-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		padding-bottom: var(--safe-bottom);
+	}
+
+	.label {
+		font-size: var(--text-base);
+		color: var(--color-text);
 	}
 </style>

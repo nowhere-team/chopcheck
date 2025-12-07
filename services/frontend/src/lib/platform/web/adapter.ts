@@ -1,10 +1,9 @@
 import { createLogger } from '$lib/shared/logger'
 import { type AsyncResult, ok } from '$lib/shared/types'
+import { applySafeArea, applyThemePalette } from '$lib/theme/injector'
+import type { ThemePalette } from '$lib/theme/types'
 
-import { applySafeArea, applyThemeColors } from '../theme'
 import type {
-	HapticImpact,
-	HapticNotification,
 	Platform,
 	PlatformAuthPayload,
 	PlatformFeature,
@@ -18,6 +17,33 @@ import { WebStorage } from './storage'
 
 const log = createLogger('web-platform')
 
+// Themes definition
+const LIGHT_THEME: ThemePalette = {
+	bg: '#ffffff',
+	bgSecondary: '#f1f5f9',
+	bgTertiary: '#e2e8f0',
+	text: '#0f172a',
+	textSecondary: '#475569',
+	textTertiary: '#94a3b8',
+	primary: '#3b82f6',
+	primaryText: '#ffffff',
+	error: '#ef4444',
+	success: '#10b981'
+}
+
+const DARK_THEME: ThemePalette = {
+	bg: '#0f172a',
+	bgSecondary: '#1e293b',
+	bgTertiary: '#334155',
+	text: '#f8fafc',
+	textSecondary: '#cbd5e1',
+	textTertiary: '#64748b',
+	primary: '#60a5fa',
+	primaryText: '#0f172a',
+	error: '#f87171',
+	success: '#34d399'
+}
+
 export interface TelegramLoginData {
 	id: number
 	first_name: string
@@ -29,8 +55,8 @@ export interface TelegramLoginData {
 }
 
 class NoopHaptic implements PlatformHaptic {
-	impact(_style: HapticImpact): void {}
-	notification(_type: HapticNotification): void {}
+	impact(): void {}
+	notification(): void {}
 	selection(): void {}
 }
 
@@ -43,7 +69,6 @@ class WebViewport implements PlatformViewport {
 	}
 	isExpanded = true
 	safeArea: SafeArea = { top: 0, bottom: 0, left: 0, right: 0 }
-
 	async expand(): Promise<void> {}
 }
 
@@ -74,21 +99,17 @@ export class WebPlatform implements Platform {
 	}
 
 	applyTheme(): void {
-		const root = document.documentElement
-		root.dataset.platform = 'web'
-
 		const isDark =
 			typeof window !== 'undefined'
 				? window.matchMedia('(prefers-color-scheme: dark)').matches
 				: false
 
-		applyThemeColors({}, isDark)
+		applyThemePalette(isDark ? DARK_THEME : LIGHT_THEME)
 		applySafeArea({ top: 0, bottom: 0, left: 0, right: 0 })
 	}
 
 	setTelegramLoginData(data: TelegramLoginData): void {
 		log.debug('setting telegram login data', { userId: data.id })
-
 		this.user = {
 			id: String(data.id),
 			platformId: data.id,
@@ -97,7 +118,6 @@ export class WebPlatform implements Platform {
 			username: data.username,
 			photoUrl: data.photo_url
 		}
-
 		this.authPayload = {
 			platform: 'web',
 			data: JSON.stringify({
@@ -112,15 +132,13 @@ export class WebPlatform implements Platform {
 		}
 	}
 
-	getUser(): PlatformUser | null {
+	getUser() {
 		return this.user
 	}
-
-	getAuthPayload(): PlatformAuthPayload | null {
+	getAuthPayload() {
 		return this.authPayload
 	}
-
-	hasFeature(_feature: PlatformFeature): boolean {
+	hasFeature() {
 		return false
 	}
 }
@@ -179,7 +197,6 @@ export class DevWebPlatform implements Platform {
 	applyTheme(): void {
 		const root = document.documentElement
 		root.dataset.platform = 'web'
-		applyThemeColors({}, false)
 		applySafeArea({ top: 0, bottom: 0, left: 0, right: 0 })
 	}
 
