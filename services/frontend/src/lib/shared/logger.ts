@@ -39,7 +39,7 @@ class ConsoleHandler implements LogHandler {
 
 class BufferHandler implements LogHandler {
 	private buffer: LogEntry[] = []
-	private maxSize: number
+	private readonly maxSize: number
 
 	constructor(maxSize = 100) {
 		this.maxSize = maxSize
@@ -71,7 +71,7 @@ class LoggerService {
 		error: 3
 	}
 
-	private bufferHandler: BufferHandler
+	private readonly bufferHandler: BufferHandler
 
 	constructor() {
 		this.bufferHandler = new BufferHandler(100)

@@ -1,58 +1,44 @@
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
+import type { RouteId } from '$app/types'
 import type { Platform } from '$lib/platform/types'
 
 import { getRouteIndex, NAV_ROUTES } from './routes'
 
-export interface SwipeConfig {
-	threshold: number
-	verticalTolerance: number
-	angleFactor: number
-	minVelocity: number
-}
+const THRESHOLD = 70
+const VELOCITY_THRESHOLD = 0.25
+const VERTICAL_LIMIT = 1.5
 
-const DEFAULT_CONFIG: SwipeConfig = {
-	threshold: 105,
-	verticalTolerance: 60,
-	angleFactor: 1.3,
-	minVelocity: 0.25
-}
+class SwipeController {
+	private platform: Platform | null = null
+	private currentPath = '/'
+	private enabled = true
+	private navigating = false
 
-export class SwipeController {
-	private enabled = $state(true)
 	private startX = 0
 	private startY = 0
 	private startTime = 0
-	private currentPath = $state('/')
-	private platform: Platform | null = null
-	private config: SwipeConfig
-	private cleanup: (() => void) | null = null
-
-	constructor(config: Partial<SwipeConfig> = {}) {
-		this.config = { ...DEFAULT_CONFIG, ...config }
-	}
+	private isTracking = false
 
 	init(platform: Platform) {
 		if (typeof window === 'undefined') return
+
 		this.platform = platform
 
-		const onTouchStart = (e: TouchEvent) => this.handleStart(e)
-		const onTouchMove = (e: TouchEvent) => this.handleMove(e)
-		const onTouchEnd = (e: TouchEvent) => this.handleEnd(e)
-
-		window.addEventListener('touchstart', onTouchStart, { passive: true })
-		window.addEventListener('touchmove', onTouchMove, { passive: false })
-		window.addEventListener('touchend', onTouchEnd)
-
-		this.cleanup = () => {
-			window.removeEventListener('touchstart', onTouchStart)
-			window.removeEventListener('touchmove', onTouchMove)
-			window.removeEventListener('touchend', onTouchEnd)
-		}
+		window.addEventListener('touchstart', this.onTouchStart, { passive: true })
+		window.addEventListener('touchmove', this.onTouchMove, { passive: false })
+		window.addEventListener('touchend', this.onTouchEnd, { passive: true })
 	}
 
 	destroy() {
-		this.cleanup?.()
+		window.removeEventListener('touchstart', this.onTouchStart)
+		window.removeEventListener('touchmove', this.onTouchMove)
+		window.removeEventListener('touchend', this.onTouchEnd)
+	}
+
+	setPath(path: string) {
+		this.currentPath = path
+		this.navigating = false
 	}
 
 	disable() {
@@ -63,66 +49,76 @@ export class SwipeController {
 		this.enabled = true
 	}
 
-	setPath(path: string) {
-		this.currentPath = path
-	}
-
-	private handleStart(e: TouchEvent): void {
-		if (!this.enabled || e.touches.length !== 1) return
+	private onTouchStart = (e: TouchEvent) => {
+		if (!this.enabled || this.navigating || e.touches.length !== 1) return
 
 		const touch = e.touches[0]
+
+		// skip edge zones (system gestures)
+		if (touch.clientX < 30 || touch.clientX > window.innerWidth - 30) return
+
 		this.startX = touch.clientX
 		this.startY = touch.clientY
 		this.startTime = Date.now()
+		this.isTracking = true
 	}
 
-	private handleMove(e: TouchEvent): void {
-		if (!this.enabled || e.touches.length !== 1) return
+	private onTouchMove = (e: TouchEvent) => {
+		if (!this.isTracking || e.touches.length !== 1) return
 
 		const touch = e.touches[0]
-		const deltaX = touch.clientX - this.startX
-		const deltaY = touch.clientY - this.startY
+		const dx = Math.abs(touch.clientX - this.startX)
+		const dy = Math.abs(touch.clientY - this.startY)
 
-		if (Math.abs(deltaY) * this.config.angleFactor > Math.abs(deltaX)) {
+		// if scrolling vertically, stop tracking
+		if (dy > dx * VERTICAL_LIMIT) {
+			this.isTracking = false
 			return
 		}
 
-		if (Math.abs(deltaX) > 20 && e.cancelable) {
+		// if clearly horizontal, prevent scroll
+		if (dx > 15 && dx > dy * 1.2 && e.cancelable) {
 			e.preventDefault()
 		}
 	}
 
-	private handleEnd(e: TouchEvent): void {
-		if (!this.enabled || e.changedTouches.length !== 1) return
-
-		const touch = e.changedTouches[0]
-		const deltaX = touch.clientX - this.startX
-		const timeElapsed = Math.max(Date.now() - this.startTime, 1)
-		const distance = Math.abs(deltaX)
-		const velocity = distance / timeElapsed
-
-		const currentIndex = getRouteIndex(this.currentPath)
-		if (currentIndex === -1) return
-
-		const passedThreshold = distance > this.config.threshold
-		const passedVelocity = velocity > this.config.minVelocity
-		const isIntentional = passedThreshold && passedVelocity
-
-		if (!isIntentional) {
+	private onTouchEnd = (e: TouchEvent) => {
+		if (!this.isTracking || e.changedTouches.length !== 1) {
+			this.isTracking = false
 			return
 		}
 
-		if (deltaX > 0 && currentIndex > 0) {
-			this.navigate(NAV_ROUTES[currentIndex - 1])
-		} else if (deltaX < 0 && currentIndex < NAV_ROUTES.length - 1) {
-			this.navigate(NAV_ROUTES[currentIndex + 1])
-		}
-	}
+		const touch = e.changedTouches[0]
+		const dx = touch.clientX - this.startX
+		const dy = touch.clientY - this.startY
+		const absDx = Math.abs(dx)
+		const absDy = Math.abs(dy)
+		const elapsed = Date.now() - this.startTime
+		const velocity = absDx / Math.max(elapsed, 1)
 
-	private navigate(path: string): void {
-		this.platform?.haptic.impact('medium')
-		// @ts-expect-error weak types in router
-		goto(resolve(path)).catch(() => {})
+		this.isTracking = false
+
+		// validate gesture
+		if (absDy > absDx * VERTICAL_LIMIT) return
+		if (absDx < THRESHOLD) return
+		if (velocity < VELOCITY_THRESHOLD) return
+
+		const idx = getRouteIndex(this.currentPath)
+		if (idx === -1) return
+
+		let target: RouteId | null = null
+
+		if (dx > 0 && idx > 0) {
+			target = NAV_ROUTES[idx - 1]
+		} else if (dx < 0 && idx < NAV_ROUTES.length - 1) {
+			target = NAV_ROUTES[idx + 1]
+		}
+
+		if (target) {
+			this.navigating = true
+			this.platform?.haptic.impact('medium')
+			goto(resolve(target))
+		}
 	}
 }
 

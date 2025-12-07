@@ -64,12 +64,12 @@ export class TelegramPlatform implements Platform {
 				await this.sdk.viewport.mount()
 			}
 
-			if (this.sdk.viewport.expand.isAvailable()) {
-				await this.sdk.viewport.expand()
+			if (this.sdk.viewport.requestFullscreen.isAvailable()) {
+				this.sdk.viewport.requestFullscreen()
 			}
 
-			if (this.sdk.miniApp.mount.isAvailable()) {
-				await this.sdk.miniApp.mount()
+			if (this.sdk.miniApp.mountSync.isAvailable()) {
+				this.sdk.miniApp.mountSync()
 			}
 			if (this.sdk.miniApp.ready.isAvailable()) {
 				this.sdk.miniApp.ready()
@@ -127,10 +127,7 @@ export class TelegramPlatform implements Platform {
 
 			const palette: ThemePalette = {
 				bg: bg,
-				// sections should use secondary bg or slightly off-white
 				bgSecondary: this.getColor(tp.sectionBackgroundColor, secondaryBg),
-				// tertiary is for borders/secondary buttons.
-				// FIXED: "Black button" issue - mix hint with bg instead of using raw secondary values that might be dark
 				bgTertiary: `color-mix(in srgb, ${hint} 15%, ${bg})`,
 
 				text: text,

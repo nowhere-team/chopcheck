@@ -21,6 +21,7 @@
 
 <div class="avatar" style:width="{size}px" style:height="{size}px" style:background-color={color}>
 	{#if url && !hasError}
+		<!--suppress HtmlDeprecatedAttribute -->
 		<img src={url} alt={name} onerror={() => (hasError = true)} loading="lazy" />
 	{:else}
 		<span class="initials" style:font-size="{size * 0.4}px">

@@ -24,14 +24,10 @@
 
 <ToastContainer />
 
-<div class="shell-layout">
-	<div class="viewport-constrain">
-		<!--
-           pan-y explicitly to hint the browser
-           that horizontal gestures are ours, improving the scrollbar fight
-        -->
-		<main class="content-scroller">
-			<div class="content-padder">
+<div class="shell">
+	<div class="container">
+		<main class="content">
+			<div class="content-inner">
 				{@render children?.()}
 			</div>
 		</main>
@@ -42,59 +38,73 @@
 	</div>
 </div>
 
+<!-- portal mount point - empty until something uses it -->
+<div id="portal-root"></div>
+
 <style>
-	.shell-layout {
+	.shell {
 		min-height: 100dvh;
 		display: flex;
 		justify-content: center;
-		background-color: var(--color-bg);
-		/* prevent horizontal scroll at root level */
+		background: var(--color-bg);
 		overflow: hidden;
 	}
 
-	.viewport-constrain {
+	.container {
 		width: 100%;
 		max-width: 600px;
 		position: relative;
-		/* crucial: clean stacking context */
-		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		height: 100dvh;
 		background: var(--color-bg);
 	}
 
-	.content-scroller {
+	.content {
 		flex: 1;
 		overflow-y: auto;
-		overflow-x: hidden; /* kill the horizontal scrollbar */
+		overflow-x: hidden;
 		overscroll-behavior-y: contain;
-		position: relative;
-
-		/* hint for swipe handler */
 		touch-action: pan-y;
-
 		scrollbar-width: none;
 		-ms-overflow-style: none;
-
-		/* transition group */
 		view-transition-name: page;
 	}
 
-	.content-scroller::-webkit-scrollbar {
+	.content::-webkit-scrollbar {
 		display: none;
 	}
 
-	.content-padder {
-		/* increased bottom padding to account for floating navbar + safety */
+	.content-inner {
 		padding: var(--safe-top) max(var(--safe-right), 16px) calc(90px + var(--safe-bottom))
 			max(var(--safe-left), 16px);
 		min-height: 100%;
 	}
 
+	#portal-root {
+		/* empty by default - no layout impact */
+		display: contents;
+	}
+
+	#portal-root:empty {
+		display: none;
+	}
+
+	/* portal instances get proper z-index */
+	/*noinspection CssUnusedSymbol*/
+	:global(.portal-instance) {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		pointer-events: none;
+	}
+
+	:global(.portal-instance > *) {
+		pointer-events: auto;
+	}
+
 	:global(html) {
 		background: var(--color-bg);
-		/* prevents rubber-banding on ios body */
 		overscroll-behavior: none;
 	}
 </style>

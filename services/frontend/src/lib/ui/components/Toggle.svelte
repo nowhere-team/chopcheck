@@ -24,9 +24,10 @@
 	class:disabled
 	onclick={toggle}
 	role="switch"
+	aria-label="toggler"
 	aria-checked={checked}
 >
-	<div class="thumb"></div>
+	<span class="thumb"></span>
 </button>
 
 <style>

@@ -30,12 +30,14 @@
 
 	/* Z-Index Scale */
 	--z-base: 1;
-	--z-navbar: 2000;
-	--z-modal: 1000;
-	--z-toast: 2000;
+	--z-navbar: 1000;
+	--z-modal: 5000;
+	--z-toast: 6000;
+	--z-portal: 9999;
 
 	/* Glass Effect (refined for smoothness) */
 	--glass-bg: color-mix(in srgb, var(--color-bg-secondary) 98%, transparent);
+	--glass-bg-secondary: color-mix(in srgb, var(--color-bg-secondary) 90%, transparent);
 	--glass-border: color-mix(in srgb, var(--color-text) 8%, transparent);
 	--glass-blur: 20px;
 }

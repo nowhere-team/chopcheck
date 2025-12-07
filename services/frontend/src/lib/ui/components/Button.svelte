@@ -1,3 +1,4 @@
+<!--suppress CssUnusedSymbol -->
 <script lang="ts">
 	import type { Component, Snippet } from 'svelte'
 	import { getContext } from 'svelte'

@@ -17,15 +17,19 @@
 		const targetEl =
 			typeof target === 'string' ? (document.querySelector(target) ?? document.body) : target
 
-		// mount the consumer component with the captured context
+		const wrapper = document.createElement('div')
+		wrapper.className = 'portal-instance'
+		targetEl.appendChild(wrapper)
+
 		const instance = mount(PortalConsumer, {
-			target: targetEl,
+			target: wrapper,
 			props: { children },
 			context
 		})
 
 		return () => {
 			unmount(instance)
+			wrapper.remove()
 		}
 	})
 </script>

@@ -65,12 +65,12 @@
 </script>
 
 <svelte:head>
-	<title>chopcheck</title>
+	<title>ChopCheck</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 </svelte:head>
 
 {#if !initialized}
-	<LoadingScreen message="инициализация..." />
+	<LoadingScreen message="Инициализация..." />
 {:else if app.state.status === 'error' && app.state.error}
 	<ErrorScreen error={app.state.error} onRetry={handleRetry} />
 {:else if app.state.status === 'consent_required'}
@@ -78,10 +78,8 @@
 {:else if app.state.status === 'unauthenticated'}
 	<LoginScreen />
 {:else if app.state.status === 'authenticating'}
-	<LoadingScreen message="авторизация..." />
+	<LoadingScreen message="Авторизация..." />
 {:else if app.state.status === 'ready'}
-	<div id="portal-root"></div>
-
 	<AppShell>
 		{#snippet navbar()}
 			<Navbar />
@@ -92,10 +90,3 @@
 {:else}
 	<LoadingScreen />
 {/if}
-
-<style>
-	#portal-root {
-		position: relative;
-		z-index: var(--z-modal);
-	}
-</style>

@@ -18,7 +18,7 @@
 		...rest
 	}: Props = $props()
 
-	/* generate id only if needed for accessiblity link */
+	/* generate id only if needed for accessibility link */
 	const id = providedId || `input-${Math.random().toString(36).slice(2)}`
 </script>
 

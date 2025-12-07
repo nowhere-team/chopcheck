@@ -12,6 +12,7 @@
 </div>
 
 <style>
+	/*noinspection CssOverwrittenProperties*/
 	.screen {
 		display: flex;
 		flex-direction: column;

@@ -169,7 +169,7 @@
 		padding: 6px;
 
 		/* Liquid Glass force logic */
-		background-color: var(--glass-bg);
+		background-color: var(--glass-bg-secondary);
 		backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 

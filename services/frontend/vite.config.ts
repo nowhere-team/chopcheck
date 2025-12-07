@@ -4,7 +4,9 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	plugins: [
+		// @ts-expect-error types
 		sveltekit(),
+		// @ts-expect-error types
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide'

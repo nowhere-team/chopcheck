@@ -84,7 +84,7 @@ textarea {
 /* remove blue highlight on tap */
 
 * {
-    -webkit-tap-highlight-color: transparent;
+	-webkit-tap-highlight-color: transparent;
 }
 
 *:focus {
