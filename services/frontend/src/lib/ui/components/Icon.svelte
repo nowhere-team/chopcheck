@@ -7,11 +7,11 @@
 		color?: string
 	}
 
-	const { icon, size = 24, color }: Props = $props()
+	const { icon: HostIcon, size = 24, color }: Props = $props()
 </script>
 
 <span class="icon" style:color style:width="{size}px" style:height="{size}px">
-	<svelte:component this={icon} {size} />
+	<HostIcon {size} />
 </span>
 
 <style>

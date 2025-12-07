@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte'
 
-	import SwipeContainer from '$lib/ui/layouts/SwipeContainer.svelte'
+	import { page } from '$app/state'
+	import { getPlatform } from '$lib/app/context.svelte'
+	import { swipeController } from '$lib/navigation/swipe.svelte'
 
 	interface Props {
 		navbar?: Snippet
@@ -9,14 +11,24 @@
 	}
 
 	const { navbar, children }: Props = $props()
+	const platform = getPlatform()
+
+	// init global swipe controller with platform access
+	$effect(() => {
+		swipeController.init(platform)
+		return () => swipeController.destroy()
+	})
+
+	// sync current path for navigation logic
+	$effect(() => {
+		swipeController.setPath(page.url.pathname)
+	})
 </script>
 
 <div class="app-shell">
-	<SwipeContainer>
-		<main class="content" style="view-transition-name: page">
-			{@render children?.()}
-		</main>
-	</SwipeContainer>
+	<main class="content" style="view-transition-name: page">
+		{@render children?.()}
+	</main>
 
 	{#if navbar}
 		<nav class="navbar" style="view-transition-name: navbar">

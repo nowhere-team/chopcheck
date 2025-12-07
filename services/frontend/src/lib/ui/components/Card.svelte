@@ -1,4 +1,4 @@
-<!-- file: services/frontend/src/lib/ui/components/Card.svelte -->
+<!--suppress CssUnusedSymbol -->
 <script lang="ts">
 	import type { Snippet } from 'svelte'
 
@@ -17,14 +17,24 @@
 		onclick,
 		children
 	}: Props = $props()
+
+	// simple handler for keyboard interaction to satisfy a11y requirements
+	function handleKeydown(e: KeyboardEvent) {
+		if (interactive && onclick && (e.key === 'Enter' || e.key === ' ')) {
+			e.preventDefault()
+			onclick()
+		}
+	}
 </script>
 
 <svelte:element
 	this={interactive ? 'button' : 'div'}
 	class="card {variant} p-{padding}"
 	class:interactive
-	type={interactive ? 'button' : undefined}
+	role={interactive ? 'button' : undefined}
+	tabindex={interactive ? 0 : undefined}
 	{onclick}
+	onkeydown={handleKeydown}
 >
 	{@render children?.()}
 </svelte:element>
@@ -36,9 +46,9 @@
 		transition:
 			transform var(--duration-fast) var(--ease-out),
 			background var(--duration-fast) var(--ease-out);
+		text-align: left; /* ensure alignment for button variant */
 	}
 
-	/* variants */
 	.default {
 		background: var(--color-bg-elevated);
 		border: 1px solid var(--color-border);
@@ -54,7 +64,6 @@
 		border: 1px solid var(--color-border);
 	}
 
-	/* padding */
 	.p-none {
 		padding: 0;
 	}
@@ -68,7 +77,6 @@
 		padding: var(--space-6);
 	}
 
-	/* interactive */
 	.interactive {
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;

@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/lib/ui/screens/LoadingScreen.svelte -->
 <script lang="ts">
 	interface Props {
 		message?: string
@@ -13,6 +12,7 @@
 </div>
 
 <style>
+	/*noinspection CssOverwrittenProperties*/
 	.screen {
 		display: flex;
 		flex-direction: column;
@@ -26,8 +26,8 @@
 	.spinner {
 		width: 32px;
 		height: 32px;
-		border: 3px solid var(--color-secondaryBg);
-		border-top-color: var(--color-button);
+		border: 3px solid var(--color-bg-tertiary);
+		border-top-color: var(--color-primary);
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
@@ -39,6 +39,6 @@
 	}
 
 	p {
-		color: var(--color-hint);
+		color: var(--color-text-muted);
 	}
 </style>
