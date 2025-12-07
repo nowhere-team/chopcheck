@@ -13,19 +13,19 @@
 		{
 			path: '/history',
 			icon: Calendar,
-			label: 'история'
+			label: 'История'
 		},
 		{
 			path: '/splits/create',
 			icon: PlusCircle,
-			label: 'создать',
+			label: 'Создать',
 			highlight: true
 		},
 		{ path: '/contacts', icon: Users, label: 'контакты' },
 		{
 			path: '/profile',
 			icon: UserCircle,
-			label: 'профиль'
+			label: 'Профиль'
 		}
 	]
 	const platform = getPlatform()
@@ -87,9 +87,9 @@
 		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		border: 1px solid var(--glass-border);
 		border-radius: 28px;
-		box-shadow:
-			0 10px 25px -5px rgba(0, 0, 0, 0.15),
-			0 4px 10px -2px rgba(0, 0, 0, 0.08);
+		/*box-shadow:*/
+		/*	0 10px 25px -5px rgba(0, 0, 0, 0.15),*/
+		/*	0 4px 10px -2px rgba(0, 0, 0, 0.08);*/
 		overflow: hidden;
 		isolation: isolate;
 	}

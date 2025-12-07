@@ -1,6 +1,9 @@
+<!--suppress TypeScriptExplicitMemberType -->
 <script lang="ts">
 	import { X } from 'phosphor-svelte'
-	import { fade } from 'svelte/transition'
+	import type { Snippet } from 'svelte'
+	import { cubicOut } from 'svelte/easing'
+	import { fade, fly } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { swipeController } from '$lib/navigation/swipe.svelte'
@@ -11,10 +14,8 @@
 		open: boolean
 		onclose: () => void
 		title?: string
-		children?: Snippet // updated type
+		children?: Snippet
 	}
-
-	import type { Snippet } from 'svelte'
 
 	let { open = $bindable(), onclose, title, children }: Props = $props()
 	const platform = getPlatform()
@@ -25,14 +26,11 @@
 	let isDragging = $state(false)
 
 	function close() {
-		/* same logical implementation */
+		platform.haptic.impact('light')
+		currentY = 0
 		open = false
 		if (onclose) onclose()
-		currentY = 0
-		platform.haptic.impact('light')
 	}
-
-	/* ... dragging logic stays mostly the same ... */
 
 	function handleStart(y: number) {
 		startY = y
@@ -42,19 +40,26 @@
 	function handleMove(y: number) {
 		if (!isDragging) return
 		const delta = y - startY
-		if (delta > 0) currentY = delta
-		else currentY = delta * 0.2
+
+		if (delta > 0) {
+			currentY = delta * 0.7
+		} else {
+			currentY = -Math.log(Math.abs(delta) + 1) * 2
+		}
 	}
 
 	function handleEnd() {
 		isDragging = false
-		if (currentY > 100) close()
-		else currentY = 0
+		if (currentY > 120) {
+			close()
+		} else {
+			currentY = 0
+		}
 	}
 
 	$effect(() => {
 		if (open) {
-			swipeController.disable() // explicit disable method
+			swipeController.disable()
 			document.body.style.overflow = 'hidden'
 		} else {
 			swipeController.enable()
@@ -72,14 +77,16 @@
 		<div class="sheet-portal-wrapper">
 			<div
 				class="backdrop"
-				transition:fade={{ duration: 200 }}
+				transition:fade={{ duration: 250 }}
 				onclick={close}
 				role="presentation"
 			></div>
 
+			<!--suppress HtmlUnknownAttribute -->
 			<div
 				class="sheet-container"
 				bind:this={sheetRef}
+				transition:fly={{ y: '100%', duration: 300, opacity: 1, easing: cubicOut }}
 				style:transform="translate3d(0, {currentY}px, 0)"
 				class:animate={!isDragging}
 				ontouchstart={e => handleStart(e.touches[0].clientY)}
@@ -115,7 +122,7 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-end;
-		pointer-events: auto; /* explicit */
+		pointer-events: auto;
 	}
 
 	.backdrop {
@@ -127,40 +134,61 @@
 	}
 
 	.sheet-container {
-		background: var(--color-bg-elevated);
+		background: var(--color-bg);
 		border-radius: 20px 20px 0 0;
-		padding-bottom: calc(var(--safe-bottom) + 20px);
+		padding-bottom: calc(var(--safe-bottom) + var(--space-8));
 		box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
 		display: flex;
 		flex-direction: column;
 		max-height: 90dvh;
 		position: relative;
 		z-index: 2;
-		/* animation defined in CSS or transition directives */
+		will-change: transform;
+	}
+
+	.sheet-container::after {
+		content: '';
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		height: 50vh;
+		background: var(--color-bg);
+	}
+
+	.animate {
+		transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
 	}
 
 	.handle-bar {
 		padding: 12px 0;
 		display: flex;
 		justify-content: center;
+		flex-shrink: 0;
 	}
+
 	.handle {
-		width: 32px;
-		height: 4px;
-		background: var(--color-border);
-		border-radius: 2px;
+		width: 40px;
+		height: 5px;
+		background: var(--color-border-subtle);
+		background-color: var(--color-bg-tertiary);
+		border-radius: 10px;
 	}
+
 	.header {
 		display: flex;
 		justify-content: space-between;
 		padding: 0 20px 16px;
 		align-items: center;
+		flex-shrink: 0;
 	}
+
 	.header h2 {
 		font-size: 18px;
 		font-weight: 600;
 		margin: 0;
 	}
+
 	.close-btn {
 		all: unset;
 		width: 28px;
@@ -170,6 +198,7 @@
 		display: grid;
 		place-items: center;
 	}
+
 	.content {
 		overflow-y: auto;
 		padding: 0 20px;
