@@ -58,8 +58,9 @@
 			<SplitCardSkeleton count={1} />
 		</Card>
 	{:else}
+		<EditableText bind:value={name} animated centered adaptive placeholder="Название" />
+
 		<Card>
-			<EditableText bind:value={name} placeholder="Название сплита" />
 			<div style="height: 12px"></div>
 			<PriceInput label="Примерная сумма" bind:value={sum} currencySymbol="₽" />
 			<div style="height: 16px"></div>

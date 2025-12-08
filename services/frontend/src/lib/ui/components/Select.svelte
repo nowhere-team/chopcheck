@@ -93,7 +93,7 @@
 					>
 						<span>{option.label}</span>
 						{#if option.value === value}
-							<Check size={16} weight="bold" class="check-icon" />
+							<Check size={16} weight="bold" />
 						{/if}
 					</button>
 				{/each}
@@ -167,18 +167,14 @@
 		flex-direction: column;
 		gap: 4px;
 		padding: 6px;
-
-		/* Liquid Glass force logic */
 		background-color: var(--glass-bg-secondary);
 		backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-
 		border: 1px solid var(--glass-border);
 		border-radius: var(--radius-lg);
 		box-shadow:
 			0 10px 30px -10px rgba(0, 0, 0, 0.15),
 			0 0 0 1px rgba(0, 0, 0, 0.02);
-
 		transform-origin: top center;
 		overflow: hidden;
 	}
@@ -206,7 +202,7 @@
 		font-weight: 500;
 	}
 
-	.check-icon {
+	.option-item.selected :global(svg) {
 		color: var(--color-primary);
 	}
 </style>

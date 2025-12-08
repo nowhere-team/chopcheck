@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { Gear } from 'phosphor-svelte'
-
 	import { Button, Card } from '$lib/ui/components'
 	import Avatar from '$lib/ui/components/Avatar.svelte'
 	import BottomSheet from '$lib/ui/components/BottomSheet.svelte'
@@ -28,7 +26,13 @@
 	<!-- Хедер с редактируемым заголовком -->
 	<section class="head">
 		<Avatar name={splitName} size={80} id="split-main" />
-		<EditableText bind:value={splitName} centered placeholder="Название сплита" />
+		<EditableText
+			bind:value={splitName}
+			adaptive
+			animated
+			centered
+			placeholder="Название сплита"
+		/>
 		<div class="status-badge">черновик</div>
 	</section>
 
@@ -36,7 +40,6 @@
 	<Card variant="elevated">
 		<div class="row header-row">
 			<h2 class="section-title">Параметры</h2>
-			<Button variant="ghost" size="sm" icon={Gear} />
 		</div>
 
 		<div class="form-grid">

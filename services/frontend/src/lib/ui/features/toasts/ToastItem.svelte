@@ -66,7 +66,6 @@
 				el.style.transform = ''
 				el.style.opacity = ''
 			}
-			// resume progress
 			startProgressCountdown()
 		}
 		currentX = 0
@@ -86,7 +85,7 @@
 				clearInterval(progressInterval!)
 				progressInterval = null
 			}
-		}, tick) as unknown as number // that's not node, its browser
+		}, tick) as unknown as number
 	}
 
 	onMount(() => {
@@ -97,7 +96,6 @@
 	})
 </script>
 
-<!--suppress HtmlUnknownAttribute -->
 <div
 	bind:this={el}
 	class="toast {item.type}"
@@ -109,14 +107,21 @@
 	ontouchend={onTouchEnd}
 >
 	<div class="content">
-		<Icon size={20} weight="fill" />
+		<div class="icon-wrapper">
+			<Icon size={20} weight="fill" />
+		</div>
 
 		<span class="message">{item.message}</span>
 	</div>
 
 	{#if item.dismissible}
-		<!--suppress JSUnusedGlobalSymbols -->
-		<Button variant="ghost" size="sm" onclick={handleDismiss} aria-label="Закрыть">
+		<Button
+			variant="ghost"
+			size="sm"
+			class="dismiss"
+			onclick={handleDismiss}
+			aria-label="Закрыть"
+		>
 			{#snippet iconLeft()}
 				<X size={16} />
 			{/snippet}
@@ -155,6 +160,24 @@
 		gap: var(--space-3);
 	}
 
+	.icon-wrapper {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	.toast.success .icon-wrapper {
+		color: var(--color-success);
+	}
+
+	.toast.error .icon-wrapper {
+		color: var(--color-error);
+	}
+
+	.toast.warning .icon-wrapper {
+		color: #f59e0b;
+	}
+
 	.progress {
 		position: absolute;
 		left: 0;
@@ -164,13 +187,46 @@
 		background: transparent;
 	}
 
-	.progress .bar {
-		height: 100%;
+	.toast.success .progress .bar {
+		background: linear-gradient(
+			90deg,
+			var(--color-success),
+			color-mix(in srgb, var(--color-success) 30%, var(--color-bg))
+		);
+	}
+
+	.toast.error .progress .bar {
+		background: linear-gradient(
+			90deg,
+			var(--color-error),
+			color-mix(in srgb, var(--color-error) 30%, var(--color-bg))
+		);
+	}
+
+	.toast.warning .progress .bar {
+		background: linear-gradient(
+			90deg,
+			#f59e0b,
+			color-mix(in srgb, #f59e0b 30%, var(--color-bg))
+		);
+	}
+
+	.toast.info .progress .bar {
 		background: linear-gradient(
 			90deg,
 			var(--color-primary),
 			color-mix(in srgb, var(--color-primary) 30%, var(--color-bg))
 		);
+	}
+
+	.progress .bar {
+		height: 100%;
 		transition: width 120ms linear;
+	}
+
+	.dismiss {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 </style>
