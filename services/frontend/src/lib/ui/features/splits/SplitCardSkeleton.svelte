@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Skeleton from './Skeleton.svelte'
+	import Skeleton from '../../components/Skeleton.svelte'
 
 	interface Props {
 		count?: number

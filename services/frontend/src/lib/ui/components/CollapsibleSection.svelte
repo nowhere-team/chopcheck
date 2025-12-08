@@ -94,10 +94,11 @@
 		display: flex;
 		color: var(--color-text-tertiary);
 		transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+		transform: rotate(-90deg);
 	}
 
 	.caret.rotated {
-		transform: rotate(180deg);
+		transform: rotate(0deg);
 	}
 
 	.content {

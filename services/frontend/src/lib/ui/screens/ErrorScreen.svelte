@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/lib/ui/screens/ErrorScreen.svelte -->
 <script lang="ts">
 	interface Props {
 		error: Error

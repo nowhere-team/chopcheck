@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/lib/ui/screens/ConsentScreen.svelte -->
 <script lang="ts">
 	import { getApp } from '$lib/app/context.svelte'
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Split } from '$lib/services/api/types'
 
-	import Avatar from './Avatar.svelte'
-	import { Card } from './index'
+	import { Card } from '../../components'
+	import Avatar from '../../components/Avatar.svelte'
 
 	interface Props {
 		split: Split

@@ -1,5 +1,5 @@
 import { createLogger } from '$lib/shared/logger'
-import { toast } from '$lib/ui/features/toasts/toast.svelte'
+import { toast } from '$lib/ui/features/toasts'
 
 const log = createLogger('connection')
 

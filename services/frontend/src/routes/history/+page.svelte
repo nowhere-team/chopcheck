@@ -7,9 +7,9 @@
 	import { formatPrice } from '$lib/shared/money'
 	import { getSplitsStore, getUserStore } from '$lib/state'
 	import { CollapsibleSection, SplitCard, StatsBox } from '$lib/ui/components'
-	import SplitCardSkeleton from '$lib/ui/components/SplitCardSkeleton.svelte'
-	import StatsSkeleton from '$lib/ui/components/StatsSkeleton.svelte'
-	import { toast } from '$lib/ui/features/toasts/toast.svelte'
+	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
+	import StatsSkeleton from '$lib/ui/features/stats/StatsSkeleton.svelte'
+	import { toast } from '$lib/ui/features/toasts'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const platform = getPlatform()

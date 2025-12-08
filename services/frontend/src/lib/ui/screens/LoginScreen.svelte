@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/lib/ui/screens/LoginScreen.svelte -->
 <script lang="ts">
 	import { getApp, getPlatform } from '$lib/app/context.svelte'
 	import TelegramLoginButton from '$lib/ui/features/auth/TelegramLoginButton.svelte'

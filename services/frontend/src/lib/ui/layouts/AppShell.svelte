@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/lib/ui/layouts/AppShell.svelte -->
 <script lang="ts">
 	import type { Snippet } from 'svelte'
 	import { onMount } from 'svelte'
@@ -7,7 +6,7 @@
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { swipeController } from '$lib/navigation/swipe.svelte'
 	import { connectionMonitor } from '$lib/services/connection.svelte'
-	import ToastContainer from '$lib/ui/features/toasts/ToastContainer.svelte'
+	import { ToastContainer } from '$lib/ui/features/toasts'
 
 	interface Props {
 		navbar?: Snippet
