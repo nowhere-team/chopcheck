@@ -1,4 +1,3 @@
-<!-- file: services/frontend/src/routes/+layout.svelte -->
 <script lang="ts">
 	import '$lib/assets/styles/base.css'
 
@@ -46,6 +45,12 @@
 
 	onNavigate(navigation => {
 		if (!document.startViewTransition) return
+
+		// critical fix: skip transition on swipe/back gestures to prevent UI freeze
+		// if we try to view-transition a swipe, the browser fights with JS and loses frames
+		if (navigation.type === 'popstate' || navigation.delta === -1) {
+			return
+		}
 
 		const from = navigation.from?.url.pathname || '/'
 		const to = navigation.to?.url.pathname || '/'

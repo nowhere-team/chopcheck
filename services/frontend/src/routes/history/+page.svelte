@@ -16,12 +16,10 @@
 	const userStore = getUserStore()
 	const splitsStore = getSplitsStore()
 
-	// reactive access to store data
 	const stats = $derived(userStore.stats)
 	const activeSplits = $derived(splitsStore.active)
 
 	onMount(() => {
-		// fetch data on mount
 		userStore.stats.fetch()
 		splitsStore.active.fetch()
 	})
@@ -32,21 +30,23 @@
 	}
 
 	function handleError() {
-		toast.error('Не удалось загрузить данные')
+		toast.error('Не удалось обновить данные')
 	}
 
-	// watch for errors
 	$effect(() => {
 		if (stats.isError || activeSplits.isError) {
 			handleError()
 		}
 	})
+
+	const isStatsLoading = $derived(stats.isLoading && !stats.data)
+	const isSplitsLoading = $derived(activeSplits.isLoading && !activeSplits.data)
 </script>
 
 <Page title="Главная">
 	<!-- Statistics Section -->
 	<section class="stats-section">
-		{#if stats.isLoading && !stats.data}
+		{#if isStatsLoading}
 			<StatsSkeleton />
 		{:else if stats.data}
 			<div class="stats-grid">
@@ -61,7 +61,7 @@
 
 	<!-- Active Splits Section -->
 	<CollapsibleSection title="Ваши сплиты" count={activeSplits.data?.length ?? 0}>
-		{#if activeSplits.isLoading && !activeSplits.data}
+		{#if isSplitsLoading}
 			<div class="splits-list">
 				<SplitCardSkeleton count={3} />
 			</div>
@@ -71,7 +71,7 @@
 					<SplitCard {split} onclick={() => handleSplitClick(split)} />
 				{/each}
 			</div>
-		{:else}
+		{:else if !activeSplits.isLoading}
 			<p class="empty-state">Нет активных сплитов</p>
 		{/if}
 	</CollapsibleSection>
