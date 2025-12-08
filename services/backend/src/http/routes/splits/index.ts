@@ -62,13 +62,6 @@ const addPaymentMethodSchema = z.object({
 export function createSplitsRoutes() {
 	const app = new Hono()
 
-	// public
-	app.get('/:id', uuidParam('id'), async c => {
-		const split = await c.get('services').splits.getById(c.req.param('id'), true)
-		if (!split) throw new NotFoundError('split not found')
-		return c.json(anonymizeSplitResponse(split))
-	})
-
 	// protected
 	app.use('/*', auth())
 
@@ -105,6 +98,12 @@ export function createSplitsRoutes() {
 	app.post('/', validate('json', createSplitSchema), requirePermission('splits:create'), async c => {
 		const split = await c.get('services').splits.createOrUpdate(c.get('authContext')!.userId, c.req.valid('json'))
 		return c.json(anonymizeSplitResponse(split), 201)
+	})
+
+	app.get('/:id', uuidParam('id'), async c => {
+		const split = await c.get('services').splits.getById(c.req.param('id'), true)
+		if (!split) throw new NotFoundError('split not found')
+		return c.json(anonymizeSplitResponse(split))
 	})
 
 	app.patch(

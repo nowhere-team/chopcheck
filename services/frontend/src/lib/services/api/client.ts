@@ -6,10 +6,11 @@ import { ApiError, type ApiRequestOptions } from './types'
 
 const log = createLogger('api')
 
-export class ApiClient {
+class ApiClient {
 	private readonly baseUrl: string
 	private storage: PlatformStorage | null = null
 	private tokenCache: string | null = null
+	private refreshPromise: Promise<void> | null = null
 
 	constructor(baseUrl: string = API_BASE_URL) {
 		this.baseUrl = baseUrl
@@ -110,7 +111,7 @@ export class ApiClient {
 		try {
 			errorData = await response.json()
 		} catch {
-			// ignore
+			// ignore parse errors
 		}
 
 		throw new ApiError(

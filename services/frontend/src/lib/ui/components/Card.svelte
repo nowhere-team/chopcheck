@@ -80,7 +80,7 @@
 		padding: var(--space-3);
 	}
 	.p-md {
-		padding: var(--space-4);
+		padding: var(--space-3) var(--space-4);
 	}
 	.p-lg {
 		padding: var(--space-6);

@@ -1,0 +1,56 @@
+<script lang="ts">
+	interface Props {
+		width?: string
+		height?: string
+		circle?: boolean
+		rounded?: boolean
+		class?: string
+	}
+
+	const {
+		width = '100%',
+		height = '20px',
+		circle = false,
+		rounded = true,
+		class: className = ''
+	}: Props = $props()
+</script>
+
+<div
+	class="skeleton {className}"
+	class:circle
+	class:rounded
+	style:width
+	style:height
+	aria-hidden="true"
+></div>
+
+<style>
+	.skeleton {
+		background: linear-gradient(
+			90deg,
+			var(--color-bg-secondary) 0%,
+			var(--color-bg-tertiary) 50%,
+			var(--color-bg-secondary) 100%
+		);
+		background-size: 200% 100%;
+		animation: shimmer 1.5s ease-in-out infinite;
+	}
+
+	.skeleton.rounded {
+		border-radius: var(--radius-md);
+	}
+
+	.skeleton.circle {
+		border-radius: 50%;
+	}
+
+	@keyframes shimmer {
+		0% {
+			background-position: 200% 0;
+		}
+		100% {
+			background-position: -200% 0;
+		}
+	}
+</style>

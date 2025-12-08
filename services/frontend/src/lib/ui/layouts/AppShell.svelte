@@ -1,9 +1,12 @@
+<!-- file: services/frontend/src/lib/ui/layouts/AppShell.svelte -->
 <script lang="ts">
 	import type { Snippet } from 'svelte'
+	import { onMount } from 'svelte'
 
 	import { page } from '$app/state'
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { swipeController } from '$lib/navigation/swipe.svelte'
+	import { connectionMonitor } from '$lib/services/connection.svelte'
 	import ToastContainer from '$lib/ui/features/toasts/ToastContainer.svelte'
 
 	interface Props {
@@ -13,6 +16,11 @@
 
 	const { navbar, children }: Props = $props()
 	const platform = getPlatform()
+
+	onMount(() => {
+		connectionMonitor.init()
+		return () => connectionMonitor.destroy()
+	})
 
 	$effect(() => {
 		swipeController.init(platform)
@@ -38,7 +46,6 @@
 	</div>
 </div>
 
-<!-- portal mount point - empty until something uses it -->
 <div id="portal-root"></div>
 
 <style>
@@ -82,7 +89,6 @@
 	}
 
 	#portal-root {
-		/* empty by default - no layout impact */
 		display: contents;
 	}
 
@@ -90,8 +96,6 @@
 		display: none;
 	}
 
-	/* portal instances get proper z-index */
-	/*noinspection CssUnusedSymbol*/
 	:global(.portal-instance) {
 		position: fixed;
 		inset: 0;

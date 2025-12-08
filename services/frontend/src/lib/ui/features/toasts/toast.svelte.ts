@@ -1,10 +1,16 @@
-export type ToastType = 'success' | 'error' | 'info'
+export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 export interface Toast {
 	id: string
 	message: string
 	type: ToastType
 	duration: number
+	dismissible: boolean
+}
+
+interface ToastOptions {
+	duration?: number
+	dismissible?: boolean
 }
 
 class ToastController {
@@ -14,29 +20,58 @@ class ToastController {
 		return this._toasts
 	}
 
-	show(message: string, type: ToastType = 'info', duration = 3000) {
-		const id = Math.random().toString(36).slice(2)
-		const toast: Toast = { id, message, type, duration }
+	private add(message: string, type: ToastType, options: ToastOptions = {}): string {
+		const id = crypto.randomUUID()
+		const duration = options.duration ?? (type === 'error' ? 5000 : 3000)
+		const dismissible = options.dismissible ?? true
 
-		this._toasts.push(toast)
+		const toast: Toast = { id, message, type, duration, dismissible }
+		this._toasts = [...this._toasts, toast]
 
 		if (duration > 0) {
-			setTimeout(() => {
-				this.dismiss(id)
-			}, duration)
+			setTimeout(() => this.dismiss(id), duration)
 		}
+
+		return id
 	}
 
-	dismiss(id: string) {
+	dismiss(id: string): void {
 		this._toasts = this._toasts.filter(t => t.id !== id)
 	}
 
-	success(message: string) {
-		this.show(message, 'success')
+	dismissAll(): void {
+		this._toasts = []
 	}
 
-	error(message: string) {
-		this.show(message, 'error', 4000)
+	success(message: string, options?: ToastOptions): string {
+		return this.add(message, 'success', options)
+	}
+
+	error(message: string, options?: ToastOptions): string {
+		return this.add(message, 'error', options)
+	}
+
+	info(message: string, options?: ToastOptions): string {
+		return this.add(message, 'info', options)
+	}
+
+	warning(message: string, options?: ToastOptions): string {
+		return this.add(message, 'warning', options)
+	}
+
+	// special toast for connection issues
+	// todo: i18n
+	connectionLost(): string {
+		return this.add('Соединение с сервером потеряно', 'error', {
+			duration: 0,
+			dismissible: false
+		})
+	}
+
+	connectionRestored(): void {
+		// find and remove connection lost toast
+		this._toasts = this._toasts.filter(t => t.message !== 'Соединение с сервером потеряно')
+		this.success('Соединение восстановлено')
 	}
 }
 
