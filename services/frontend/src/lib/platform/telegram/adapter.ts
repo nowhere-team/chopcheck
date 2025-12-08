@@ -64,9 +64,10 @@ export class TelegramPlatform implements Platform {
 				await this.sdk.viewport.mount()
 			}
 
-			if (this.sdk.viewport.requestFullscreen.isAvailable()) {
-				this.sdk.viewport.requestFullscreen()
-			}
+			// todo: only android
+			// if (this.sdk.viewport.requestFullscreen.isAvailable()) {
+			// 	this.sdk.viewport.requestFullscreen()
+			// }
 
 			if (this.sdk.miniApp.mountSync.isAvailable()) {
 				this.sdk.miniApp.mountSync()
