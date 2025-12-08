@@ -1,14 +1,15 @@
 import { SvelteURLSearchParams } from 'svelte/reactivity'
 
 import { api } from '$lib/services/api/client'
-import type {
-	CreateSplitDto,
-	ItemSelection,
-	PaginatedResponse,
-	Split,
-	SplitItem,
-	SplitResponse,
-	SplitsByPeriod
+import {
+	ApiError,
+	type CreateSplitDto,
+	type ItemSelection,
+	type PaginatedResponse,
+	type Split,
+	type SplitItem,
+	type SplitResponse,
+	type SplitsByPeriod
 } from '$lib/services/api/types'
 
 import { cache } from '../cache.svelte'
@@ -42,19 +43,21 @@ export function createSplitsStore() {
 		{ ttl: 2 * 60 * 1000 }
 	)
 
-	// current draft
-	// const draftQuery = createQuery<SplitResponse | null>(
-	// 	CACHE_KEYS.draft,
-	// 	async () => {
-	// 		try {
-	// 			return await api.get<SplitResponse>('splits/draft')
-	// 		} catch (e: any) {
-	// 			if (e.status === 404) return null
-	// 			throw e
-	// 		}
-	// 	},
-	// 	{ ttl: 60 * 1000 }
-	// )
+	const draftQuery = createQuery<SplitResponse | null>(
+		CACHE_KEYS.draft,
+		async () => {
+			try {
+				return await api.get<SplitResponse>('splits/draft')
+			} catch (e: any) {
+				// no draft
+				if (e instanceof ApiError && e.isNotFound) {
+					return null
+				}
+				throw e
+			}
+		},
+		{ ttl: 60 * 1000 }
+	)
 
 	// fetch single split by id
 	function fetchById(id: string) {
@@ -146,7 +149,7 @@ export function createSplitsStore() {
 		// queries
 		active: activeQuery,
 		grouped: groupedQuery,
-		// draft: draftQuery,
+		draft: draftQuery,
 		fetchById,
 		fetchByShortId,
 

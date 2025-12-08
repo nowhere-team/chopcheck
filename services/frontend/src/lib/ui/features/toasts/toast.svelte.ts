@@ -15,9 +15,33 @@ interface ToastOptions {
 
 class ToastController {
 	private _toasts = $state<Toast[]>([])
+	private queue: Toast[] = []
+	private readonly maxVisible = 3
 
 	get toasts() {
 		return this._toasts
+	}
+
+	private enqueue(toast: Toast) {
+		// если места нет — добавляем в очередь
+		if (this._toasts.length >= this.maxVisible) {
+			this.queue.push(toast)
+			return
+		}
+		this._toasts = [...this._toasts, toast]
+		if (toast.duration > 0) {
+			setTimeout(() => this.dismiss(toast.id), toast.duration)
+		}
+	}
+
+	private tryFlushQueue() {
+		while (this._toasts.length < this.maxVisible && this.queue.length > 0) {
+			const next = this.queue.shift()!
+			this._toasts = [...this._toasts, next]
+			if (next.duration > 0) {
+				setTimeout(() => this.dismiss(next.id), next.duration)
+			}
+		}
 	}
 
 	private add(message: string, type: ToastType, options: ToastOptions = {}): string {
@@ -25,22 +49,20 @@ class ToastController {
 		const duration = options.duration ?? (type === 'error' ? 5000 : 3000)
 		const dismissible = options.dismissible ?? true
 
-		const toast: Toast = { id, message, type, duration, dismissible }
-		this._toasts = [...this._toasts, toast]
-
-		if (duration > 0) {
-			setTimeout(() => this.dismiss(id), duration)
-		}
+		const t: Toast = { id, message, type, duration, dismissible }
+		this.enqueue(t)
 
 		return id
 	}
 
 	dismiss(id: string): void {
 		this._toasts = this._toasts.filter(t => t.id !== id)
+		this.tryFlushQueue()
 	}
 
 	dismissAll(): void {
 		this._toasts = []
+		this.queue = []
 	}
 
 	success(message: string, options?: ToastOptions): string {
@@ -59,8 +81,6 @@ class ToastController {
 		return this.add(message, 'warning', options)
 	}
 
-	// special toast for connection issues
-	// todo: i18n
 	connectionLost(): string {
 		return this.add('Соединение с сервером потеряно', 'error', {
 			duration: 0,
@@ -69,7 +89,6 @@ class ToastController {
 	}
 
 	connectionRestored(): void {
-		// find and remove connection lost toast
 		this._toasts = this._toasts.filter(t => t.message !== 'Соединение с сервером потеряно')
 		this.success('Соединение восстановлено')
 	}

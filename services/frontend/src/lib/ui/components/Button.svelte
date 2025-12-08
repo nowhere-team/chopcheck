@@ -1,6 +1,5 @@
-<!--suppress CssUnusedSymbol -->
 <script lang="ts">
-	import type { Component, Snippet } from 'svelte'
+	import type { Snippet } from 'svelte'
 	import { getContext } from 'svelte'
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 
@@ -13,8 +12,8 @@
 		variant?: Variant
 		size?: Size
 		loading?: boolean
-		icon?: Component
-		iconSize?: number
+		iconLeft?: Snippet
+		iconRight?: Snippet
 		children?: Snippet
 		'aria-label'?: string
 	}
@@ -24,8 +23,8 @@
 		size = 'md',
 		loading = false,
 		disabled = false,
-		icon: IconComponent,
-		iconSize = 20,
+		iconLeft,
+		iconRight,
 		children,
 		onclick,
 		class: className,
@@ -49,13 +48,14 @@
 		}
 	}
 
+	const isIconOnly = $derived((iconLeft || iconRight) && !children)
 	const computedAriaLabel = $derived(ariaLabel || (children ? undefined : 'button'))
 </script>
 
 <button
 	class="button {variant} {size} {className || ''}"
 	class:loading
-	class:icon-only={IconComponent && !children}
+	class:icon-only={isIconOnly}
 	disabled={disabled || loading}
 	onclick={handleClick}
 	aria-label={computedAriaLabel}
@@ -65,15 +65,23 @@
 	{#if loading}
 		<span class="spinner" aria-hidden="true"></span>
 	{:else}
-		{#if IconComponent}
-			<span class="icon" aria-hidden="true">
-				<IconComponent size={iconSize} />
-			</span>
-		{/if}
+		<div class="button-content">
+			{#if iconLeft}
+				<span class="icon" aria-hidden="true">
+					{@render iconLeft()}
+				</span>
+			{/if}
 
-		{#if children}
-			<span class="label">{@render children()}</span>
-		{/if}
+			{#if children}
+				<span class="label">{@render children()}</span>
+			{/if}
+
+			{#if iconRight}
+				<span class="icon" aria-hidden="true">
+					{@render iconRight()}
+				</span>
+			{/if}
+		</div>
 	{/if}
 </button>
 
@@ -82,7 +90,6 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: var(--space-2);
 		font-weight: var(--font-medium);
 		border-radius: var(--radius-md);
 		cursor: pointer;
@@ -92,9 +99,16 @@
 			transform var(--duration-fast) var(--ease-out),
 			opacity var(--duration-fast) var(--ease-out),
 			background var(--duration-fast) var(--ease-out);
-
-		/* reset default border style */
 		border: 1px solid transparent;
+	}
+
+	.button-content {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-2);
+		width: 100%;
+		min-width: 0;
 	}
 
 	/* sizes */
@@ -127,6 +141,10 @@
 	.icon-only.lg {
 		width: 52px;
 		padding: 0;
+	}
+
+	.icon-only .button-content {
+		gap: 0;
 	}
 
 	/* variants */
@@ -173,12 +191,14 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
+		line-height: 1;
 	}
 
 	.label {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		min-width: 0;
 	}
 
 	.spinner {

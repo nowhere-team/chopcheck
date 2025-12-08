@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { CheckCircle, Info, Warning, X, XCircle } from 'phosphor-svelte'
-	import type { Component } from 'svelte'
+	import { type Component, onMount } from 'svelte'
 	import { fly } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { Button } from '$lib/ui/components'
 
 	import { type Toast, toast, type ToastType } from './toast.svelte'
 
@@ -23,28 +24,109 @@
 
 	const Icon = $derived(icons[item.type])
 
+	let startX = $state(0)
+	let currentX = $state(0)
+	let dragging = $state(false)
+	let el = $state<HTMLDivElement | null>(null)
+
+	let progress = $state(100)
+	let progressInterval = $state<number | null>(null)
+
 	function handleDismiss() {
 		platform.haptic.impact('light')
 		toast.dismiss(item.id)
 	}
+
+	function onTouchStart(e: TouchEvent) {
+		if (!item.dismissible) return
+		startX = e.touches[0].clientX
+		dragging = true
+		if (progressInterval) {
+			clearInterval(progressInterval)
+			progressInterval = null
+		}
+	}
+
+	function onTouchMove(e: TouchEvent) {
+		if (!dragging) return
+		currentX = e.touches[0].clientX - startX
+		if (el) {
+			el.style.transform = `translateX(${currentX}px)`
+			el.style.opacity = `${Math.max(0.3, 1 - Math.abs(currentX) / 200)}`
+		}
+	}
+
+	function onTouchEnd() {
+		if (!dragging) return
+		dragging = false
+		if (Math.abs(currentX) > 80) {
+			handleDismiss()
+		} else {
+			if (el) {
+				el.style.transform = ''
+				el.style.opacity = ''
+			}
+			// resume progress
+			startProgressCountdown()
+		}
+		currentX = 0
+	}
+
+	function startProgressCountdown() {
+		if (item.duration <= 0) return
+		const total = item.duration
+		const step = 100
+		const tick = Math.max(40, Math.floor(total / step))
+		let elapsed = 0
+		progress = 100
+		progressInterval = setInterval(() => {
+			elapsed += tick
+			progress = Math.max(0, 100 - (elapsed / total) * 100)
+			if (elapsed >= total) {
+				clearInterval(progressInterval!)
+				progressInterval = null
+			}
+		}, tick) as unknown as number // that's not node, its browser
+	}
+
+	onMount(() => {
+		startProgressCountdown()
+		return () => {
+			if (progressInterval) clearInterval(progressInterval)
+		}
+	})
 </script>
 
+<!--suppress HtmlUnknownAttribute -->
 <div
+	bind:this={el}
 	class="toast {item.type}"
 	role="alert"
-	in:fly={{ y: 20, duration: 250 }}
+	in:fly={{ y: -20, duration: 250 }}
 	out:fly={{ y: -20, duration: 200 }}
+	ontouchstart={onTouchStart}
+	ontouchmove={onTouchMove}
+	ontouchend={onTouchEnd}
 >
-	<span class="icon">
+	<div class="content">
 		<Icon size={20} weight="fill" />
-	</span>
 
-	<span class="message">{item.message}</span>
+		<span class="message">{item.message}</span>
+	</div>
 
 	{#if item.dismissible}
-		<button class="dismiss" onclick={handleDismiss} aria-label="закрыть">
-			<X size={16} />
-		</button>
+		<!--suppress JSUnusedGlobalSymbols -->
+		<Button variant="ghost" size="sm" onclick={handleDismiss} aria-label="Закрыть">
+			{#snippet iconLeft()}
+				<X size={16} />
+			{/snippet}
+		</Button>
+	{/if}
+
+	{#if item.duration > 0}
+		<div class="progress" aria-hidden="true">
+			<div class="bar" style="width: {progress}%"></div>
+		</div>
 	{/if}
 </div>
 
@@ -52,84 +134,43 @@
 	.toast {
 		display: flex;
 		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-3) var(--space-4);
+		justify-content: space-between;
+		padding: var(--space-2) var(--space-4);
 		background: var(--glass-bg);
 		backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		border: 1px solid var(--glass-border);
-		border-radius: 50px;
-		box-shadow:
-			0 8px 32px rgba(0, 0, 0, 0.12),
-			0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+		border-radius: 12px;
 		font-size: var(--text-sm);
 		font-weight: var(--font-medium);
 		color: var(--color-text);
-		max-width: calc(100vw - 32px);
+		min-width: 90%;
 		pointer-events: auto;
+		position: relative;
+		overflow: hidden;
 	}
 
-	.toast.success {
-		border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
-	}
-
-	.toast.success .icon {
-		color: var(--color-success);
-	}
-
-	.toast.error {
-		border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
-	}
-
-	.toast.error .icon {
-		color: var(--color-error);
-	}
-
-	.toast.warning {
-		border-color: color-mix(in srgb, #f59e0b 30%, transparent);
-	}
-
-	.toast.warning .icon {
-		color: #f59e0b;
-	}
-
-	.toast.info {
-		border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
-	}
-
-	.toast.info .icon {
-		color: var(--color-primary);
-	}
-
-	.icon {
-		display: flex;
-		flex-shrink: 0;
-	}
-
-	.message {
-		flex: 1;
-		min-width: 0;
-	}
-
-	.dismiss {
+	.content {
 		display: flex;
 		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border-radius: 50%;
-		color: var(--color-text-tertiary);
-		cursor: pointer;
-		transition: all 0.15s;
-		flex-shrink: 0;
+		gap: var(--space-3);
 	}
 
-	.dismiss:hover {
-		background: var(--color-bg-tertiary);
-		color: var(--color-text);
+	.progress {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 3px;
+		background: transparent;
 	}
 
-	.dismiss:active {
-		transform: scale(0.9);
+	.progress .bar {
+		height: 100%;
+		background: linear-gradient(
+			90deg,
+			var(--color-primary),
+			color-mix(in srgb, var(--color-primary) 30%, var(--color-bg))
+		);
+		transition: width 120ms linear;
 	}
 </style>

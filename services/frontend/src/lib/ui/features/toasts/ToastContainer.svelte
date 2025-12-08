@@ -16,17 +16,17 @@
 <style>
 	.toast-container {
 		position: fixed;
-		bottom: calc(var(--safe-bottom) + 90px);
+		top: calc(var(--safe-top) + 12px);
 		left: 50%;
 		transform: translateX(-50%);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: var(--space-2);
-		z-index: var(--z-toast);
+		z-index: calc(var(--z-toast) + 10);
 		pointer-events: none;
 		width: 100%;
-		max-width: 400px;
+		max-width: 420px;
 		padding: 0 var(--space-4);
 	}
 </style>

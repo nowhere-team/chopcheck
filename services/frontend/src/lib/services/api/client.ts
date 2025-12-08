@@ -1,6 +1,7 @@
 import type { PlatformStorage } from '$lib/platform/types'
 import { API_BASE_URL, API_TIMEOUT, STORAGE_KEYS } from '$lib/shared/constants'
 import { createLogger } from '$lib/shared/logger'
+import { sleep } from '$lib/shared/time'
 
 import { ApiError, type ApiRequestOptions } from './types'
 
@@ -11,6 +12,9 @@ class ApiClient {
 	private storage: PlatformStorage | null = null
 	private tokenCache: string | null = null
 	private refreshPromise: Promise<void> | null = null
+
+	private readonly maxRetries = 2
+	private readonly backoffBase = 300 // ms
 
 	constructor(baseUrl: string = API_BASE_URL) {
 		this.baseUrl = baseUrl
@@ -53,6 +57,52 @@ class ApiClient {
 		return null
 	}
 
+	private isRetryableError(err: ApiError): boolean {
+		// retry on network error / timeout / 5xx / 429
+		if (err.isNetworkError) return true
+		if (err.status >= 500) return true
+		return err.status === 408 || err.status === 429
+	}
+
+	private normalizeError(error: unknown): ApiError {
+		if (error instanceof ApiError) return error
+
+		if (
+			error instanceof Error &&
+			(error.name === 'AbortError' || error.message.includes('timeout'))
+		) {
+			return new ApiError('Request timeout', 408, 'TIMEOUT')
+		}
+
+		return new ApiError(
+			error instanceof Error ? error.message : 'Unknown error',
+			0,
+			'NETWORK_ERROR'
+		)
+	}
+
+	private async fetchWithRetry(
+		input: RequestInfo,
+		init: RequestInit,
+		attempt = 0
+	): Promise<Response> {
+		try {
+			const res = await fetch(input, init)
+			return res
+		} catch (err) {
+			const apiErr = this.normalizeError(err)
+			if (attempt >= this.maxRetries || !this.isRetryableError(apiErr)) {
+				throw apiErr
+			}
+			const backoff = Math.round(
+				this.backoffBase * Math.pow(2, attempt) * (0.8 + Math.random() * 0.4) // jitter
+			)
+			log.debug('request failed, retrying', { attempt, backoff, err: apiErr.message })
+			await sleep(backoff)
+			return this.fetchWithRetry(input, init, attempt + 1)
+		}
+	}
+
 	async request<T>(
 		method: string,
 		endpoint: string,
@@ -71,14 +121,15 @@ class ApiClient {
 			}
 		}
 
-		const url = `${this.baseUrl}/${endpoint}`
+		const url = `${this.baseUrl.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`
+
 		const controller = new AbortController()
 		const timeoutId = setTimeout(() => controller.abort(), timeout)
 
 		try {
 			log.debug(`${method} ${endpoint}`)
 
-			const response = await fetch(url, {
+			const response = await this.fetchWithRetry(url, {
 				method,
 				headers,
 				body: data ? JSON.stringify(data) : undefined,
@@ -119,20 +170,6 @@ class ApiClient {
 			response.status,
 			errorData.code,
 			errorData.details
-		)
-	}
-
-	private normalizeError(error: unknown): ApiError {
-		if (error instanceof ApiError) return error
-
-		if (error instanceof Error && error.name === 'AbortError') {
-			return new ApiError('Request timeout', 408, 'TIMEOUT')
-		}
-
-		return new ApiError(
-			error instanceof Error ? error.message : 'Unknown error',
-			0,
-			'NETWORK_ERROR'
 		)
 	}
 

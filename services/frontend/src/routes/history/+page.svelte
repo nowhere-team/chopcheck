@@ -1,103 +1,88 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 
-	import { goto } from '$app/navigation'
-	import { resolve } from '$app/paths'
-	import { getPlatform } from '$lib/app/context.svelte'
-	import { formatPrice } from '$lib/shared/money'
-	import { getSplitsStore, getUserStore } from '$lib/state'
-	import { CollapsibleSection, SplitCard, StatsBox } from '$lib/ui/components'
+	import { getSplitsStore } from '$lib/state'
+	import { Button, Card, EditableText, PriceInput } from '$lib/ui/components'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
-	import StatsSkeleton from '$lib/ui/features/stats/StatsSkeleton.svelte'
 	import { toast } from '$lib/ui/features/toasts'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
-	const platform = getPlatform()
-	const userStore = getUserStore()
 	const splitsStore = getSplitsStore()
+	const draftQuery = splitsStore.draft
+	const createOrUpdate = splitsStore.createOrUpdate
 
-	const stats = $derived(userStore.stats)
-	const activeSplits = $derived(splitsStore.active)
+	let name = $state('')
+	let currency = $state('RUB')
+	let isLoading = $state(true)
+	let isSaving = $state(false)
+	let sum = $state(0)
+	let draftId: string | undefined
 
-	onMount(() => {
-		userStore.stats.fetch()
-		splitsStore.active.fetch()
-	})
-
-	function handleSplitClick(split: { id: string; shortId: string }) {
-		platform.haptic.impact('light')
-		goto(resolve('/splits/[id]', { id: split.shortId }))
-	}
-
-	function handleError() {
-		toast.error('Не удалось обновить данные')
-	}
-
-	$effect(() => {
-		if (stats.isError || activeSplits.isError) {
-			handleError()
+	onMount(async () => {
+		try {
+			isLoading = true
+			await draftQuery.fetch()
+			if (draftQuery.data) {
+				name = draftQuery.data.split.name
+				currency = draftQuery.data.split.currency
+				draftId = draftQuery.data.split.id
+			}
+		} catch {
+			// already processed
+		} finally {
+			isLoading = false
 		}
 	})
 
-	const isStatsLoading = $derived(stats.isLoading && !stats.data)
-	const isSplitsLoading = $derived(activeSplits.isLoading && !activeSplits.data)
+	async function saveDraft() {
+		isSaving = true
+		try {
+			const dto: any = { name, currency }
+			if (draftId) dto.id = draftId
+			const res = await createOrUpdate.mutate(dto)
+			if (res) {
+				toast.success('Черновик сохранён')
+				draftId = res.split.id
+			} else {
+				toast.error('Не удалось сохранить черновик')
+			}
+		} finally {
+			isSaving = false
+		}
+	}
 </script>
 
-<Page title="Главная">
-	<!-- Statistics Section -->
-	<section class="stats-section">
-		{#if isStatsLoading}
-			<StatsSkeleton />
-		{:else if stats.data}
-			<div class="stats-grid">
-				<StatsBox label="Всего сплитов" value={stats.data.totalJoinedSplits} />
-				<StatsBox
-					label="Потрачено в этом месяце"
-					value={formatPrice(stats.data.monthlySpent)}
-				/>
-			</div>
-		{/if}
-	</section>
+<Page title="Создать сплит">
+	{#if isLoading}
+		<Card>
+			<SplitCardSkeleton count={1} />
+		</Card>
+	{:else}
+		<Card>
+			<EditableText bind:value={name} placeholder="Название сплита" />
+			<div style="height: 12px"></div>
+			<PriceInput label="Примерная сумма" bind:value={sum} currencySymbol="₽" />
+			<div style="height: 16px"></div>
 
-	<!-- Active Splits Section -->
-	<CollapsibleSection title="Ваши сплиты" count={activeSplits.data?.length ?? 0}>
-		{#if isSplitsLoading}
-			<div class="splits-list">
-				<SplitCardSkeleton count={3} />
+			<div class="actions">
+				<Button variant="secondary" onclick={saveDraft} loading={isSaving}
+					>Сохранить как черновик</Button
+				>
+				<Button
+					variant="primary"
+					onclick={() => {
+						/* publish flow */
+					}}>Опубликовать</Button
+				>
 			</div>
-		{:else if activeSplits.data && activeSplits.data.length > 0}
-			<div class="splits-list">
-				{#each activeSplits.data as split (split.id)}
-					<SplitCard {split} onclick={() => handleSplitClick(split)} />
-				{/each}
-			</div>
-		{:else if !activeSplits.isLoading}
-			<p class="empty-state">Нет активных сплитов</p>
-		{/if}
-	</CollapsibleSection>
+		</Card>
+	{/if}
 </Page>
 
 <style>
-	.stats-section {
-		margin-bottom: var(--space-2);
-	}
-
-	.stats-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-3);
-	}
-
-	.splits-list {
+	.actions {
 		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: var(--space-8) var(--space-4);
-		color: var(--color-text-tertiary);
-		font-size: var(--text-sm);
+		gap: var(--space-3);
+		margin-top: var(--space-4);
 	}
 </style>
