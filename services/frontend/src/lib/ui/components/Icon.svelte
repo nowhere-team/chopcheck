@@ -1,21 +1,21 @@
 <script lang="ts">
-	import type { Component } from 'svelte'
+	import type { Snippet } from 'svelte'
 
 	interface Props {
-		icon: Component
 		size?: number
 		color?: string
 		'aria-hidden'?: boolean | 'true' | 'false'
 		'aria-label'?: string
+		children: Snippet
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
 	const {
-		icon: HostIcon,
 		size = 24,
 		color,
 		'aria-hidden': ariaHidden = true,
-		'aria-label': ariaLabel
+		'aria-label': ariaLabel,
+		children
 	}: Props = $props()
 </script>
 
@@ -28,7 +28,7 @@
 	aria-label={ariaLabel}
 	role={ariaLabel ? 'img' : undefined}
 >
-	<HostIcon {size} />
+	{@render children()}
 </span>
 
 <style>
