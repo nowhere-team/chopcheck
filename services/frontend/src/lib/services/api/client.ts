@@ -11,10 +11,10 @@ class ApiClient {
 	private readonly baseUrl: string
 	private storage: PlatformStorage | null = null
 	private tokenCache: string | null = null
-	private refreshPromise: Promise<void> | null = null
+	private useCredentials = true
 
 	private readonly maxRetries = 2
-	private readonly backoffBase = 300 // ms
+	private readonly backoffBase = 300
 
 	constructor(baseUrl: string = API_BASE_URL) {
 		this.baseUrl = baseUrl
@@ -39,6 +39,7 @@ class ApiClient {
 	}
 
 	async hasToken(): Promise<boolean> {
+		if (this.useCredentials) return true
 		const token = await this.getToken()
 		return token !== null
 	}
@@ -58,7 +59,6 @@ class ApiClient {
 	}
 
 	private isRetryableError(err: ApiError): boolean {
-		// retry on network error / timeout / 5xx / 429
 		if (err.isNetworkError) return true
 		if (err.status >= 500) return true
 		return err.status === 408 || err.status === 429
@@ -95,7 +95,7 @@ class ApiClient {
 				throw apiErr
 			}
 			const backoff = Math.round(
-				this.backoffBase * Math.pow(2, attempt) * (0.8 + Math.random() * 0.4) // jitter
+				this.backoffBase * Math.pow(2, attempt) * (0.8 + Math.random() * 0.4)
 			)
 			log.debug('request failed, retrying', { attempt, backoff, err: apiErr.message })
 			await sleep(backoff)
@@ -114,7 +114,7 @@ class ApiClient {
 		const headers = new Headers(fetchOptions.headers)
 		headers.set('Content-Type', 'application/json')
 
-		if (!skipAuth) {
+		if (!skipAuth && !this.useCredentials) {
 			const token = await this.getToken()
 			if (token) {
 				headers.set('Authorization', `Bearer ${token}`)
@@ -134,6 +134,7 @@ class ApiClient {
 				headers,
 				body: data ? JSON.stringify(data) : undefined,
 				signal: controller.signal,
+				credentials: this.useCredentials ? 'include' : 'same-origin',
 				...fetchOptions
 			})
 
@@ -162,7 +163,7 @@ class ApiClient {
 		try {
 			errorData = await response.json()
 		} catch {
-			// ignore parse errors
+			// ignore
 		}
 
 		throw new ApiError(

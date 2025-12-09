@@ -1,7 +1,16 @@
 ﻿import { and, eq, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { setCookie } from 'hono/cookie'
 
 import { schema } from '@/platform/database'
+
+const COOKIE_OPTIONS = {
+	httpOnly: true,
+	secure: false,
+	sameSite: 'Lax' as const,
+	maxAge: 7 * 24 * 60 * 60,
+	path: '/',
+}
 
 export function createDevRoutes() {
 	return new Hono().post('/telegram', async c => {
@@ -50,7 +59,7 @@ export function createDevRoutes() {
 				id: authUser.user_id,
 				telegramId: telegram_id,
 				username,
-				displayName: first_name || username || 'Р°РЅРѕРЅРёРј',
+				displayName: first_name || username || 'аноним',
 				avatarUrl: photo_url || '',
 			})
 			localUser = await db.query.users.findFirst({ where: eq(schema.users.id, authUser.user_id) })
@@ -72,6 +81,8 @@ export function createDevRoutes() {
 			permissions: ['cc:splits:read', 'cc:splits:write', 'cc:splits:create'],
 			client_info: { user_agent: c.req.header('user-agent'), platform: 'telegram' },
 		})
+
+		setCookie(c, 'access_token', token.access_token, COOKIE_OPTIONS)
 
 		return c.json({
 			access_token: token.access_token,

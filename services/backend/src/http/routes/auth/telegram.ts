@@ -1,5 +1,6 @@
 ﻿import { parse, validate } from '@tma.js/init-data-node'
 import { Hono } from 'hono'
+import { setCookie } from 'hono/cookie'
 import { z } from 'zod'
 
 import { validate as v } from '@/http/utils'
@@ -38,6 +39,14 @@ export function createTelegramAuthRoute() {
 			requested_by: 'chopcheck',
 			permissions: ['cc:splits:read', 'cc:splits:write', 'cc:splits:create'],
 			client_info: { user_agent: c.req.header('user-agent'), platform: 'telegram' },
+		})
+
+		setCookie(c, 'access_token', token.access_token, {
+			httpOnly: true,
+			secure: !config.development,
+			sameSite: config.development ? 'Lax' : 'Strict',
+			maxAge: 7 * 24 * 60 * 60,
+			path: '/',
 		})
 
 		return c.json({
