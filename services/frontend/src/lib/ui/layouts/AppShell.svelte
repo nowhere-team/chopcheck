@@ -16,6 +16,9 @@
 	const { navbar, children }: Props = $props()
 	const platform = getPlatform()
 
+	// Прокидываем платформу для CSS хаков если понадобятся
+	const platformType = $derived(platform.type)
+
 	onMount(() => {
 		connectionMonitor.init()
 		return () => connectionMonitor.destroy()
@@ -31,10 +34,11 @@
 
 <ToastContainer />
 
-<div class="shell">
+<div class="shell" data-platform={platformType}>
 	<div class="container">
 		<main class="content">
-			<div class="content-inner">
+			<!-- Убрали жесткие паддинги, теперь этим рулит Page -->
+			<div class="content-viewport">
 				{@render children?.()}
 			</div>
 		</main>
@@ -48,6 +52,14 @@
 <div id="portal-root"></div>
 
 <style>
+	/* Глобальные дефолты для safe-area, чтобы calc() не ломался в вебе */
+	:global(:root) {
+		--safe-top: 0px;
+		--safe-bottom: 0px;
+		--safe-left: 0px;
+		--safe-right: 0px;
+	}
+
 	.shell {
 		min-height: 100dvh;
 		display: flex;
@@ -75,16 +87,17 @@
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 		view-transition-name: page;
+		position: relative;
 	}
 
 	.content::-webkit-scrollbar {
 		display: none;
 	}
 
-	.content-inner {
-		padding: var(--safe-top) max(var(--safe-right), 16px) calc(90px + var(--safe-bottom))
-			max(var(--safe-left), 16px);
+	.content-viewport {
 		min-height: 100%;
+		display: flex;
+		flex-direction: column;
 	}
 
 	#portal-root {

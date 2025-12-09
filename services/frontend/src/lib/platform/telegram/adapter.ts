@@ -64,10 +64,12 @@ export class TelegramPlatform implements Platform {
 				await this.sdk.viewport.mount()
 			}
 
-			// todo: only android
-			// if (this.sdk.viewport.requestFullscreen.isAvailable()) {
-			// 	this.sdk.viewport.requestFullscreen()
-			// }
+			if (
+				this.isMobile(this.launchParams.tgWebAppPlatform) &&
+				this.sdk.viewport.requestFullscreen.isAvailable()
+			) {
+				this.sdk.viewport.requestFullscreen()
+			}
 
 			if (this.sdk.miniApp.mountSync.isAvailable()) {
 				this.sdk.miniApp.mountSync()
@@ -184,6 +186,10 @@ export class TelegramPlatform implements Platform {
 		}
 	}
 
+	getAppPlatform(): string | null {
+		return this.launchParams?.tgWebAppPlatform ?? null
+	}
+
 	hasFeature(feature: PlatformFeature): boolean {
 		if (!this.sdk) return false
 
@@ -201,6 +207,10 @@ export class TelegramPlatform implements Platform {
 			default:
 				return false
 		}
+	}
+
+	private isMobile(platform: string) {
+		return platform === 'ios' || platform === 'android'
 	}
 }
 

@@ -1,235 +1,99 @@
 <script lang="ts">
-	import { Button, Card } from '$lib/ui/components'
-	import Avatar from '$lib/ui/components/Avatar.svelte'
-	import BottomSheet from '$lib/ui/components/BottomSheet.svelte'
-	import EditableText from '$lib/ui/components/EditableText.svelte'
-	import PriceInput from '$lib/ui/components/PriceInput.svelte'
-	import Select from '$lib/ui/components/Select.svelte'
-	import Toggle from '$lib/ui/components/Toggle.svelte'
+	import { onMount } from 'svelte'
+
+	import { goto } from '$app/navigation'
+	import { resolve } from '$app/paths'
+	import { getPlatform } from '$lib/app/context.svelte'
+	import { formatPrice } from '$lib/shared/money'
+	import { getSplitsStore, getUserStore } from '$lib/state'
+	import { CollapsibleSection } from '$lib/ui/components'
+	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
+	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
+	import StatsBox from '$lib/ui/features/stats/StatsBox.svelte'
+	import StatsSkeleton from '$lib/ui/features/stats/StatsSkeleton.svelte'
+	import { toast } from '$lib/ui/features/toasts'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
-	// состояние для тестов
-	let splitName = $state('Шашлыки на даче')
-	let selectedMethod = $state('equal')
-	let priceValue = $state(125000) // в копейках
-	let isNotificationsEnabled = $state(true)
-	let isSheetOpen = $state(false)
+	const platform = getPlatform()
 
-	const methods = [
-		{ value: 'equal', label: 'Поровну' },
-		{ value: 'shares', label: 'По долям' },
-		{ value: 'exact', label: 'Точные суммы' }
-	]
+	const userStore = getUserStore()
+	const stats = $derived(userStore.stats)
+	const isStatsLoading = $derived(stats.isLoading && !stats.data)
+
+	const splitsStore = getSplitsStore()
+	const activeSplits = $derived(splitsStore.active)
+	const isSplitsLoading = $derived(activeSplits.isLoading && !activeSplits.data)
+
+	onMount(() => {
+		userStore.stats.fetch()
+		splitsStore.active.fetch()
+	})
+
+	$effect(() => {
+		if (stats.isError || activeSplits.isError) {
+			toast.error('Не удалось обновить данные')
+		}
+	})
+
+	function handleSplitClick(split: { id: string; shortId: string }) {
+		platform.haptic.impact('light')
+		goto(resolve('/splits/[id]', { id: split.shortId }))
+	}
 </script>
 
-<Page>
-	<!-- Хедер с редактируемым заголовком -->
-	<section class="head">
-		<Avatar name={splitName} size={80} id="split-main" />
-		<EditableText
-			bind:value={splitName}
-			adaptive
-			animated
-			centered
-			placeholder="Название сплита"
-		/>
-		<div class="status-badge">черновик</div>
+<Page title="Главная">
+	<section class="stats-section">
+		{#if isStatsLoading}
+			<StatsSkeleton />
+		{:else if stats.data}
+			<div class="stats-grid">
+				<StatsBox label="Всего сплитов" value={stats.data.totalJoinedSplits} />
+				<StatsBox
+					label="Потрачено в этом месяце"
+					value={formatPrice(stats.data.monthlySpent)}
+				/>
+			</div>
+		{/if}
 	</section>
 
-	<!-- Секция настроек (Inputs test) -->
-	<Card variant="elevated">
-		<div class="row header-row">
-			<h2 class="section-title">Параметры</h2>
-		</div>
-
-		<div class="form-grid">
-			<Select label="Метод разделения" bind:value={selectedMethod} options={methods} />
-
-			<PriceInput label="Общая сумма" bind:value={priceValue} currencySymbol="₽" />
-
-			<div class="row setting-row">
-				<span class="label">Уведомлять участников</span>
-				<Toggle bind:checked={isNotificationsEnabled} />
+	<CollapsibleSection title="Активные сплиты" count={activeSplits.data?.length ?? 0}>
+		{#if isSplitsLoading}
+			<div class="splits-list">
+				<SplitCardSkeleton count={3} />
 			</div>
-		</div>
-	</Card>
-
-	<!-- Демо участников (List test) -->
-	<Card>
-		<div class="row header-row">
-			<h3>Участники</h3>
-			<span class="badge">3</span>
-		</div>
-
-		<div class="participants">
-			<div class="row item">
-				<div class="left">
-					<Avatar name="Мария Иванова" id="u1" size={40} />
-					<div class="info">
-						<span class="name">Мария (Вы)</span>
-						<span class="role">Организатор</span>
-					</div>
-				</div>
-				<span class="money positive">+500 ₽</span>
+		{:else if activeSplits.data && activeSplits.data.length > 0}
+			<div class="splits-list">
+				{#each activeSplits.data as split (split.id)}
+					<SplitCard {split} onclick={() => handleSplitClick(split)} />
+				{/each}
 			</div>
-
-			<div class="row item">
-				<div class="left">
-					<Avatar name="Алексей К." id="u2" size={40} />
-					<div class="info">
-						<span class="name">Алексей</span>
-					</div>
-				</div>
-				<!-- <span class="money negative">-250 ₽</span> -->
-			</div>
-		</div>
-
-		<div class="actions-row">
-			<Button variant="secondary" size="sm" onclick={() => (isSheetOpen = true)}>
-				Открыть меню
-			</Button>
-		</div>
-	</Card>
-
-	<!-- Кнопки действий -->
-	<div class="floating-actions">
-		<Button variant="primary" size="lg">Сохранить изменения</Button>
-	</div>
+		{:else if !isSplitsLoading}
+			<p class="empty-state">Нет активных сплитов</p>
+		{/if}
+	</CollapsibleSection>
 </Page>
 
-<!-- Bottom Sheet Test -->
-<BottomSheet bind:open={isSheetOpen} title="Действия" onclose={() => {}}>
-	<div class="sheet-content">
-		<Button variant="secondary" size="lg">Поделиться ссылкой</Button>
-		<Button variant="danger" size="lg">Удалить сплит</Button>
-	</div>
-</BottomSheet>
-
 <style>
-	.head {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-4) 0;
+	.stats-section {
+		margin-bottom: var(--space-2);
 	}
 
-	.status-badge {
-		font-size: var(--text-xs);
-		text-transform: uppercase;
-		background: var(--color-bg-secondary);
-		padding: 4px 8px;
-		border-radius: 6px;
-		color: var(--color-text-secondary);
-		letter-spacing: 0.05em;
-		font-weight: 600;
-	}
-
-	.section-title {
-		font-size: var(--text-sm);
-		color: var(--color-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		font-weight: 600;
-		margin: 0;
-	}
-
-	.form-grid {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-5);
-	}
-
-	.row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.row.header-row {
-		margin-bottom: var(--space-4);
-	}
-
-	.row.item {
-		padding: 10px 0;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.row.item:last-child {
-		border-bottom: none;
-	}
-
-	.row.setting-row {
-		padding: 4px 0;
-	}
-
-	.left {
-		display: flex;
-		align-items: center;
+	.stats-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
 		gap: var(--space-3);
 	}
 
-	.badge {
-		background: var(--color-bg-secondary);
-		padding: 2px 8px;
-		border-radius: 10px;
-		font-size: var(--text-sm);
-		font-weight: bold;
-		color: var(--color-text-primary);
-	}
-
-	.participants {
+	.splits-list {
 		display: flex;
 		flex-direction: column;
+		gap: var(--space-2);
 	}
 
-	.info {
-		display: flex;
-		flex-direction: column;
-	}
-
-	.name {
-		font-weight: 500;
-	}
-	.role {
-		font-size: var(--text-xs);
+	.empty-state {
+		text-align: center;
+		padding: var(--space-8) var(--space-4);
 		color: var(--color-text-tertiary);
-	}
-
-	.money {
-		font-weight: 600;
 		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-	}
-	.money.positive {
-		color: var(--color-success);
-	}
-
-	.actions-row {
-		margin-top: var(--space-4);
-		display: flex;
-	}
-
-	.actions-row :global(button) {
-		width: 100%;
-	}
-
-	.floating-actions {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		padding-bottom: var(--space-4);
-	}
-
-	.sheet-content {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		padding-bottom: var(--safe-bottom);
-	}
-
-	.label {
-		font-size: var(--text-base);
-		color: var(--color-text);
 	}
 </style>

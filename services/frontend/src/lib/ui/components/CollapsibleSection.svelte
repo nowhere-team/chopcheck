@@ -54,7 +54,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--space-3) 0;
+		padding: var(--space-3) var(--space-1);
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;
 	}

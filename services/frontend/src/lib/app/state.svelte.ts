@@ -68,13 +68,6 @@ export class App {
 
 		log.info('initialized', { platform: platform.type })
 
-		const skipConsents = import.meta.env.DEV && import.meta.env.VITE_DEV_USER_ID
-		if (skipConsents) {
-			log.info('dev mode: skipping consents')
-			await this.authenticate()
-			return
-		}
-
 		const consents = await this.loadConsents()
 		const needsConsent = consents.some(c => c.required && !c.accepted)
 
@@ -86,20 +79,29 @@ export class App {
 		await this.authenticate()
 	}
 
-	async acceptConsent(type: 'terms' | 'privacy'): Promise<void> {
-		const consents = this._state.consents.map(c =>
-			c.type === type ? { ...c, accepted: true } : c
-		)
+	async acceptAllConsents(): Promise<void> {
+		const newConsents = this._state.consents.map(c => ({ ...c, accepted: true }))
 
-		await this.saveConsents(consents)
+		// 1. optimistic update
+		this.updateState({ consents: newConsents, status: 'authenticating' })
 
-		const allAccepted = consents.filter(c => c.required).every(c => c.accepted)
-		if (allAccepted) {
-			this.updateState({ consents, status: 'authenticating' })
-			await this.authenticate()
-		} else {
-			this.updateState({ consents })
+		// 2. save locally
+		await this.saveConsents(newConsents)
+
+		// 3. try to sync with backend (fire and forget logic essentially, but we await to catch errors if needed)
+		try {
+			const payload = {
+				terms: true,
+				privacy: true,
+				data_processing: true,
+				accepted_at: new SvelteDate().toISOString()
+			}
+			await api.post('me/consents', payload)
+		} catch (e) {
+			log.warn('failed to sync consents with backend (safely ignored)', e)
 		}
+
+		await this.authenticate()
 	}
 
 	async logout(): Promise<void> {

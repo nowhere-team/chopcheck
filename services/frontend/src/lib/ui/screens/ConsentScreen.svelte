@@ -1,89 +1,83 @@
-<script lang="ts">
+<script>
+	import { ShieldCheck } from 'phosphor-svelte'
+
+	import { resolve } from '$app/paths'
 	import { getApp } from '$lib/app/context.svelte'
+	import { Button, Icon } from '$lib/ui/components'
+	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const app = getApp()
+	let loading = $state(false)
 
-	const consents = $derived(app.state.consents)
+	async function handleAgree() {
+		loading = true
+		await app.acceptAllConsents()
+	}
 </script>
 
-<div class="screen">
-	<div class="logo">🍔</div>
-	<h1>chopcheck</h1>
-	<p class="hint">для продолжения необходимо принять условия</p>
+<Page safeTop={2.5}>
+	<div class="content">
+		<main>
+			<Icon size={64} variant="placard" color="var(--color-primary)" class="mb-6">
+				<ShieldCheck weight="fill" size={48} />
+			</Icon>
 
-	<div class="consents">
-		{#each consents as consent (consent)}
-			<label class="consent-item">
-				<input
-					type="checkbox"
-					checked={consent.accepted}
-					onchange={() => app.acceptConsent(consent.type)}
-				/>
-				<span>
-					{consent.type === 'terms'
-						? 'условия использования'
-						: 'политика конфиденциальности'}
-					{#if consent.required}<span class="required">*</span>{/if}
-				</span>
-			</label>
-		{/each}
+			<h1>Безопасность и данные</h1>
+			<p>
+				Используя <strong>ChopCheck</strong>, ты соглашаешься с тем, что мы обрабатываем
+				твои данные из Telegram и чеки для работы приложения.
+			</p>
+			<p>
+				Подробнее в <a class="link" href={resolve('/privacy')}
+					>Политике конфиденциальности</a
+				>.
+			</p>
+		</main>
+		<footer>
+			<Button variant="primary" class="w-full" onclick={handleAgree} {loading}
+				>Понятно, поехали</Button
+			>
+		</footer>
 	</div>
-</div>
+</Page>
 
 <style>
-	/*noinspection CssOverwrittenProperties*/
-	.screen {
+	.content {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		min-height: 100vh;
-		min-height: 100dvh;
-		padding: 2rem;
-		text-align: center;
+		/*height: 100vh;*/
+		/*background: var(--color-bg);*/
+		overflow: hidden;
+		flex-grow: 1;
 	}
-
-	.logo {
-		font-size: 4rem;
-		margin-bottom: 1rem;
+	main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
 	}
 
 	h1 {
-		margin: 0 0 0.5rem;
-		font-size: 2rem;
-	}
-
-	.hint {
-		color: var(--color-hint);
-		margin: 0 0 2rem;
-	}
-
-	.consents {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		width: 100%;
-		max-width: 320px;
-	}
-
-	.consent-item {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 1rem;
-		background: var(--color-secondaryBg);
-		border-radius: 12px;
-		cursor: pointer;
-		user-select: none;
-	}
-
-	.consent-item input {
-		width: 20px;
-		height: 20px;
+		font-size: var(--text-2xl);
+		font-weight: var(--font-bold);
+		color: var(--color-text);
 		margin: 0;
 	}
 
-	.required {
-		color: #ef4444;
+	strong {
+		color: var(--color-primary);
+		font-weight: var(--font-semibold);
+	}
+
+	.link {
+		color: var(--color-primary);
+		font-weight: var(--font-medium);
+		text-decoration: underline;
+		text-underline-offset: 4px;
+		text-decoration-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+	}
+
+	:global(.w-full) {
+		width: 100%;
 	}
 </style>
