@@ -1,57 +1,125 @@
-import { start, stop } from '@/bootstrap'
+import { migrate } from 'drizzle-orm/bun-sql/migrator'
+import path from 'path'
 
-process.env.NODE_ENV = 'development'
+import { type ApiSpec, createRouter } from '@/http'
+import { createAuthClient } from '@/platform/auth'
+import { createCache } from '@/platform/cache'
+import { createDatabase, type Database } from '@/platform/database'
+import { createLogger, type Logger } from '@/platform/logger'
+import { createTracer } from '@/platform/tracing'
+import { createServices } from '@/services'
 
-let testApp: Awaited<ReturnType<typeof start>> | null = null
+import { createMockCatalogClient, createMockFnsClient, createMockTelegramClient } from './mocks'
 
-export async function setupTestApp() {
-	if (testApp) {
-		const baseURL = `http://localhost:${testApp.config.PORT}/api`
-		return { app: testApp, baseURL }
+export interface TestContext {
+	app: ApiSpec
+	db: Database
+	logger: Logger
+	cleanup: () => Promise<void>
+}
+
+let sharedContext: TestContext | null = null
+
+export async function createTestContext(): Promise<TestContext> {
+	if (sharedContext) {
+		return sharedContext
 	}
 
-	testApp = await start()
-	const baseURL = `http://localhost:${testApp.config.PORT}/api`
-
-	return { app: testApp, baseURL }
-}
-
-export async function teardownTestApp() {
-	if (testApp) {
-		await stop(testApp)
-		testApp = null
-	}
-}
-
-interface TestUser {
-	userId: string
-	token: string
-	telegramId: number
-}
-
-export async function createTestUser(baseURL: string, suffix: string = ''): Promise<TestUser> {
-	const telegram_id = Math.floor(Math.random() * 1000000000) + Date.now()
-	const username = `testuser_${telegram_id}${suffix}`
-
-	const response = await fetch(`${baseURL}/dev/telegram`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			telegram_id,
-			username,
-			first_name: `Test User ${suffix}`,
-			photo_url: 'https://example.com/avatar.jpg',
-		}),
+	const logger = createLogger({
+		name: 'test',
+		level: 'warn',
+		format: 'text',
 	})
 
-	if (!response.ok) {
-		throw new Error(`Failed to create test user: ${response.statusText}`)
+	const databaseUrl = process.env.DATABASE_URL
+	if (!databaseUrl) {
+		throw new Error('DATABASE_URL must be set. run tests via: bun run test:integration')
 	}
 
-	const data = (await response.json()) as { access_token: string; user: { id: string } }
-	return {
-		userId: data.user.id,
-		token: data.access_token,
-		telegramId: telegram_id,
+	logger.info('connecting to test database', { url: databaseUrl.replace(/:[^:@]+@/, ':***@') })
+
+	const db = await createDatabase(logger, { url: databaseUrl })
+
+	const migrationsPath = path.join(process.cwd(), 'migrations')
+	await migrate(db, { migrationsFolder: migrationsPath })
+	logger.info('migrations applied')
+
+	const cache = await createCache(logger, {
+		type: 'memory',
+		keyPrefix: 'test',
+		defaultTtl: 60,
+		maxMemoryItems: 1000,
+	})
+
+	const tracer = createTracer({
+		enabled: false,
+		serviceName: 'test',
+	})
+
+	const auth = createAuthClient(logger, cache, {
+		devMode: true,
+		serviceTimeout: 5000,
+		jwtSecret: 'test-secret-key-minimum-32-characters-long',
+		jwtIssuer: 'nowhere-auth-service',
+		jwtAudience: 'chopcheck',
+	})
+
+	const telegram = createMockTelegramClient()
+	const fns = createMockFnsClient()
+	const catalog = createMockCatalogClient()
+
+	const services = createServices(auth, db, cache, fns, catalog, logger)
+
+	const app = createRouter({
+		database: db,
+		auth,
+		telegram,
+		fns,
+		catalog,
+		services,
+		config: {
+			port: 0,
+			telegramToken: 'test-token',
+			webAppUrl: 'https://test.app',
+			development: true,
+		},
+		logger,
+		tracer,
+	})
+
+	const cleanup = async () => {
+		await cache.disconnect()
+		await db.$client.end()
+		sharedContext = null
+		logger.info('test context cleaned up')
 	}
+
+	sharedContext = { app, db, logger, cleanup }
+	return sharedContext
+}
+
+export function getTestContext(): TestContext {
+	if (!sharedContext) {
+		throw new Error('Test context not initialized. Call createTestContext() in beforeAll()')
+	}
+	return sharedContext
+}
+
+export async function resetTestData(ctx: TestContext): Promise<void> {
+	await ctx.db.execute(`
+		TRUNCATE TABLE
+			split_audit_log,
+			split_payments,
+			split_payment_methods,
+			split_item_participants,
+			split_items,
+			split_participants,
+			split_receipts,
+			splits,
+			receipt_items,
+			receipts,
+			user_payment_methods,
+			users
+		CASCADE
+	`)
 }
