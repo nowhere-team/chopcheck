@@ -58,5 +58,11 @@ export default defineConfig(
 				}
 			]
 		}
+	},
+	{
+		files: ['scripts/**/*.ts'],
+		rules: {
+			'no-console': 'off'
+		}
 	}
 )

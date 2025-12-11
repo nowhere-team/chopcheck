@@ -56,6 +56,7 @@
         "@telegram-apps/signals": "^1.1.2",
         "@tma.js/sdk": "^3.1.2",
         "@twemoji/api": "^16.0.1",
+        "fluent-optimized": "^2025.12.11",
         "grammy": "^1.38.3",
         "ky": "^1.14.0",
         "phosphor-svelte": "^3.0.1",
@@ -720,6 +721,8 @@
     "flat-cache": ["flat-cache@4.0.1", "", { "dependencies": { "flatted": "^3.2.9", "keyv": "^4.5.4" } }, "sha512-f7ccFPK3SXFHpx15UIGyRJ/FJQctuKZ0zVuN3frBo4HnK3cay9VEW0R6yPYFHC0AgqhukPzKjq22t5DmAyqGyw=="],
 
     "flatted": ["flatted@3.3.3", "", {}, "sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg=="],
+
+    "fluent-optimized": ["fluent-optimized@2025.12.11", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-SlaeKvkIUxCm1msVvOHlYu9O04SjXcWv3dwDp9rIMchuGbuFvQGObGzkv7+nrWg7gMR6hFNKfgrrpwGSK9P5LQ=="],
 
     "fp-ts": ["fp-ts@2.16.11", "", {}, "sha512-LaI+KaX2NFkfn1ZGHoKCmcfv7yrZsC3b8NtWsTVQeHkq4F27vI5igUuO53sxqDEa2gNQMHFPmpojDw/1zmUK7w=="],
 
