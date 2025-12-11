@@ -8,9 +8,36 @@ on:
     branches: [main, master, develop]
 
 jobs:
-  install:
-    name: Install Dependencies
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      telegram: ${{ steps.filter.outputs.telegram }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check which services changed
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'services/frontend/**'
+              - 'bun.lockb'
+            backend:
+              - 'services/backend/**'
+              - 'bun.lockb'
+            telegram:
+              - 'services/telegram/**'
+              - 'bun.lockb'
+
+  install-frontend:
+    name: Install Dependencies (Frontend)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v5
 
@@ -19,29 +46,85 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Cache Bun dependencies
+      - name: Cache dependencies
         uses: actions/cache@v4
-        id: bun-cache
+        id: cache
         with:
           path: |
             ~/.bun/install/cache
-            node_modules
-            services/*/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+            services/frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('services/frontend/package.json', 'bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-
+            ${{ runner.os }}-frontend-
 
       - name: Install dependencies
-        if: steps.bun-cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ./services/frontend
         run: bun install --frozen-lockfile
 
-  lint-and-check:
-    name: Lint & Type Check
+  install-backend:
+    name: Install Dependencies (Backend)
     runs-on: ubuntu-latest
-    needs: install
-    strategy:
-      matrix:
-        service: [frontend, backend, telegram]
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('services/backend/package.json', 'bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ./services/backend
+        run: bun install --frozen-lockfile
+
+  install-telegram:
+    name: Install Dependencies (Telegram)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.telegram == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/telegram/node_modules
+          key: ${{ runner.os }}-telegram-${{ hashFiles('services/telegram/package.json', 'bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-telegram-
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ./services/telegram
+        run: bun install --frozen-lockfile
+
+  lint-frontend:
+    name: Lint & Type Check (Frontend)
+    runs-on: ubuntu-latest
+    needs: [changes, install-frontend]
+    if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v5
 
@@ -55,20 +138,68 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            node_modules
-            services/*/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+            services/frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('services/frontend/package.json', 'bun.lockb') }}
 
       - name: Run lint
+        working-directory: ./services/frontend
         run: bun run lint
-        working-directory: ./services/${{ matrix.service }}
+
+  lint-backend:
+    name: Lint & Type Check (Backend)
+    runs-on: ubuntu-latest
+    needs: [changes, install-backend]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('services/backend/package.json', 'bun.lockb') }}
+
+      - name: Run lint
+        working-directory: ./services/backend
+        run: bun run lint
+
+  lint-telegram:
+    name: Lint & Type Check (Telegram)
+    runs-on: ubuntu-latest
+    needs: [changes, install-telegram]
+    if: needs.changes.outputs.telegram == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/telegram/node_modules
+          key: ${{ runner.os }}-telegram-${{ hashFiles('services/telegram/package.json', 'bun.lockb') }}
+
+      - name: Run lint
+        working-directory: ./services/telegram
+        run: bun run lint
 
   test-integration:
     name: Integration Tests (Backend)
     runs-on: ubuntu-latest
-    needs: install
+    needs: [changes, install-backend]
+    if: needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@v5
 
@@ -82,33 +213,18 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            node_modules
-            services/*/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Check if backend changed
-        id: backend-changed
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'services/backend/**'
-              - 'bun.lockb'
+            services/backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('services/backend/package.json', 'bun.lockb') }}
 
       - name: Run integration tests
-        if: steps.backend-changed.outputs.backend == 'true'
-        run: bun run test:integration
         working-directory: ./services/backend
+        run: bun run test:integration
 
-  build:
-    name: Build
+  build-frontend:
+    name: Build (Frontend)
     runs-on: ubuntu-latest
-    needs: lint-and-check
-    strategy:
-      matrix:
-        service: [frontend, backend, telegram]
+    needs: [changes, lint-frontend]
+    if: needs.changes.outputs.frontend == 'true'
     steps:
       - uses: actions/checkout@v5
 
@@ -122,12 +238,59 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            node_modules
-            services/*/node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+            services/frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('services/frontend/package.json', 'bun.lockb') }}
 
       - name: Build
+        working-directory: ./services/frontend
         run: bun run build
-        working-directory: ./services/${{ matrix.service }}
+
+  build-backend:
+    name: Build (Backend)
+    runs-on: ubuntu-latest
+    needs: [changes, lint-backend, test-integration]
+    if: needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('services/backend/package.json', 'bun.lockb') }}
+
+      - name: Build
+        working-directory: ./services/backend
+        run: bun run build
+
+  build-telegram:
+    name: Build (Telegram)
+    runs-on: ubuntu-latest
+    needs: [changes, lint-telegram]
+    if: needs.changes.outputs.telegram == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Restore dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            services/telegram/node_modules
+          key: ${{ runner.os }}-telegram-${{ hashFiles('services/telegram/package.json', 'bun.lockb') }}
+
+      - name: Build
+        working-directory: ./services/telegram
+        run: bun run build
