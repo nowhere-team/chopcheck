@@ -1,21 +1,29 @@
-import { and, eq, isNull } from 'drizzle-orm'
+﻿import { and, eq, isNull } from 'drizzle-orm'
 
 import type { User } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
 
+type NewUser = {
+	id: string
+	telegramId?: number
+	username?: string
+	displayName: string
+	avatarUrl?: string
+}
+
 export class UsersRepository extends BaseRepository {
-	private getCacheKey(id: string): string {
+	private key(id: string) {
 		return `user:${id}`
 	}
 
-	private getTelegramCacheKey(telegramId: number): string {
-		return `user:telegram:${telegramId}`
+	private telegramKey(telegramId: number) {
+		return `user:tg:${telegramId}`
 	}
 
 	async findById(id: string): Promise<User | null> {
-		return this.getOrSet(this.getCacheKey(id), async () => {
+		return this.cached(this.key(id), async () => {
 			const user = await this.db.query.users.findFirst({
 				where: and(eq(schema.users.id, id), eq(schema.users.isDeleted, false)),
 			})
@@ -24,7 +32,7 @@ export class UsersRepository extends BaseRepository {
 	}
 
 	async findByTelegramId(telegramId: number): Promise<User | null> {
-		return this.getOrSet(this.getTelegramCacheKey(telegramId), async () => {
+		return this.cached(this.telegramKey(telegramId), async () => {
 			const user = await this.db.query.users.findFirst({
 				where: and(eq(schema.users.telegramId, telegramId), eq(schema.users.isDeleted, false)),
 			})
@@ -39,13 +47,7 @@ export class UsersRepository extends BaseRepository {
 		return user || null
 	}
 
-	async create(data: {
-		id: string
-		telegramId?: number
-		username?: string
-		displayName: string
-		avatarUrl?: string
-	}): Promise<User> {
+	async create(data: NewUser): Promise<User> {
 		const [user] = await this.db
 			.insert(schema.users)
 			.values({
@@ -56,8 +58,6 @@ export class UsersRepository extends BaseRepository {
 				avatarUrl: data.avatarUrl || '',
 			})
 			.returning()
-
-		await this.invalidateCache(user!.id, user!.telegramId)
 
 		return user!
 	}
@@ -73,21 +73,15 @@ export class UsersRepository extends BaseRepository {
 			.set({ ...data, updatedAt: new Date() })
 			.where(eq(schema.users.id, id))
 
-		await this.invalidateCache(id, user?.telegramId)
+		await this.invalidate(this.key(id))
+		if (user?.telegramId) {
+			await this.invalidate(this.telegramKey(user.telegramId))
+		}
 	}
 
 	async updatePreferences(id: string, preferences: Record<string, unknown>): Promise<void> {
-		const user = await this.findById(id)
-
 		await this.db.update(schema.users).set({ preferences, updatedAt: new Date() }).where(eq(schema.users.id, id))
 
-		await this.invalidateCache(id, user?.telegramId)
-	}
-
-	private async invalidateCache(userId: string, telegramId?: number | null): Promise<void> {
-		await this.cache.delete(this.getCacheKey(userId))
-		if (telegramId) {
-			await this.cache.delete(this.getTelegramCacheKey(telegramId))
-		}
+		await this.invalidate(this.key(id))
 	}
 }

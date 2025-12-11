@@ -1,2 +1,2 @@
-export * from './service'
+﻿export { UsersService } from './service'
 export * from './types'

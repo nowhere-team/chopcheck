@@ -1,6 +1,6 @@
-export type PaymentMethodType = 'sbp' | 'card' | 'phone' | 'bank_transfer' | 'cash' | 'crypto' | 'custom'
+﻿export type PaymentMethodType = 'sbp' | 'card' | 'phone' | 'bank_transfer' | 'cash' | 'crypto' | 'custom'
 
-export interface PaymentMethods {
+export interface PaymentMethod {
 	id: string
 	userId: string
 	type: PaymentMethodType
@@ -11,18 +11,6 @@ export interface PaymentMethods {
 	isDefault: boolean
 	displayOrder: number
 	isDeleted: boolean
-	deletedAt: Date | null
-	createdAt: Date
-	updatedAt: Date
-}
-
-export interface SplitPaymentMethod {
-	id: string
-	splitId: string
-	paymentMethodId: string
-	comment: string | null
-	isPreferred: boolean
-	displayOrder: number
 	createdAt: Date
 	updatedAt: Date
 }
@@ -31,16 +19,7 @@ export interface CreatePaymentMethodDto {
 	type: PaymentMethodType
 	displayName?: string
 	currency?: string
-	paymentData: {
-		phone?: string
-		cardNumber?: string
-		cardHolder?: string
-		accountNumber?: string
-		bankName?: string
-		bik?: string
-		phoneNumber?: string
-		description?: string
-	}
+	paymentData: Record<string, unknown>
 	isTemporary?: boolean
 	isDefault?: boolean
 }

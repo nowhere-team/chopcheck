@@ -1,1 +1,1 @@
-export * from './service'
+﻿export { SplitsService } from './service'

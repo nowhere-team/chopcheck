@@ -1,36 +1,60 @@
 <script lang="ts">
-	import '$lib/assets/styles/reset.css'
-	import '$lib/assets/styles/fonts.css'
-	import '$lib/assets/styles/typography.css'
-	import '$lib/assets/styles/theme.css'
-	import '$lib/assets/styles/animations.css'
-	import '$lib/assets/styles/global.css'
+	import '$lib/assets/styles/base.css'
+
+	import { onMount } from 'svelte'
 
 	import { onNavigate } from '$app/navigation'
-	import Navbar from '$components/Navbar.svelte'
-	import SwipeContainer from '$components/SwipeContainer.svelte'
-	import TelegramContext from '$components/TelegramContext.svelte'
-	import ToastContainer from '$components/ToastContainer.svelte'
-	import { setActiveSplitsContext } from '$lib/contexts/active-splits.svelte'
-	import { setSplitsHistoryContext } from '$lib/contexts/splits-history.svelte'
-	import { setStatsContext } from '$lib/contexts/stats.svelte'
-	import { setToastContext } from '$lib/contexts/toast.svelte'
-	import { getNavigationDirection } from '$lib/navigation/carousel'
+	import { app, setPlatformContext } from '$lib/app/context.svelte'
+	import { getNavigationDirection } from '$lib/navigation/routes'
+	import { createPlatform } from '$lib/platform/create'
+	import { createLogger } from '$lib/shared/logger'
+	import AppShell from '$lib/ui/layouts/AppShell.svelte'
+	import Navbar from '$lib/ui/layouts/Navbar.svelte'
+	import ConsentScreen from '$lib/ui/screens/ConsentScreen.svelte'
+	import ErrorScreen from '$lib/ui/screens/ErrorScreen.svelte'
+	import LoadingScreen from '$lib/ui/screens/LoadingScreen.svelte'
+	import LoginScreen from '$lib/ui/screens/LoginScreen.svelte'
 
 	const { children } = $props()
+	const log = createLogger('layout')
 
-	setStatsContext()
-	setActiveSplitsContext()
-	setSplitsHistoryContext()
-	setToastContext()
+	let initialized = $state(false)
+
+	const platform = createPlatform()
+	setPlatformContext(platform)
+
+	onMount(async () => {
+		try {
+			const initResult = await platform.init()
+
+			if (!initResult.ok) {
+				log.error('platform init failed', initResult.error.message)
+				app.setError(initResult.error)
+				initialized = true
+				return
+			}
+
+			await app.init(platform)
+			initialized = true
+		} catch (error) {
+			log.error('initialization failed', error)
+			app.setError(error instanceof Error ? error : new Error('initialization failed'))
+			initialized = true
+		}
+	})
 
 	onNavigate(navigation => {
 		if (!document.startViewTransition) return
 
-		document.documentElement.dataset.direction = getNavigationDirection(
-			navigation.from?.url.pathname || '/',
-			navigation.to?.url.pathname || '/'
-		)
+		// critical fix: skip transition on swipe/back gestures to prevent UI freeze
+		// if we try to view-transition a swipe, the browser fights with JS and loses frames
+		if (navigation.type === 'popstate' || navigation.delta === -1) {
+			return
+		}
+
+		const from = navigation.from?.url.pathname || '/'
+		const to = navigation.to?.url.pathname || '/'
+		document.documentElement.dataset.navDirection = getNavigationDirection(from, to)
 
 		return new Promise(resolve => {
 			document.startViewTransition(async () => {
@@ -39,28 +63,35 @@
 			})
 		})
 	})
+
+	function handleRetry() {
+		window.location.reload()
+	}
 </script>
 
-<div class="app">
-	<TelegramContext>
-		<SwipeContainer>
-			<div class="app-container" style="view-transition-name: page-content">
-				{@render children?.()}
-			</div>
-		</SwipeContainer>
-		<Navbar />
-		<ToastContainer />
-	</TelegramContext>
-</div>
+<svelte:head>
+	<title>ChopCheck</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+</svelte:head>
 
-<style>
-	.app {
-		display: flex;
-		flex-direction: column;
-	}
+{#if !initialized}
+	<LoadingScreen message="Инициализация..." />
+{:else if app.state.status === 'error' && app.state.error}
+	<ErrorScreen error={app.state.error} onRetry={handleRetry} />
+{:else if app.state.status === 'consent_required'}
+	<ConsentScreen />
+{:else if app.state.status === 'unauthenticated'}
+	<LoginScreen />
+{:else if app.state.status === 'authenticating'}
+	<LoadingScreen message="Авторизация..." />
+{:else if app.state.status === 'ready'}
+	<AppShell>
+		{#snippet navbar()}
+			<Navbar />
+		{/snippet}
 
-	.app-container {
-		min-height: calc(100dvh - 64px - max(var(--tg-inset-bottom), 8px));
-		padding-bottom: calc(64px + max(var(--tg-inset-bottom), 8px));
-	}
-</style>
+		{@render children?.()}
+	</AppShell>
+{:else}
+	<LoadingScreen />
+{/if}

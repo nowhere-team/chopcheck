@@ -1,0 +1,21 @@
+@import './reset.css';
+@import './tokens.css';
+@import './theme.css';
+@import './transitions.css';
+
+html {
+	scrollbar-gutter: stable;
+}
+
+body {
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	font-size: var(--text-base);
+	line-height: var(--leading-normal);
+	font-weight: var(--font-normal);
+	color: var(--color-text);
+	background: var(--color-bg);
+	min-height: 100dvh;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}

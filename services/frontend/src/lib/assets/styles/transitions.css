@@ -1,0 +1,117 @@
+/* main page transition */
+::view-transition-old(page),
+::view-transition-new(page) {
+	animation-duration: 280ms;
+	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	animation-fill-mode: both;
+}
+
+/* navbar stays static */
+::view-transition-group(navbar) {
+	animation: none;
+	z-index: 10000;
+}
+
+::view-transition-old(navbar),
+::view-transition-new(navbar) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
+/* forward navigation - new page slides in from right */
+:root[data-nav-direction='forward']::view-transition-old(page) {
+	animation-name: page-out-to-left;
+	z-index: 1;
+}
+
+:root[data-nav-direction='forward']::view-transition-new(page) {
+	animation-name: page-in-from-right;
+	z-index: 2;
+}
+
+/* backward navigation - new page slides in from left */
+:root[data-nav-direction='backward']::view-transition-old(page) {
+	animation-name: page-out-to-right;
+	z-index: 2;
+}
+
+:root[data-nav-direction='backward']::view-transition-new(page) {
+	animation-name: page-in-from-left;
+	z-index: 1;
+}
+
+/* no direction - simple crossfade */
+:root[data-nav-direction='none']::view-transition-old(page),
+:root:not([data-nav-direction])::view-transition-old(page) {
+	animation-name: page-fade-out;
+}
+
+:root[data-nav-direction='none']::view-transition-new(page),
+:root:not([data-nav-direction])::view-transition-new(page) {
+	animation-name: page-fade-in;
+}
+
+/* forward keyframes */
+@keyframes page-out-to-left {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 0.6;
+		transform: translateX(-100%);
+	}
+}
+
+@keyframes page-in-from-right {
+	from {
+		opacity: 1;
+		transform: translateX(100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+/* backward keyframes */
+@keyframes page-out-to-right {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(100%);
+	}
+}
+
+@keyframes page-in-from-left {
+	from {
+		opacity: 0.6;
+		transform: translateX(-100%);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+/* fade fallback */
+@keyframes page-fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}

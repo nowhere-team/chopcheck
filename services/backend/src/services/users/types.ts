@@ -1,4 +1,4 @@
-export interface TelegramUserData {
+﻿export interface TelegramUserData {
 	id: number
 	username?: string
 	firstName?: string

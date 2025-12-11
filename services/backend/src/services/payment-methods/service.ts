@@ -1,22 +1,22 @@
-import { NotFoundError, ValidationError } from '@/common/errors'
-import type { CreatePaymentMethodDto, PaymentMethods, UpdatePaymentMethodDto } from '@/common/types'
+﻿import { NotFoundError, ValidationError } from '@/common/errors'
+import type { CreatePaymentMethodDto, PaymentMethod, UpdatePaymentMethodDto } from '@/common/types'
 import type { Logger } from '@/platform/logger'
-import type { PaymentMethodsRepository } from '@/repositories/payment-methods'
+import type { PaymentMethodsRepository } from '@/repositories'
 
 export class PaymentMethodsService {
 	constructor(
-		private paymentMethodsRepo: PaymentMethodsRepository,
-		private logger: Logger,
+		private readonly repo: PaymentMethodsRepository,
+		private readonly logger: Logger,
 	) {}
 
-	async getMyPaymentMethods(userId: string): Promise<PaymentMethods[]> {
-		return await this.paymentMethodsRepo.findByUserId(userId)
+	async getMyPaymentMethods(userId: string): Promise<PaymentMethod[]> {
+		return this.repo.findByUserId(userId)
 	}
 
-	async createPaymentMethod(userId: string, dto: CreatePaymentMethodDto): Promise<PaymentMethods> {
+	async create(userId: string, dto: CreatePaymentMethodDto): Promise<PaymentMethod> {
 		this.validatePaymentData(dto.type, dto.paymentData)
 
-		const paymentMethod = await this.paymentMethodsRepo.create({
+		const pm = await this.repo.create({
 			userId,
 			type: dto.type,
 			displayName: dto.displayName || null,
@@ -26,95 +26,46 @@ export class PaymentMethodsService {
 			isDefault: dto.isDefault || false,
 		})
 
-		this.logger.info('payment method created', {
-			userId,
-			paymentMethodId: paymentMethod.id,
-			type: dto.type,
-		})
-
-		return paymentMethod
+		this.logger.info('payment method created', { userId, paymentMethodId: pm.id, type: dto.type })
+		return pm
 	}
 
-	async updatePaymentMethod(
-		paymentMethodId: string,
-		userId: string,
-		dto: UpdatePaymentMethodDto,
-	): Promise<PaymentMethods> {
-		const paymentMethod = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!paymentMethod) {
-			throw new NotFoundError('payment method not found')
-		}
+	async update(paymentMethodId: string, userId: string, dto: UpdatePaymentMethodDto): Promise<PaymentMethod> {
+		const pm = await this.repo.findById(paymentMethodId)
+		if (!pm) throw new NotFoundError('payment method not found')
+		if (pm.userId !== userId) throw new ValidationError('can only update own payment methods')
 
-		if (paymentMethod.userId !== userId) {
-			throw new ValidationError('you can only update your own payment methods')
-		}
+		await this.repo.update(paymentMethodId, dto)
 
-		await this.paymentMethodsRepo.update(paymentMethodId, dto)
-
-		this.logger.info('payment method updated', { userId, paymentMethodId })
-
-		const updated = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!updated) {
-			throw new NotFoundError('payment method not found after update')
-		}
-
-		return updated
+		const updated = await this.repo.findById(paymentMethodId)
+		return updated!
 	}
 
-	async deletePaymentMethod(paymentMethodId: string, userId: string): Promise<void> {
-		const paymentMethod = await this.paymentMethodsRepo.findById(paymentMethodId)
-		if (!paymentMethod) {
-			throw new NotFoundError('payment method not found')
-		}
+	async delete(paymentMethodId: string, userId: string): Promise<void> {
+		const pm = await this.repo.findById(paymentMethodId)
+		if (!pm) throw new NotFoundError('payment method not found')
+		if (pm.userId !== userId) throw new ValidationError('can only delete own payment methods')
 
-		if (paymentMethod.userId !== userId) {
-			throw new ValidationError('you can only delete your own payment methods')
-		}
-
-		await this.paymentMethodsRepo.delete(paymentMethodId)
-
+		await this.repo.delete(paymentMethodId)
 		this.logger.info('payment method deleted', { userId, paymentMethodId })
 	}
 
-	private validatePaymentData(type: string, paymentData: unknown): void {
-		if (!paymentData || typeof paymentData !== 'object') {
-			throw new ValidationError('paymentData must be an object')
-		}
-
-		const data = paymentData as Record<string, unknown>
+	private validatePaymentData(type: string, data: Record<string, unknown>): void {
+		if (!data || typeof data !== 'object') throw new ValidationError('paymentData must be an object')
 
 		switch (type) {
 			case 'sbp':
-				if (!data.phone || typeof data.phone !== 'string') {
-					throw new ValidationError('phone is required for sbp type')
-				}
+				if (!data.phone) throw new ValidationError('phone is required for sbp')
 				break
-
 			case 'card':
-				if (!data.cardNumber || typeof data.cardNumber !== 'string') {
-					throw new ValidationError('cardNumber is required for card type')
-				}
+				if (!data.cardNumber) throw new ValidationError('cardNumber is required for card')
 				break
-
 			case 'phone':
-				if (!data.phoneNumber || typeof data.phoneNumber !== 'string') {
-					throw new ValidationError('phoneNumber is required for phone type')
-				}
+				if (!data.phoneNumber) throw new ValidationError('phoneNumber is required for phone')
 				break
-
 			case 'bank_transfer':
-				if (!data.accountNumber || typeof data.accountNumber !== 'string') {
-					throw new ValidationError('accountNumber is required for bank_transfer type')
-				}
+				if (!data.accountNumber) throw new ValidationError('accountNumber is required for bank_transfer')
 				break
-
-			case 'cash':
-			case 'crypto':
-			case 'custom':
-				break
-
-			default:
-				throw new ValidationError(`unknown payment method type: ${type}`)
 		}
 	}
 }
