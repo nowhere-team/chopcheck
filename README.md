@@ -9,7 +9,7 @@
 
 ### Receipt Processing
 
-~70% of Russian receipts have fiscal QR codes. We fetch structured data directly from the Federal Tax Service API in 2-3 seconds. For the remaining 30%, we use Gemini 2.0 Flash for image recognition.
+~70% of Russian receipts have fiscal QR codes. We fetch structured data directly from the Federal Tax Service API in 2-3 seconds. For the remaining 30%, we use Gemini for image recognition.
 ```
 QR Code → FNS API → Catalog → Enriched Items
 Photo → Gemini → Catalog → Enriched Items
