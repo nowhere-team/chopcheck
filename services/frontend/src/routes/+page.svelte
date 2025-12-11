@@ -7,6 +7,7 @@
 	import { formatPrice } from '$lib/shared/money'
 	import { getSplitsStore, getUserStore } from '$lib/state'
 	import { CollapsibleSection } from '$lib/ui/components'
+	import Emoji from '$lib/ui/components/Emoji.svelte'
 	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
 	import StatsBox from '$lib/ui/features/stats/StatsBox.svelte'
@@ -56,6 +57,7 @@
 		{/if}
 	</section>
 
+	<Emoji emoji="🥇" />
 	<CollapsibleSection title="Активные сплиты" count={activeSplits.data?.length ?? 0}>
 		{#if isSplitsLoading}
 			<div class="splits-list">
