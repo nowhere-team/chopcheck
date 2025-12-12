@@ -1,6 +1,6 @@
 import { createLogger } from '$lib/shared/logger'
 
-import { cache, type CacheOptions } from './cache.svelte'
+import { cache, CACHE_NOT_FOUND, type CacheOptions } from './cache.svelte'
 
 const log = createLogger('query')
 
@@ -29,20 +29,13 @@ export function createQuery<T>(
 	fetcher: () => Promise<T>,
 	options: QueryOptions<T> = {}
 ) {
-	const {
-		enabled = true,
-		initialData,
-		onSuccess,
-		onError,
-		refetchOnMount = true,
-		ttl
-		// staleWhileRevalidate = true
-	} = options
+	const { enabled = true, initialData, onSuccess, onError, refetchOnMount = true, ttl } = options
 
 	let data = $state<T | null>(initialData ?? null)
 	let status = $state<QueryStatus>('idle')
 	let error = $state<Error | null>(null)
 	let lastFetchedAt = $state<number | null>(null)
+	let hasFetched = $state(false)
 
 	const resolveKey = () => (typeof key === 'function' ? key() : key)
 
@@ -50,12 +43,19 @@ export function createQuery<T>(
 		const cacheKey = resolveKey()
 
 		if (!force) {
-			const cached = cache.get<T>(cacheKey)
-			if (cached !== null) {
-				data = cached
+			const cached = cache.getWithStatus<T>(cacheKey)
+			if (cached !== CACHE_NOT_FOUND) {
+				data = cached as T
 				status = 'success'
-				return cached
+				hasFetched = true
+				return cached as T
 			}
+		}
+
+		// prevent duplicate fetches while one is in progress
+		if (status === 'loading') {
+			log.debug(`fetch already in progress: ${cacheKey}`)
+			return data
 		}
 
 		status = 'loading'
@@ -68,6 +68,7 @@ export function createQuery<T>(
 			data = result
 			status = 'success'
 			lastFetchedAt = Date.now()
+			hasFetched = true
 
 			onSuccess?.(result)
 			log.debug(`query success: ${cacheKey}`)
@@ -77,6 +78,7 @@ export function createQuery<T>(
 			const err = e instanceof Error ? e : new Error(String(e))
 			error = err
 			status = 'error'
+			hasFetched = true
 
 			onError?.(err)
 			log.error(`query error: ${cacheKey}`, err)
@@ -87,6 +89,7 @@ export function createQuery<T>(
 
 	function invalidate(): void {
 		cache.invalidate(resolveKey())
+		hasFetched = false
 	}
 
 	function reset(): void {
@@ -94,11 +97,12 @@ export function createQuery<T>(
 		status = 'idle'
 		error = null
 		lastFetchedAt = null
+		hasFetched = false
 	}
 
-	// auto-fetch on mount if enabled
+	// auto-fetch on mount if enabled - but only once
 	$effect(() => {
-		if (enabled && refetchOnMount) {
+		if (enabled && refetchOnMount && !hasFetched) {
 			fetch()
 		}
 	})
@@ -132,7 +136,6 @@ export function createQuery<T>(
 	}
 }
 
-// mutation helper for write operations
 export interface MutationOptions<TData, TVariables> {
 	onSuccess?: (data: TData, variables: TVariables) => void
 	onError?: (error: Error, variables: TVariables) => void
@@ -159,7 +162,6 @@ export function createMutation<TData, TVariables = void>(
 
 			options.onSuccess?.(result, variables)
 
-			// invalidate related queries
 			if (options.invalidateKeys) {
 				options.invalidateKeys.forEach(key => {
 					if (key.includes('*')) {

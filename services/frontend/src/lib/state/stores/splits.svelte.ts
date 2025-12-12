@@ -24,7 +24,6 @@ const CACHE_KEYS = {
 }
 
 export function createSplitsStore() {
-	// active splits for home page
 	const activeQuery = createQuery<Split[]>(
 		CACHE_KEYS.active,
 		async () => {
@@ -36,7 +35,6 @@ export function createSplitsStore() {
 		{ ttl: 2 * 60 * 1000 }
 	)
 
-	// grouped splits for history
 	const groupedQuery = createQuery<SplitsByPeriod>(
 		CACHE_KEYS.grouped,
 		() => api.get<SplitsByPeriod>('splits/my?grouped=true'),
@@ -48,18 +46,16 @@ export function createSplitsStore() {
 		async () => {
 			try {
 				return await api.get<SplitResponse>('splits/draft')
-			} catch (e: any) {
-				// no draft
+			} catch (e) {
 				if (e instanceof ApiError && e.isNotFound) {
 					return null
 				}
 				throw e
 			}
 		},
-		{ ttl: 60 * 1000 }
+		{ ttl: 60 * 1000, refetchOnMount: false }
 	)
 
-	// fetch single split by id
 	function fetchById(id: string) {
 		return createQuery<SplitResponse>(
 			CACHE_KEYS.byId(id),
@@ -68,7 +64,6 @@ export function createSplitsStore() {
 		)
 	}
 
-	// fetch by short id
 	function fetchByShortId(shortId: string) {
 		return createQuery<SplitResponse>(
 			CACHE_KEYS.byShortId(shortId),
@@ -77,7 +72,6 @@ export function createSplitsStore() {
 		)
 	}
 
-	// mutations
 	const createOrUpdate = createMutation<SplitResponse, CreateSplitDto & { id?: string }>(
 		async dto => {
 			if (dto.id) {
@@ -146,14 +140,12 @@ export function createSplitsStore() {
 	}
 
 	return {
-		// queries
 		active: activeQuery,
 		grouped: groupedQuery,
 		draft: draftQuery,
 		fetchById,
 		fetchByShortId,
 
-		// mutations
 		createOrUpdate,
 		publish,
 		join,

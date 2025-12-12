@@ -11,27 +11,44 @@ export interface CacheEntry<T> {
 }
 
 export interface CacheOptions {
-	ttl?: number // time to live in ms
+	ttl?: number
 	staleWhileRevalidate?: boolean
 }
 
-const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
+// sentinel value to distinguish "not in cache" from "cached null"
+const NOT_FOUND = Symbol('cache-not-found')
+
+const DEFAULT_TTL = 5 * 60 * 1000
 
 class ReactiveCache {
 	private entries = $state<Map<string, CacheEntry<unknown>>>(new Map())
 	private pending = new Map<string, Promise<unknown>>()
 
-	get<T>(key: string): T | null {
+	// returns NOT_FOUND symbol if key doesn't exist or expired
+	// returns actual data (including null) if cached
+	getWithStatus<T>(key: string): T | typeof NOT_FOUND {
 		const entry = this.entries.get(key) as CacheEntry<T> | undefined
-		if (!entry) return null
+		if (!entry) return NOT_FOUND
 
 		const now = Date.now()
 		if (now > entry.expiresAt) {
 			log.debug(`cache expired: ${key}`)
-			return null
+			return NOT_FOUND
 		}
 
 		return entry.data
+	}
+
+	// legacy method for backward compat - but be careful with null values!
+	get<T>(key: string): T | null {
+		const result = this.getWithStatus<T>(key)
+		if (result === NOT_FOUND) return null
+		return result as T
+	}
+
+	has(key: string): boolean {
+		const result = this.getWithStatus(key)
+		return result !== NOT_FOUND
 	}
 
 	set<T>(key: string, data: T, options: CacheOptions = {}): void {
@@ -63,16 +80,16 @@ class ReactiveCache {
 		const keysToDelete: string[] = []
 
 		for (const key of this.entries.keys()) {
-			if (regex.test(key)) {
-				keysToDelete.push(key)
-			}
+			keysToDelete.push(key)
 		}
 
-		if (keysToDelete.length > 0) {
+		const toDelete = keysToDelete.filter(k => regex.test(k))
+
+		if (toDelete.length > 0) {
 			const newEntries = new SvelteMap(this.entries)
-			keysToDelete.forEach(k => newEntries.delete(k))
+			toDelete.forEach(k => newEntries.delete(k))
 			this.entries = newEntries
-			log.debug(`cache invalidated pattern: ${pattern}`, { count: keysToDelete.length })
+			log.debug(`cache invalidated pattern: ${pattern}`, { count: toDelete.length })
 		}
 	}
 
@@ -81,7 +98,6 @@ class ReactiveCache {
 		log.debug('cache cleared')
 	}
 
-	// deduplication for concurrent requests
 	async dedupe<T>(key: string, factory: () => Promise<T>): Promise<T> {
 		const existing = this.pending.get(key)
 		if (existing) {
@@ -97,15 +113,14 @@ class ReactiveCache {
 		return promise
 	}
 
-	// get or fetch with caching
 	async getOrFetch<T>(
 		key: string,
 		fetcher: () => Promise<T>,
 		options: CacheOptions = {}
 	): Promise<T> {
-		const cached = this.get<T>(key)
-		if (cached !== null) {
-			return cached
+		const cached = this.getWithStatus<T>(key)
+		if (cached !== NOT_FOUND) {
+			return cached as T
 		}
 
 		const data = await this.dedupe(key, fetcher)
@@ -115,3 +130,6 @@ class ReactiveCache {
 }
 
 export const cache = new ReactiveCache()
+
+// export for use in query.svelte.ts
+export const CACHE_NOT_FOUND = NOT_FOUND

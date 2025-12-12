@@ -10,6 +10,10 @@ import { createSplitsRoutes } from './splits'
 
 export function registerRoutes() {
 	return new Hono()
+		.use(async (c, next) => {
+			console.log(c.req.path)
+			await next()
+		})
 		.route('/health', createHealthRoutes())
 		.route('/auth', createAuthRoutes())
 		.route('/splits', createSplitsRoutes())
