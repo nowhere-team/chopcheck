@@ -4,6 +4,7 @@
 	import { slide } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import Badge from '$lib/ui/components/Badge.svelte'
 
 	interface Props {
 		title: string
@@ -28,7 +29,7 @@
 		<div class="title-row">
 			<h2 class="title">{title}</h2>
 			{#if count !== undefined && count > 0}
-				<span class="badge">{count}</span>
+				<Badge {count} />
 			{/if}
 		</div>
 
@@ -74,20 +75,6 @@
 		font-weight: var(--font-semibold);
 		color: var(--color-text);
 		margin: 0;
-	}
-
-	.badge {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 22px;
-		height: 22px;
-		padding: 0 6px;
-		background: var(--color-bg-tertiary);
-		border-radius: 11px;
-		font-size: var(--text-xs);
-		font-weight: var(--font-semibold);
-		color: var(--color-text-secondary);
 	}
 
 	.caret {

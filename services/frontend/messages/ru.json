@@ -63,6 +63,7 @@
 	"empty_section": "Пусто",
 
 	"error_generic": "Ошибка",
+	"error_loading": "Не удалось обновить данные",
 
 	"item_delete_button": "Удалить позицию",
 	"item_division_method_label": "Способ деления",
@@ -87,7 +88,7 @@
 	"section_earlier": "Раньше",
 	"section_this_month": "В этом месяце",
 	"section_this_week": "На этой неделе",
-	"section_your_splits": "Ваши сплиты",
+	"section_active_splits": "Активные сплиты",
 
 	"split_card_aria_label": "Сплит {name}",
 	"split_created_by": "Создан {date}",
@@ -118,7 +119,7 @@
 	],
 
 	"stats_loading_error": "Не удалось загрузить статистику",
-	"stats_monthly_spent": "Разделено за месяц",
+	"stats_monthly_spent": "Потрачено в этом месяце",
 	"stats_total_splits": "Всего сплитов",
 
 	"success_split_created": "Cплит создан",

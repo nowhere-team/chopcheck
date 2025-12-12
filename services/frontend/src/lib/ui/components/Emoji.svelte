@@ -15,7 +15,7 @@
 	const emojiMap = emojiMapJson as EmojiMap
 
 	interface Props {
-		emoji: string
+		emoji?: string
 		size?: number
 		variant?: EmojiVariant
 		trimmed?: boolean
@@ -25,7 +25,7 @@
 	}
 
 	const {
-		emoji,
+		emoji = '❓',
 		size = 32,
 		variant = '3d',
 		trimmed = true,

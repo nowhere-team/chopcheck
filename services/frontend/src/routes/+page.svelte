@@ -4,10 +4,10 @@
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { formatPrice } from '$lib/shared/money'
 	import { getSplitsStore, getUserStore } from '$lib/state'
 	import { CollapsibleSection } from '$lib/ui/components'
-	import Emoji from '$lib/ui/components/Emoji.svelte'
 	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
 	import StatsBox from '$lib/ui/features/stats/StatsBox.svelte'
@@ -32,7 +32,7 @@
 
 	$effect(() => {
 		if (stats.isError || activeSplits.isError) {
-			toast.error('Не удалось обновить данные')
+			toast.error(m.error_loading())
 		}
 	})
 
@@ -42,23 +42,22 @@
 	}
 </script>
 
-<Page title="Главная">
+<Page title={m.app_title_home()}>
 	<section class="stats-section">
 		{#if isStatsLoading}
 			<StatsSkeleton />
 		{:else if stats.data}
 			<div class="stats-grid">
-				<StatsBox label="Всего сплитов" value={stats.data.totalJoinedSplits} />
+				<StatsBox label={m.stats_total_splits()} value={stats.data.totalJoinedSplits} />
 				<StatsBox
-					label="Потрачено в этом месяце"
+					label={m.stats_monthly_spent()}
 					value={formatPrice(stats.data.monthlySpent)}
 				/>
 			</div>
 		{/if}
 	</section>
 
-	<Emoji emoji="🥇" />
-	<CollapsibleSection title="Активные сплиты" count={activeSplits.data?.length ?? 0}>
+	<CollapsibleSection title={m.section_active_splits()} count={activeSplits.data?.length ?? 0}>
 		{#if isSplitsLoading}
 			<div class="splits-list">
 				<SplitCardSkeleton count={3} />
@@ -70,7 +69,7 @@
 				{/each}
 			</div>
 		{:else if !isSplitsLoading}
-			<p class="empty-state">Нет активных сплитов</p>
+			<p class="empty-state">{m.empty_active_splits()}</p>
 		{/if}
 	</CollapsibleSection>
 </Page>

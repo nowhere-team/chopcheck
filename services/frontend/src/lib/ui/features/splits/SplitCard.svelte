@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '$lib/i18n'
 	import type { Split } from '$lib/services/api/types'
-
-	import { Card } from '../../components'
-	import Avatar from '../../components/Avatar.svelte'
+	import { formatPrice } from '$lib/shared/money'
+	import { formatDate } from '$lib/shared/time'
+	import { Avatar, Card } from '$lib/ui/components'
 
 	interface Props {
 		split: Split
@@ -11,56 +12,25 @@
 
 	const { split, onclick }: Props = $props()
 
-	const currencySymbols: Record<string, string> = {
-		RUB: '₽',
-		USD: '$',
-		EUR: '€'
-	}
-
-	function formatDate(dateString: string): string {
-		const date = new Date(dateString)
-		const now = new Date()
-
-		if (date.toDateString() === now.toDateString()) {
-			return date.toLocaleTimeString('ru-RU', {
-				hour: '2-digit',
-				minute: '2-digit'
-			})
-		}
-
-		if (date.getFullYear() === now.getFullYear()) {
-			return date.toLocaleDateString('ru-RU', {
-				day: 'numeric',
-				month: 'short'
-			})
-		}
-
-		return date.toLocaleDateString('ru-RU', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric'
-		})
-	}
-
 	function getStatusText(split: Split): string {
-		if (split.status === 'completed') return 'завершён'
-		if (split.status === 'draft') return 'черновик'
+		if (split.status === 'completed') return m.split_status_completed()
+		if (split.status === 'draft') return m.split_status_setup()
 
 		if (split.expectedParticipants) {
 			const current = split.participants?.length || 0
 			const waiting = split.expectedParticipants - current
-			if (waiting > 0) return `ожидаем ${waiting} чел.`
+			if (waiting > 0) return m.split_status_waiting({ count: waiting })
 		}
 
 		switch (split.phase) {
 			case 'voting':
-				return 'голосование'
+				return m.split_status_voting()
 			case 'payment':
-				return 'оплата'
+				return m.split_status_payment()
 			case 'confirming':
-				return 'подтверждение'
+				return m.split_status_confirming()
 			default:
-				return 'настройка'
+				return m.split_status_setup()
 		}
 	}
 
@@ -74,7 +44,7 @@
 
 <Card interactive {onclick} class="split-card">
 	<div class="card-content">
-		<Avatar name={split.name} id={split.id} size={40} />
+		<Avatar name={split.name} id={split.id} icon={split.icon} variant="plain" size={40} />
 
 		<div class="info">
 			<span class="name">{split.name}</span>
@@ -83,8 +53,7 @@
 
 		<div class="meta">
 			<span class="amount">
-				{totalAmount().toLocaleString('ru-RU')}
-				{currencySymbols[split.currency] || split.currency}
+				{formatPrice(totalAmount(), split.currency)}
 			</span>
 			<time class="date" datetime={split.createdAt}>
 				{formatDate(split.createdAt)}
@@ -109,7 +78,6 @@
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
 	}
 
 	.name {
@@ -122,7 +90,7 @@
 	}
 
 	.status {
-		font-size: var(--text-xs);
+		font-size: var(--text-sm);
 		color: var(--color-text-tertiary);
 	}
 
@@ -135,14 +103,14 @@
 	}
 
 	.amount {
-		font-size: var(--text-sm);
-		font-weight: var(--font-semibold);
+		font-size: var(--text-base);
+		font-weight: var(--font-medium);
 		color: var(--color-text);
 		font-variant-numeric: tabular-nums;
 	}
 
 	.date {
-		font-size: var(--text-xs);
+		font-size: var(--text-sm);
 		color: var(--color-text-tertiary);
 	}
 </style>

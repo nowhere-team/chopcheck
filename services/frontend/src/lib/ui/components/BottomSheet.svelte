@@ -12,7 +12,7 @@
 
 	interface Props {
 		open: boolean
-		onclose: () => void
+		onclose?: () => void
 		title?: string
 		children?: Snippet
 	}
@@ -29,7 +29,7 @@
 		platform.haptic.impact('light')
 		currentY = 0
 		open = false
-		if (onclose) onclose()
+		onclose?.()
 	}
 
 	function handleStart(y: number) {
