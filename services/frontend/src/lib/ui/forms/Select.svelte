@@ -3,7 +3,9 @@
 	import { quintOut } from 'svelte/easing'
 	import { fade, scale } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte'
+	import { getPlatform } from '$lib/app/context.svelte.js'
+	import Label from '$lib/ui/components/Label.svelte'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Option {
 		value: string
@@ -59,7 +61,7 @@
 
 <div class="select-wrapper">
 	{#if label}
-		<span class="label">{label}</span>
+		<Label>{label}</Label>
 	{/if}
 
 	<button bind:this={triggerRef} class="trigger" class:active={isOpen} onclick={toggle}>
@@ -70,35 +72,37 @@
 	</button>
 
 	{#if isOpen}
-		<div class="portal-root">
-			<div
-				class="backdrop"
-				onclick={() => (isOpen = false)}
-				role="presentation"
-				transition:fade={{ duration: 150 }}
-			></div>
+		<Portal target="#portal-root">
+			<div class="select-portal-wrapper">
+				<div
+					class="backdrop"
+					onclick={() => (isOpen = false)}
+					role="presentation"
+					transition:fade={{ duration: 150 }}
+				></div>
 
-			<div
-				class="dropdown glass-panel"
-				style:top="{coords.top}px"
-				style:left="{coords.left}px"
-				style:width="{coords.width}px"
-				transition:scale={{ duration: 200, start: 0.9, opacity: 0, easing: quintOut }}
-			>
-				{#each options as option (option.value)}
-					<button
-						class="option-item"
-						class:selected={option.value === value}
-						onclick={() => select(option.value)}
-					>
-						<span>{option.label}</span>
-						{#if option.value === value}
-							<Check size={16} weight="bold" />
-						{/if}
-					</button>
-				{/each}
+				<div
+					class="dropdown glass-panel"
+					style:top="{coords.top}px"
+					style:left="{coords.left}px"
+					style:width="{coords.width}px"
+					transition:scale={{ duration: 200, start: 0.9, opacity: 0, easing: quintOut }}
+				>
+					{#each options as option (option.value)}
+						<button
+							class="option-item"
+							class:selected={option.value === value}
+							onclick={() => select(option.value)}
+						>
+							<span>{option.label}</span>
+							{#if option.value === value}
+								<Check size={16} weight="bold" />
+							{/if}
+						</button>
+					{/each}
+				</div>
 			</div>
-		</div>
+		</Portal>
 	{/if}
 </div>
 
@@ -112,9 +116,10 @@
 	}
 
 	.label {
-		font-size: var(--text-xs);
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
 		color: var(--color-text-secondary);
-		margin-left: 4px;
+		margin-left: var(--space-1);
 	}
 
 	.trigger {
@@ -148,10 +153,10 @@
 		color: var(--color-text-secondary);
 	}
 
-	.portal-root {
+	.select-portal-wrapper {
 		position: fixed;
 		inset: 0;
-		z-index: var(--z-modal);
+		z-index: calc(var(--z-modal) + 100);
 		pointer-events: auto;
 	}
 

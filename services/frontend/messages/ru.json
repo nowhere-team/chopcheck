@@ -11,7 +11,7 @@
 	"all_splits_loaded": "Это все ваши сплиты",
 
 	"app_title_contacts": "Контакты",
-	"app_title_create": "Создать",
+	"app_title_create": "Создать сплит",
 	"app_title_history": "История",
 	"app_title_home": "Главная",
 	"app_title_profile": "Профиль",
@@ -22,7 +22,7 @@
 	"create_split_error": "Не удалось создать сплит",
 	"create_split_icon_label": "Иконка",
 	"create_split_name_label": "Название",
-	"create_split_name_placeholder": "Введите название",
+	"create_split_name_placeholder": "Например, Пицца Маргарита",
 	"create_split_participants_label": "Участники",
 	"create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
 	"create_split_positions_title": "Позиции",

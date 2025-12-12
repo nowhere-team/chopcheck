@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Portal from '$lib/ui/components/Portal.svelte'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	import { toast } from './toast.svelte'
 	import ToastItem from './ToastItem.svelte'

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements'
 
+	import Label from '$lib/ui/components/Label.svelte'
+
 	interface Props extends HTMLInputAttributes {
 		label?: string
 		suffix?: string
@@ -24,7 +26,7 @@
 
 <div class="input-group {className || ''}" class:has-error={!!error}>
 	{#if label}
-		<label class="label" for={id}>{label}</label>
+		<Label for={id}>{label}</Label>
 	{/if}
 
 	<div class="input-wrapper">
@@ -71,6 +73,7 @@
 		border-radius: var(--radius-lg);
 		transition: all var(--duration-fast) var(--ease-out);
 		-webkit-appearance: none;
+		appearance: none;
 	}
 
 	.input:focus {

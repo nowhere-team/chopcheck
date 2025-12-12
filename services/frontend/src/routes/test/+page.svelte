@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Button, Card } from '$lib/ui/components'
 	import Avatar from '$lib/ui/components/Avatar.svelte'
-	import BottomSheet from '$lib/ui/components/BottomSheet.svelte'
-	import EditableText from '$lib/ui/components/EditableText.svelte'
-	import PriceInput from '$lib/ui/components/PriceInput.svelte'
-	import Select from '$lib/ui/components/Select.svelte'
 	import Toggle from '$lib/ui/components/Toggle.svelte'
+	import EditableText from '$lib/ui/forms/EditableText.svelte'
+	import PriceInput from '$lib/ui/forms/PriceInput.svelte'
+	import Select from '$lib/ui/forms/Select.svelte'
 	import Page from '$lib/ui/layouts/Page.svelte'
+	import BottomSheet from '$lib/ui/overlays/BottomSheet.svelte'
 
 	// состояние для тестов
 	let splitName = $state('Шашлыки на даче')

@@ -1,19 +1,29 @@
 <script lang="ts">
 	interface Props {
 		size?: 'sm' | 'md' | 'lg'
+		variant?: 'default' | 'muted'
 	}
 
-	const { size = 'md' }: Props = $props()
+	const { size = 'md', variant = 'default' }: Props = $props()
 </script>
 
-<div class="spinner {size}"></div>
+<div class="spinner {size} {variant}"></div>
 
+<!--suppress CssUnusedSymbol -->
 <style>
 	.spinner {
 		border-radius: 50%;
+		animation: spin 0.7s linear infinite;
+	}
+
+	.default {
 		border: 2px solid var(--color-border);
 		border-top-color: var(--color-primary);
-		animation: spin 0.7s linear infinite;
+	}
+
+	.muted {
+		border: 2px solid var(--color-border-subtle);
+		border-top-color: var(--color-text-tertiary);
 	}
 
 	.sm {
