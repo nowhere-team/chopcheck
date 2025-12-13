@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Receipt } from 'phosphor-svelte'
+	import { cubicOut } from 'svelte/easing'
+	import { fly } from 'svelte/transition'
 
 	import { Spinner } from '$lib/ui/components'
 
@@ -8,9 +10,16 @@
 		status?: string
 		itemsLoaded?: number
 		totalItems?: number
+		lastScannedItem?: string
 	}
 
-	const { storeName, status = 'Загрузка...', itemsLoaded = 0, totalItems }: Props = $props()
+	const {
+		storeName,
+		status = 'Загрузка...',
+		itemsLoaded = 0,
+		totalItems,
+		lastScannedItem
+	}: Props = $props()
 </script>
 
 <div class="receipt-loader">
@@ -29,7 +38,23 @@
 		<div class="progress">
 			<div class="progress-bar" style:width="{(itemsLoaded / totalItems) * 100}%"></div>
 		</div>
-		<span class="progress-text">{itemsLoaded} / {totalItems} позиций</span>
+		<div class="progress-footer">
+			<span class="progress-text">{itemsLoaded} / {totalItems} позиций</span>
+
+			{#if lastScannedItem}
+				<div class="ticker-container">
+					{#key lastScannedItem}
+						<div
+							class="ticker-item"
+							in:fly={{ y: 8, duration: 200, easing: cubicOut }}
+							out:fly={{ y: -8, duration: 200, easing: cubicOut }}
+						>
+							{lastScannedItem}
+						</div>
+					{/key}
+				</div>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -42,6 +67,7 @@
 		background: var(--color-bg-secondary);
 		border-radius: var(--radius-lg);
 		border: 1px dashed var(--color-border);
+		overflow: hidden; /* contain animations */
 	}
 
 	.header {
@@ -91,9 +117,46 @@
 		transition: width 0.3s var(--ease-out);
 	}
 
+	.progress-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		min-height: 20px;
+	}
+
 	.progress-text {
 		font-size: var(--text-xs);
 		color: var(--color-text-tertiary);
-		text-align: center;
+	}
+
+	.ticker-container {
+		position: relative;
+		height: 20px;
+		flex: 1;
+		display: flex;
+		justify-content: flex-end;
+		overflow: hidden;
+
+		/*noinspection CssInvalidPropertyValue*/
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent,
+			black 15%,
+			black 85%,
+			transparent
+		);
+
+		mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+	}
+
+	.ticker-item {
+		font-size: var(--text-xs);
+		color: var(--color-text-secondary);
+		white-space: nowrap;
+		position: absolute;
+		right: 0;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 </style>

@@ -59,7 +59,7 @@ export class ReceiptsService {
 			return { receipt: enriched.receipt!, items: enriched.items, enriched: true }
 		} catch (error) {
 			this.logger.error('enrichment failed', { receiptId: receipt.id, error })
-			await this.repo.update(receipt.id, { status: 'failed', lastError: (error as Error).message })
+			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
 			return { receipt, items, enriched: false }
 		}
 	}
@@ -75,6 +75,21 @@ export class ReceiptsService {
 
 		const existing = await this.repo.findByFiscalData(qrData.fn, qrData.i)
 		if (existing) {
+			if (existing.status === 'enriched') {
+				const items = await this.repo.getItems(existing.id)
+				yield { type: 'completed', data: { receipt: existing, items, cached: true } }
+				return
+			}
+
+			if (existing.fnsData) {
+				yield {
+					type: 'fns_fetched',
+					data: { itemCount: (existing.fnsData as FnsReceiptData).items?.length || 0 },
+				}
+				yield* this.streamEnrichment(existing, existing.fnsData as FnsReceiptData, userId, span)
+				return
+			}
+
 			const items = await this.repo.getItems(existing.id)
 			yield { type: 'completed', data: { receipt: existing, items, cached: true } }
 			return
@@ -117,7 +132,7 @@ export class ReceiptsService {
 			const enrichRequest = this.catalog.buildImageRequest(base64)
 			const enriched = await this.catalog.enrich(enrichRequest, span)
 
-			await this.saveEnrichedItems(receipt.id, enriched)
+			await this.createEnrichedItems(receipt.id, enriched)
 
 			const total = enriched.receipt?.total
 				? Math.round(enriched.receipt.total * 100)
@@ -137,7 +152,7 @@ export class ReceiptsService {
 
 			return { receipt: updated!, items, enriched: true }
 		} catch (error) {
-			await this.repo.update(receipt.id, { status: 'failed', lastError: (error as Error).message })
+			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
 			throw error
 		}
 	}
@@ -156,7 +171,7 @@ export class ReceiptsService {
 				else if (event.type === 'receipt') yield { type: 'receipt', data: event.data }
 				else if (event.type === 'completed') {
 					const enriched = (event.data as any).response as EnrichResponse
-					await this.saveEnrichedItems(receipt.id, enriched)
+					await this.createEnrichedItems(receipt.id, enriched)
 
 					const total = enriched.receipt?.total
 						? Math.round(enriched.receipt.total * 100)
@@ -179,7 +194,7 @@ export class ReceiptsService {
 				}
 			}
 		} catch (error) {
-			await this.repo.update(receipt.id, { status: 'failed', lastError: (error as Error).message })
+			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
 			yield { type: 'error', data: { message: (error as Error).message, stage: 'enrichment' } }
 		}
 	}
@@ -211,10 +226,12 @@ export class ReceiptsService {
 				else if (event.type === 'receipt') yield { type: 'receipt', data: event.data }
 				else if (event.type === 'completed') {
 					const enriched = (event.data as any).response as EnrichResponse
-					await this.saveEnrichedItems(receipt.id, enriched)
+					await this.createEnrichedItems(receipt.id, enriched)
 
 					await this.repo.update(receipt.id, {
 						status: 'enriched',
+						placeName: enriched.place?.name || receipt.placeName,
+						placeAddress: enriched.place?.address || receipt.placeAddress,
 						enrichmentData: enriched,
 						enrichedAt: new Date(),
 					})
@@ -227,7 +244,9 @@ export class ReceiptsService {
 				}
 			}
 		} catch (error) {
-			await this.repo.update(receipt.id, { status: 'failed', lastError: (error as Error).message })
+			this.logger.warn('enrichment failed, saving raw items', { receiptId: receipt.id, error })
+			await this.createItemsFromFns(receipt.id, fnsData)
+			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
 			yield { type: 'error', data: { message: (error as Error).message, stage: 'enrichment' } }
 		}
 	}
@@ -272,44 +291,83 @@ export class ReceiptsService {
 		return { receipt, items }
 	}
 
+	private async createEnrichedItems(receiptId: string, enriched: EnrichResponse) {
+		if (!enriched.items?.length) return []
+
+		return this.repo.createItems(
+			receiptId,
+			enriched.items.map((ei, i) => ({
+				rawName: ei.rawName,
+				name: ei.name,
+				category: ei.category,
+				subcategory: ei.subcategory,
+				emoji: this.normalizeEmoji(ei.emoji),
+				tags: ei.tags,
+				price: Math.round((ei.price || 0) * 100),
+				quantity: String(ei.quantity || 1),
+				unit: ei.unit,
+				sum: Math.round((ei.sum || 0) * 100),
+				discount: ei.discount ? Math.round(ei.discount * 100) : 0,
+				suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
+				displayOrder: i,
+				catalogItemId: ei.id,
+			})),
+		)
+	}
+
 	private async saveEnrichedItems(receiptId: string, enriched: EnrichResponse) {
 		const existing = await this.repo.getItems(receiptId)
 
-		for (let i = 0; i < enriched.items.length; i++) {
-			const ei = enriched.items[i]!
-			const ex = existing[i]
+		if (existing.length > 0) {
+			for (let i = 0; i < enriched.items.length; i++) {
+				const ei = enriched.items[i]!
+				const ex = existing[i]
 
-			if (ex) {
-				await this.repo.updateItem(ex.id, {
-					name: ei.name,
-					category: ei.category,
-					subcategory: ei.subcategory,
-					emoji: ei.emoji,
-					tags: ei.tags,
-					unit: ei.unit,
-					suggestedSplitMethod: ei.splitMethod as any,
-					catalogItemId: ei.id,
-				})
-			} else {
-				await this.repo.createItems(receiptId, [
-					{
-						rawName: ei.rawName,
+				if (ex) {
+					await this.repo.updateItem(ex.id, {
 						name: ei.name,
 						category: ei.category,
 						subcategory: ei.subcategory,
-						emoji: ei.emoji,
+						emoji: this.normalizeEmoji(ei.emoji),
 						tags: ei.tags,
-						price: Math.round((ei.price || 0) * 100),
-						quantity: String(ei.quantity || 1),
 						unit: ei.unit,
-						sum: Math.round((ei.sum || 0) * 100),
-						discount: ei.discount ? Math.round(ei.discount * 100) : 0,
-						suggestedSplitMethod: ei.splitMethod as any,
-						displayOrder: i,
+						suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
 						catalogItemId: ei.id,
-					},
-				])
+					})
+				}
 			}
+		} else {
+			await this.createEnrichedItems(receiptId, enriched)
 		}
+	}
+
+	private mapSplitMethod(
+		catalogMethod?: string,
+	): 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom' | undefined {
+		if (!catalogMethod) return undefined
+
+		const mapping: Record<string, 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'> = {
+			equal: 'equal',
+			shares: 'shares',
+			fixed: 'fixed',
+			proportional: 'proportional',
+			custom: 'custom',
+			by_amount: 'proportional',
+			per_unit: 'shares',
+		}
+
+		return mapping[catalogMethod] ?? 'equal'
+	}
+
+	private truncateError(error: Error | string, maxLength = 2000): string {
+		const msg = error instanceof Error ? error.message : String(error)
+		return msg.length > maxLength ? msg.slice(0, maxLength) + '...' : msg
+	}
+
+	private normalizeEmoji(emoji?: string): string | undefined {
+		if (!emoji) return undefined
+		const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' })
+		const first = segmenter.segment(emoji)[Symbol.iterator]().next().value
+		return first?.segment
 	}
 }

@@ -76,12 +76,21 @@
 		platform.haptic.impact('light')
 	}
 
-	function handleBackdropClick(e: MouseEvent) {
-		// prevent event from bubbling and triggering other elements
-		e.stopPropagation()
-		isOpen = false
+	function handleWindowClick(e: MouseEvent) {
+		if (!isOpen) return
+		if (
+			dropdownRef &&
+			!dropdownRef.contains(e.target as Node) &&
+			triggerRef &&
+			!triggerRef.contains(e.target as Node)
+		) {
+			isOpen = false
+		}
 	}
 </script>
+
+<!-- Use window click listener instead of a backdrop div to avoid compositing issues -->
+<svelte:window onclick={handleWindowClick} />
 
 <div class="select-wrapper">
 	{#if label}
@@ -97,16 +106,8 @@
 
 	{#if isOpen}
 		<Portal target="#portal-root">
+			<!-- Wrapper has no pointer events so clicks pass through to window listener -->
 			<div class="select-portal-wrapper">
-				<!--suppress HtmlUnknownAttribute -->
-				<div
-					class="backdrop"
-					onclick={handleBackdropClick}
-					onmousedown={() => {}}
-					role="presentation"
-					transition:fade={{ duration: 100 }}
-				></div>
-
 				<div
 					bind:this={dropdownRef}
 					class="dropdown"
@@ -183,13 +184,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: calc(var(--z-modal) + 100);
-		pointer-events: auto;
-	}
-
-	.backdrop {
-		position: absolute;
-		inset: 0;
-		background: transparent;
+		pointer-events: none; /* Crucial: let clicks pass through to window */
 	}
 
 	.dropdown {
@@ -208,6 +203,7 @@
 		overflow: hidden;
 		max-height: 300px;
 		overflow-y: auto;
+		pointer-events: auto; /* Re-enable pointer events for the menu itself */
 	}
 
 	.dropdown.from-top {

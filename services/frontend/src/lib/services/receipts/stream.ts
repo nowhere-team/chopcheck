@@ -4,47 +4,29 @@ import { createLogger } from '$lib/shared/logger'
 const log = createLogger('receipt-stream')
 
 export type ReceiptStreamEventType =
-	| 'start'
-	| 'fetching'
-	| 'parsing'
-	| 'enriching'
+	| 'started'
+	| 'fns_fetched'
 	| 'item'
-	| 'complete'
+	| 'place'
+	| 'receipt'
+	| 'completed'
 	| 'error'
+	| 'stream_end'
+	| 'ping'
 
 export interface ReceiptStreamEvent {
 	type: ReceiptStreamEventType
-	data: unknown
-}
-
-export interface ReceiptItem {
-	name: string
-	price: number
-	quantity: string
-	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-}
-
-export interface ReceiptStartData {
-	receiptId: string
-}
-
-export interface ReceiptItemData {
-	item: ReceiptItem
-	index: number
-	total: number
+	data: any
 }
 
 export interface ReceiptCompleteData {
-	receiptId: string
-	storeName?: string
-	storeAddress?: string
-	totalItems: number
-	totalAmount: number
-}
-
-export interface ReceiptErrorData {
-	message: string
-	code?: string
+	receipt: {
+		id: string
+		total: number
+		placeName?: string
+	}
+	items: any[]
+	cached: boolean
 }
 
 export type StreamCallback = (event: ReceiptStreamEvent) => void
@@ -55,62 +37,7 @@ export async function streamReceiptFromQr(
 	signal?: AbortSignal
 ): Promise<void> {
 	const url = `${API_BASE_URL}/receipts/scan/qr/stream`
-
-	try {
-		const response = await fetch(url, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			credentials: 'include',
-			body: JSON.stringify({ qrRaw }),
-			signal
-		})
-
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}`)
-		}
-
-		const reader = response.body?.getReader()
-		if (!reader) throw new Error('No response body')
-
-		const decoder = new TextDecoder()
-		let buffer = ''
-
-		while (true) {
-			const { done, value } = await reader.read()
-			if (done) break
-
-			buffer += decoder.decode(value, { stream: true })
-			const lines = buffer.split('\n')
-			buffer = lines.pop() || ''
-
-			for (const line of lines) {
-				if (line.startsWith('event:')) {
-					const eventType = line.slice(6).trim()
-					const dataLine = lines[lines.indexOf(line) + 1]
-					if (dataLine?.startsWith('data:')) {
-						try {
-							const data = JSON.parse(dataLine.slice(5).trim())
-							onEvent({ type: eventType as ReceiptStreamEventType, data })
-						} catch (e) {
-							log.warn('failed to parse sse data', e)
-						}
-					}
-				}
-			}
-		}
-	} catch (e) {
-		if ((e as Error).name === 'AbortError') {
-			log.info('stream aborted')
-			return
-		}
-		log.error('stream error', e)
-		onEvent({
-			type: 'error',
-			data: { message: e instanceof Error ? e.message : 'Unknown error' }
-		})
-	}
+	await openEventSource(url, { qrRaw }, onEvent, signal)
 }
 
 export async function streamReceiptFromImage(
@@ -119,15 +46,24 @@ export async function streamReceiptFromImage(
 	signal?: AbortSignal
 ): Promise<void> {
 	const url = `${API_BASE_URL}/receipts/scan/image/stream`
+	await openEventSource(url, { image: imageBase64 }, onEvent, signal)
+}
 
+async function openEventSource(
+	url: string,
+	body: unknown,
+	onEvent: StreamCallback,
+	signal?: AbortSignal
+) {
 	try {
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
+				Accept: 'text/event-stream'
 			},
+			body: JSON.stringify(body),
 			credentials: 'include',
-			body: JSON.stringify({ image: imageBase64 }),
 			signal
 		})
 
@@ -140,6 +76,7 @@ export async function streamReceiptFromImage(
 
 		const decoder = new TextDecoder()
 		let buffer = ''
+		let currentEventType: string | null = null
 
 		while (true) {
 			const { done, value } = await reader.read()
@@ -149,19 +86,33 @@ export async function streamReceiptFromImage(
 			const lines = buffer.split('\n')
 			buffer = lines.pop() || ''
 
-			let currentEvent: string | null = null
-
 			for (const line of lines) {
-				if (line.startsWith('event:')) {
-					currentEvent = line.slice(6).trim()
-				} else if (line.startsWith('data:') && currentEvent) {
+				const trimmed = line.trim()
+
+				if (!trimmed) {
+					currentEventType = null
+					continue
+				}
+
+				if (trimmed.startsWith('event:')) {
+					currentEventType = trimmed.slice(6).trim()
+					continue
+				}
+
+				if (trimmed.startsWith('data:')) {
+					const dataStr = trimmed.slice(5).trim()
+					if (!dataStr) continue
+
 					try {
-						const data = JSON.parse(line.slice(5).trim())
-						onEvent({ type: currentEvent as ReceiptStreamEventType, data })
+						const data = JSON.parse(dataStr)
+						const eventType = currentEventType || data.type || 'unknown'
+
+						if (eventType !== 'ping') {
+							onEvent({ type: eventType as ReceiptStreamEventType, data })
+						}
 					} catch (e) {
 						log.warn('failed to parse sse data', e)
 					}
-					currentEvent = null
 				}
 			}
 		}
@@ -175,6 +126,8 @@ export async function streamReceiptFromImage(
 			type: 'error',
 			data: { message: e instanceof Error ? e.message : 'Unknown error' }
 		})
+	} finally {
+		onEvent({ type: 'stream_end', data: {} })
 	}
 }
 
@@ -183,7 +136,6 @@ export function fileToBase64(file: File): Promise<string> {
 		const reader = new FileReader()
 		reader.onload = () => {
 			const result = reader.result as string
-			// remove data:image/...;base64, prefix
 			const base64 = result.split(',')[1]
 			resolve(base64 || '')
 		}

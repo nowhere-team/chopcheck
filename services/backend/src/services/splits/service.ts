@@ -106,6 +106,7 @@ export class SplitsService {
 			icon: dto.icon,
 		})
 
+		// Only update items if items array is explicitly provided (not null/undefined)
 		if (dto.items) {
 			const currentItems = await this.items.findBySplitId(dto.id)
 			const toUpdate = dto.items.filter(i => i.id)
@@ -388,7 +389,7 @@ export class SplitsService {
 
 			const newItems = receiptItems.map(ri => ({
 				name: ri.name || ri.rawName,
-				price: ri.sum,
+				price: ri.price, // FIX: Use unit price, NOT sum
 				type: 'product' as const,
 				quantity: ri.quantity,
 				defaultDivisionMethod: (ri.suggestedSplitMethod as any) || 'equal',
