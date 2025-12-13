@@ -1,0 +1,37 @@
+.editable-field {
+	min-height: 32px;
+	padding: var(--space-1) var(--space-2);
+	line-height: 1.4;
+	background: transparent;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	outline: none;
+	transition:
+		border-color 0.15s var(--ease-out),
+		box-shadow 0.15s var(--ease-out);
+	-webkit-tap-highlight-color: transparent;
+	cursor: pointer;
+}
+
+.editable-field:hover {
+	border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border));
+}
+
+.editable-field.focused {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.editable-field-wrapper {
+	width: 100%;
+	cursor: pointer;
+}
+
+.editable-field-wrapper:focus {
+	outline: none;
+}
+
+.editable-field-wrapper.centered {
+	display: flex;
+	justify-content: center;
+}

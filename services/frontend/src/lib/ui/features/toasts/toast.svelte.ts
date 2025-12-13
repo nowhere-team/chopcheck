@@ -44,8 +44,15 @@ class ToastController {
 		}
 	}
 
+	private generateId(): string {
+		if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+			return crypto.randomUUID()
+		}
+		return `toast-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+	}
+
 	private add(message: string, type: ToastType, options: ToastOptions = {}): string {
-		const id = crypto.randomUUID()
+		const id = this.generateId()
 		const duration = options.duration ?? (type === 'error' ? 5000 : 3000)
 		const dismissible = options.dismissible ?? true
 

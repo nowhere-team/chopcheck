@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { CaretDown, Check } from 'phosphor-svelte'
 	import { quintOut } from 'svelte/easing'
-	import { fade, scale } from 'svelte/transition'
+	import { fade, fly } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte'
+	import { getPlatform } from '$lib/app/context.svelte.js'
+	import Label from '$lib/ui/components/Label.svelte'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Option {
 		value: string
@@ -21,13 +23,31 @@
 
 	let isOpen = $state(false)
 	let triggerRef: HTMLButtonElement | undefined = $state()
+	let dropdownRef: HTMLDivElement | undefined = $state()
 	let coords = $state({ top: 0, left: 0, width: 0 })
+	let placement = $state<'bottom' | 'top'>('bottom')
 
 	const currentLabel = $derived(options.find(o => o.value === value)?.label || value)
 
 	function updatePosition() {
-		if (triggerRef) {
-			const rect = triggerRef.getBoundingClientRect()
+		if (!triggerRef) return
+
+		const rect = triggerRef.getBoundingClientRect()
+		const viewportHeight = window.innerHeight
+		const spaceBelow = viewportHeight - rect.bottom
+		const spaceAbove = rect.top
+		const dropdownHeight = Math.min(options.length * 44 + 12, 300) // approximate height
+
+		// decide placement based on available space
+		if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+			placement = 'top'
+			coords = {
+				top: rect.top - dropdownHeight - 6,
+				left: rect.left,
+				width: rect.width
+			}
+		} else {
+			placement = 'bottom'
 			coords = {
 				top: rect.bottom + 6,
 				left: rect.left,
@@ -55,11 +75,26 @@
 		isOpen = false
 		platform.haptic.impact('light')
 	}
+
+	function handleWindowClick(e: MouseEvent) {
+		if (!isOpen) return
+		if (
+			dropdownRef &&
+			!dropdownRef.contains(e.target as Node) &&
+			triggerRef &&
+			!triggerRef.contains(e.target as Node)
+		) {
+			isOpen = false
+		}
+	}
 </script>
+
+<!-- Use window click listener instead of a backdrop div to avoid compositing issues -->
+<svelte:window onclick={handleWindowClick} />
 
 <div class="select-wrapper">
 	{#if label}
-		<span class="label">{label}</span>
+		<Label>{label}</Label>
 	{/if}
 
 	<button bind:this={triggerRef} class="trigger" class:active={isOpen} onclick={toggle}>
@@ -70,35 +105,38 @@
 	</button>
 
 	{#if isOpen}
-		<div class="portal-root">
-			<div
-				class="backdrop"
-				onclick={() => (isOpen = false)}
-				role="presentation"
-				transition:fade={{ duration: 150 }}
-			></div>
-
-			<div
-				class="dropdown glass-panel"
-				style:top="{coords.top}px"
-				style:left="{coords.left}px"
-				style:width="{coords.width}px"
-				transition:scale={{ duration: 200, start: 0.9, opacity: 0, easing: quintOut }}
-			>
-				{#each options as option (option.value)}
-					<button
-						class="option-item"
-						class:selected={option.value === value}
-						onclick={() => select(option.value)}
-					>
-						<span>{option.label}</span>
-						{#if option.value === value}
-							<Check size={16} weight="bold" />
-						{/if}
-					</button>
-				{/each}
+		<Portal target="#portal-root">
+			<!-- Wrapper has no pointer events so clicks pass through to window listener -->
+			<div class="select-portal-wrapper">
+				<div
+					bind:this={dropdownRef}
+					class="dropdown"
+					class:from-top={placement === 'top'}
+					style:top="{coords.top}px"
+					style:left="{coords.left}px"
+					style:width="{coords.width}px"
+					in:fly={{
+						y: placement === 'top' ? 10 : -10,
+						duration: 180,
+						easing: quintOut
+					}}
+					out:fade={{ duration: 100 }}
+				>
+					{#each options as option (option.value)}
+						<button
+							class="option-item"
+							class:selected={option.value === value}
+							onclick={() => select(option.value)}
+						>
+							<span>{option.label}</span>
+							{#if option.value === value}
+								<Check size={16} weight="bold" />
+							{/if}
+						</button>
+					{/each}
+				</div>
 			</div>
-		</div>
+		</Portal>
 	{/if}
 </div>
 
@@ -109,12 +147,6 @@
 		gap: 6px;
 		width: 100%;
 		position: relative;
-	}
-
-	.label {
-		font-size: var(--text-xs);
-		color: var(--color-text-secondary);
-		margin-left: 4px;
 	}
 
 	.trigger {
@@ -148,17 +180,11 @@
 		color: var(--color-text-secondary);
 	}
 
-	.portal-root {
+	.select-portal-wrapper {
 		position: fixed;
 		inset: 0;
-		z-index: var(--z-modal);
-		pointer-events: auto;
-	}
-
-	.backdrop {
-		position: absolute;
-		inset: 0;
-		background: transparent;
+		z-index: calc(var(--z-modal) + 100);
+		pointer-events: none; /* Crucial: let clicks pass through to window */
 	}
 
 	.dropdown {
@@ -167,16 +193,21 @@
 		flex-direction: column;
 		gap: 4px;
 		padding: 6px;
-		background-color: var(--glass-bg-secondary);
-		backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-		border: 1px solid var(--glass-border);
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
 		box-shadow:
-			0 10px 30px -10px rgba(0, 0, 0, 0.15),
-			0 0 0 1px rgba(0, 0, 0, 0.02);
+			0 10px 30px -10px rgba(0, 0, 0, 0.2),
+			0 4px 12px -4px rgba(0, 0, 0, 0.1);
 		transform-origin: top center;
 		overflow: hidden;
+		max-height: 300px;
+		overflow-y: auto;
+		pointer-events: auto; /* Re-enable pointer events for the menu itself */
+	}
+
+	.dropdown.from-top {
+		transform-origin: bottom center;
 	}
 
 	.option-item {

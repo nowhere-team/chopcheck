@@ -1,3 +1,3 @@
-export * from './cache'
+export * from './categories'
 export * from './types'
 export * from './utils'

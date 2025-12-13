@@ -71,6 +71,10 @@ export class TelegramPlatform implements Platform {
 				this.sdk.viewport.requestFullscreen()
 			}
 
+			if (this.sdk.disableVerticalSwipes.isAvailable()) {
+				this.sdk.disableVerticalSwipes()
+			}
+
 			if (this.sdk.miniApp.mountSync.isAvailable()) {
 				this.sdk.miniApp.mountSync()
 			}

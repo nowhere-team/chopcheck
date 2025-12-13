@@ -1,7 +1,7 @@
 ﻿import type { Logger } from '@/platform/logger'
 import type { SpanContext, Tracer } from '@/platform/tracing'
 
-import type { CatalogClientConfig, EnrichRequest, EnrichResponse, StreamEvent } from './types'
+import type { CatalogClientConfig, EnrichRequest, EnrichResponse, StreamEvent, StreamEventType } from './types'
 
 export class CatalogClient {
 	constructor(
@@ -71,7 +71,9 @@ export class CatalogClient {
 
 			const reader = response.body.getReader()
 			const decoder = new TextDecoder()
+
 			let buffer = ''
+			let currentEventType: string | null = null
 
 			while (true) {
 				const { done, value } = await reader.read()
@@ -81,30 +83,47 @@ export class CatalogClient {
 				buffer += decoder.decode(value, { stream: true })
 
 				const lines = buffer.split('\n')
+				// keep the last part potentially incomplete
 				buffer = lines.pop() || ''
 
 				for (const line of lines) {
-					this.logger.debug('got line from catalog stream', { line })
-					if (line.startsWith('event:')) {
-						// todo what to do
-						// const eventType = line.slice(6).trim()
+					const trimmed = line.trim()
+
+					// Empty line indicates end of message in SSE
+					if (!trimmed) {
+						currentEventType = null
 						continue
 					}
 
-					if (line.startsWith('data:')) {
-						const data = line.slice(5).trim()
-						if (!data) continue
+					if (trimmed.startsWith('event:')) {
+						currentEventType = trimmed.slice(6).trim()
+						continue
+					}
+
+					if (trimmed.startsWith('data:')) {
+						const dataStr = trimmed.slice(5).trim()
+						if (!dataStr) continue
 
 						try {
-							const parsed = JSON.parse(data) as StreamEvent
+							const parsedData = JSON.parse(dataStr)
 
-							// skip pings
-							if (parsed.type === 'ping') continue
+							// Determine event type:
+							// 1. From 'event:' line (standard SSE)
+							// 2. From data payload (if backend wraps it inside json)
+							const type = currentEventType || (parsedData as any).type
 
-							span.addEvent(`stream.${parsed.type}`)
-							yield parsed
+							// Skip pings or unknown types
+							if (!type || type === 'ping') continue
+
+							const event: StreamEvent = {
+								type: type as StreamEventType,
+								data: parsedData,
+							}
+
+							span.addEvent(`stream.${type}`)
+							yield event
 						} catch {
-							this.logger.warn('failed to parse sse data', { data })
+							this.logger.warn('failed to parse sse data', { data: dataStr })
 						}
 					}
 				}

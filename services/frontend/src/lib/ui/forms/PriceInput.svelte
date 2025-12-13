@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { formatPriceInput, parsePriceInput } from '$lib/shared/money'
-
-	import Input from './Input.svelte'
+	import { Input } from '$lib/ui/components'
 
 	interface Props {
 		label?: string

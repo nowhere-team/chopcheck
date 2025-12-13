@@ -117,6 +117,22 @@ export function createSplitsStore() {
 		}
 	})
 
+	// Новый метод для привязки чека
+	const linkReceipt = createMutation<SplitResponse, { splitId: string; receiptId: string }>(
+		({ splitId, receiptId }) => api.post(`splits/${splitId}/receipts/${receiptId}`),
+		{
+			onSuccess: (data, { splitId }) => {
+				// Инвалидируем кэш, чтобы обновить данные на UI
+				cache.invalidate(CACHE_KEYS.byId(splitId))
+				cache.invalidate(CACHE_KEYS.draft)
+				// Если это был черновик, обновляем его данные напрямую
+				if (data) {
+					cache.set(CACHE_KEYS.draft, data)
+				}
+			}
+		}
+	)
+
 	const selectItems = createMutation<
 		SplitResponse,
 		{ splitId: string; participantId?: string; selections: ItemSelection[] }
@@ -150,6 +166,7 @@ export function createSplitsStore() {
 		publish,
 		join,
 		addItems,
+		linkReceipt,
 		selectItems,
 		shareMessage,
 

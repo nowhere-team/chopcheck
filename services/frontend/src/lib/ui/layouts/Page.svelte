@@ -58,4 +58,8 @@
 		width: 100%;
 		flex-grow: 1;
 	}
+
+	.with-nav {
+		padding-bottom: 150px;
+	}
 </style>

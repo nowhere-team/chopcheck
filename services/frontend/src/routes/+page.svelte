@@ -7,12 +7,12 @@
 	import { m } from '$lib/i18n'
 	import { formatPrice } from '$lib/shared/money'
 	import { getSplitsStore, getUserStore } from '$lib/state'
-	import { CollapsibleSection } from '$lib/ui/components'
 	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
 	import StatsBox from '$lib/ui/features/stats/StatsBox.svelte'
 	import StatsSkeleton from '$lib/ui/features/stats/StatsSkeleton.svelte'
 	import { toast } from '$lib/ui/features/toasts'
+	import { CollapsibleSection } from '$lib/ui/forms'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const platform = getPlatform()

@@ -8,6 +8,7 @@
 		fontWeight?: string
 		animated?: boolean
 		class?: string
+		onchange?: (value: string) => void
 	}
 
 	let {
@@ -18,7 +19,8 @@
 		fontSize = 'var(--text-xl)',
 		fontWeight = 'var(--font-bold)',
 		animated = false,
-		class: className = ''
+		class: className = '',
+		onchange
 	}: Props = $props()
 
 	let isEditing = $state(false)
@@ -76,7 +78,9 @@
 
 	function handleInput(e: Event) {
 		const target = e.target as HTMLDivElement
-		value = target.textContent || ''
+		const newValue = target.textContent || ''
+		value = newValue
+		onchange?.(newValue)
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {

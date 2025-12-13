@@ -173,3 +173,13 @@ export interface ItemSelection {
 	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
 	value?: string
 }
+
+export interface DraftItem {
+	id?: string
+	name: string
+	price: number
+	quantity: string
+	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
+	defaultDivisionMethod: 'equal' | 'shares' | 'custom'
+	icon?: string
+}
