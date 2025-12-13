@@ -33,6 +33,7 @@
 
 	function handleSelect(emoji: string) {
 		value = emoji
+		// Важно: вызываем onchange после обновления value
 		onchange?.(emoji)
 		isPickerOpen = false
 		isFocused = false
@@ -59,6 +60,7 @@
 	tabindex="0"
 	onclick={openPicker}
 	onkeydown={handleKeyDown}
+	oncontextmenu={e => e.preventDefault()}
 >
 	<button
 		type="button"
@@ -66,7 +68,7 @@
 		class:focused={isFocused}
 		aria-label="Выбрать эмодзи"
 	>
-		<Emoji emoji={value} {size} showSpinner />
+		<Emoji emoji={value} {size} />
 	</button>
 </div>
 
@@ -81,6 +83,7 @@
 	.wrapper {
 		width: fit-content;
 		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.wrapper:focus {
@@ -109,7 +112,6 @@
 			border-color 0.15s var(--ease-out),
 			box-shadow 0.15s var(--ease-out),
 			transform 0.1s var(--ease-out);
-		-webkit-tap-highlight-color: transparent;
 		cursor: pointer;
 	}
 

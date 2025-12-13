@@ -6,7 +6,7 @@ import { generateSplitId } from '@/platform/database/utils'
 
 import { BaseRepository } from './base'
 
-type NewSplit = Pick<Split, 'name' | 'currency'>
+type NewSplit = Pick<Split, 'name' | 'currency'> & { icon?: string }
 
 export class SplitsRepository extends BaseRepository {
 	private key(id: string) {
@@ -116,6 +116,7 @@ export class SplitsRepository extends BaseRepository {
 					shortId,
 					name: data.name,
 					currency: data.currency || 'RUB',
+					icon: data.icon,
 					status: 'draft',
 					phase: 'setup',
 				})

@@ -1,15 +1,25 @@
-<!--suppress CssUnusedSymbol -->
 <script lang="ts">
 	import type { Snippet } from 'svelte'
+	import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
 
-	interface Props {
+	type BaseProps = {
 		variant?: 'default' | 'elevated' | 'outlined' | 'ghost'
 		padding?: 'none' | 'sm' | 'md' | 'lg'
-		interactive?: boolean
-		onclick?: () => void
 		children?: Snippet
-		class?: string // allow external styling override
+		class?: string
 	}
+
+	type InteractiveProps = BaseProps & {
+		interactive: true
+		onclick?: (e: MouseEvent) => void
+	} & Omit<HTMLButtonAttributes, 'class' | 'onclick'>
+
+	type NonInteractiveProps = BaseProps & {
+		interactive?: false
+		onclick?: never
+	} & Omit<HTMLAttributes<HTMLDivElement>, 'class'>
+
+	type Props = InteractiveProps | NonInteractiveProps
 
 	const {
 		variant = 'default',
@@ -17,13 +27,14 @@
 		interactive = false,
 		onclick,
 		children,
-		class: className
+		class: className,
+		...rest
 	}: Props = $props()
 
 	function onKeydown(e: KeyboardEvent) {
 		if (interactive && (e.key === 'Enter' || e.key === ' ')) {
 			e.preventDefault()
-			onclick?.()
+			onclick?.(e as unknown as MouseEvent & { currentTarget: HTMLButtonElement })
 		}
 	}
 </script>
@@ -36,10 +47,12 @@
 	tabindex={interactive ? 0 : undefined}
 	{onclick}
 	onkeydown={interactive ? onKeydown : undefined}
+	{...rest}
 >
 	{@render children?.()}
 </svelte:element>
 
+<!--suppress CssUnusedSymbol -->
 <style>
 	.card {
 		width: 100%;
@@ -50,7 +63,6 @@
 		overflow: hidden; /* for border-radius clip */
 	}
 
-	/* variants using our new subtle borders and backgrounds */
 	.default {
 		background: var(--color-bg-elevated);
 		border: 1px solid var(--color-border);

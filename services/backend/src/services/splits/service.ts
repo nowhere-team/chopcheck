@@ -71,7 +71,11 @@ export class SplitsService {
 	async create(userId: string, dto: CreateSplitDto): Promise<SplitResponse> {
 		this.logger.info('creating split', { userId, name: dto.name })
 
-		const split = await this.splits.create(userId, { name: dto.name, currency: dto.currency })
+		const split = await this.splits.create(userId, {
+			name: dto.name,
+			currency: dto.currency,
+			icon: dto.icon,
+		})
 
 		if (dto.items?.length) {
 			await this.items.createMany(split.id, dto.items)
@@ -96,7 +100,11 @@ export class SplitsService {
 		if (existing.ownerId !== userId) throw new ForbiddenError('only owner can update split')
 		if (existing.status !== 'draft') throw new ForbiddenError('can only update draft splits')
 
-		await this.splits.update(dto.id, { name: dto.name, currency: dto.currency })
+		await this.splits.update(dto.id, {
+			name: dto.name,
+			currency: dto.currency,
+			icon: dto.icon,
+		})
 
 		if (dto.items) {
 			const currentItems = await this.items.findBySplitId(dto.id)

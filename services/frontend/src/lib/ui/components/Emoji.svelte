@@ -73,7 +73,6 @@
 		return `/emoji/3d/${subdir}/${resolvedUnicode}.webp`
 	})
 
-	// reset state when src changes
 	$effect(() => {
 		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 		src
@@ -81,7 +80,6 @@
 		hasError = false
 	})
 
-	// check if image is already loaded (from browser cache)
 	$effect(() => {
 		if (imgRef && imgRef.complete && imgRef.naturalWidth > 0) {
 			isLoaded = true
@@ -117,8 +115,11 @@
 			height={size}
 			loading={lazy ? 'lazy' : 'eager'}
 			decoding="async"
+			draggable="false"
+			oncontextmenu={e => e.preventDefault()}
 			onload={handleLoad}
 			onerror={handleError}
+			style="pointer-events: none; user-select: none; -webkit-touch-callout: none;"
 		/>
 	{/if}
 
@@ -148,6 +149,8 @@
 		justify-content: center;
 		position: relative;
 		vertical-align: middle;
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	.emoji-img {
