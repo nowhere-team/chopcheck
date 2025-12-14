@@ -12,6 +12,8 @@
 
 	let { open = $bindable(), selected, onselect, onclose }: Props = $props()
 
+	let shouldRenderContent = $state(false)
+
 	// prettier-ignore
 	const categories = {
 		food: ['🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🥗', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘'],
@@ -31,30 +33,47 @@
 		symbols: m.emoji_picker_symbols_category()
 	}
 
+	// dont block the animation while rendering
+	$effect(() => {
+		if (open) {
+			const timeout = setTimeout(() => {
+				requestAnimationFrame(() => {
+					shouldRenderContent = true
+				})
+			}, 50)
+
+			return () => clearTimeout(timeout)
+		} else {
+			shouldRenderContent = false
+		}
+	})
+
 	function handleSelect(emoji: string) {
 		onselect?.(emoji)
 	}
 </script>
 
 <BottomSheet bind:open {onclose} title={m.emoji_picker_label()}>
-	<div class="picker">
-		{#each Object.entries(categories) as [key, emojis] (key)}
-			<div class="category">
-				<h3 class="category-title">{categoryNames[key]}</h3>
-				<div class="emoji-grid">
-					{#each emojis as emoji (emoji)}
-						<button
-							type="button"
-							class="emoji-button"
-							class:selected={emoji === selected}
-							onclick={() => handleSelect(emoji)}
-						>
-							<Emoji {emoji} size={32} lazy={true} />
-						</button>
-					{/each}
+	<div class="picker" class:ready={shouldRenderContent}>
+		{#if shouldRenderContent}
+			{#each Object.entries(categories) as [key, emojis] (key)}
+				<div class="category">
+					<h3 class="category-title">{categoryNames[key]}</h3>
+					<div class="emoji-grid">
+						{#each emojis as emoji (emoji)}
+							<button
+								type="button"
+								class="emoji-button"
+								class:selected={emoji === selected}
+								onclick={() => handleSelect(emoji)}
+							>
+								<Emoji {emoji} size={32} lazy={true} />
+							</button>
+						{/each}
+					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
+		{/if}
 	</div>
 </BottomSheet>
 
@@ -65,6 +84,13 @@
 		gap: var(--space-6);
 		padding-bottom: var(--space-4);
 		max-height: 60vh;
+		min-height: 60vh;
+		opacity: 0;
+		transition: opacity 0.15s ease-out;
+	}
+
+	.picker.ready {
+		opacity: 1;
 	}
 
 	.category {
@@ -72,7 +98,7 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		content-visibility: auto;
-		contain-intrinsic-size: 200px;
+		contain-intrinsic-size: 180px;
 	}
 
 	.category-title {
