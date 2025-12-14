@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { CaretDown, Check } from 'phosphor-svelte'
+	import { onClickOutside } from 'runed'
 	import { quintOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
@@ -22,12 +23,23 @@
 	const platform = getPlatform()
 
 	let isOpen = $state(false)
-	let triggerRef: HTMLButtonElement | undefined = $state()
-	let dropdownRef: HTMLDivElement | undefined = $state()
+	let triggerRef = $state<HTMLButtonElement | undefined>()
+	let dropdownRef = $state<HTMLDivElement | undefined>()
 	let coords = $state({ top: 0, left: 0, width: 0 })
 	let placement = $state<'bottom' | 'top'>('bottom')
 
 	const currentLabel = $derived(options.find(o => o.value === value)?.label || value)
+
+	onClickOutside(
+		() => dropdownRef,
+		() => {
+			if (isOpen) isOpen = false
+		},
+		{
+			immediate: false,
+			detectIframe: false
+		}
+	)
 
 	function updatePosition() {
 		if (!triggerRef) return
@@ -36,9 +48,8 @@
 		const viewportHeight = window.innerHeight
 		const spaceBelow = viewportHeight - rect.bottom
 		const spaceAbove = rect.top
-		const dropdownHeight = Math.min(options.length * 44 + 12, 300) // approximate height
+		const dropdownHeight = Math.min(options.length * 44 + 12, 300)
 
-		// decide placement based on available space
 		if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
 			placement = 'top'
 			coords = {
@@ -56,7 +67,8 @@
 		}
 	}
 
-	function toggle() {
+	function toggle(e: MouseEvent) {
+		e.stopPropagation()
 		if (!isOpen) {
 			updatePosition()
 			platform.haptic.selection()
@@ -75,22 +87,7 @@
 		isOpen = false
 		platform.haptic.impact('light')
 	}
-
-	function handleWindowClick(e: MouseEvent) {
-		if (!isOpen) return
-		if (
-			dropdownRef &&
-			!dropdownRef.contains(e.target as Node) &&
-			triggerRef &&
-			!triggerRef.contains(e.target as Node)
-		) {
-			isOpen = false
-		}
-	}
 </script>
-
-<!-- Use window click listener instead of a backdrop div to avoid compositing issues -->
-<svelte:window onclick={handleWindowClick} />
 
 <div class="select-wrapper">
 	{#if label}
@@ -106,7 +103,6 @@
 
 	{#if isOpen}
 		<Portal target="#portal-root">
-			<!-- Wrapper has no pointer events so clicks pass through to window listener -->
 			<div class="select-portal-wrapper">
 				<div
 					bind:this={dropdownRef}
@@ -184,7 +180,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: calc(var(--z-modal) + 100);
-		pointer-events: none; /* Crucial: let clicks pass through to window */
+		pointer-events: none;
 	}
 
 	.dropdown {
@@ -203,7 +199,7 @@
 		overflow: hidden;
 		max-height: 300px;
 		overflow-y: auto;
-		pointer-events: auto; /* Re-enable pointer events for the menu itself */
+		pointer-events: auto;
 	}
 
 	.dropdown.from-top {

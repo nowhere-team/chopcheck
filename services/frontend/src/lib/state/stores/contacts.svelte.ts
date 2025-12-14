@@ -1,53 +1,33 @@
+import { resource } from 'runed'
+
 import { api } from '$lib/services/api/client'
 import type { Contact } from '$lib/services/api/types'
 
-import { cache } from '../cache.svelte'
-import { createQuery } from '../query.svelte'
+export class ContactsService {
+	private selectedId = $state<string | null>(null)
 
-const CACHE_KEYS = {
-	list: 'contacts:list',
-	byId: (id: string) => `contacts:${id}`
-}
-
-export function createContactsStore() {
-	const listQuery = createQuery<Contact[]>(
-		CACHE_KEYS.list,
+	list = resource(
+		() => 'list',
 		async () => {
 			const response = await api.get<{ success: boolean; data: Contact[] }>('contacts')
 			return response.data
-		},
-		{ ttl: 5 * 60 * 1000 }
+		}
 	)
 
-	function fetchById(contactId: string) {
-		return createQuery<Contact>(
-			CACHE_KEYS.byId(contactId),
-			async () => {
-				const response = await api.get<{ success: boolean; data: Contact }>(
-					`contacts/${contactId}`
-				)
-				return response.data
-			},
-			{ ttl: 5 * 60 * 1000 }
-		)
+	details = resource(
+		() => this.selectedId,
+		async id => {
+			if (!id) return null
+			const response = await api.get<{ success: boolean; data: Contact }>(`contacts/${id}`)
+			return response.data
+		}
+	)
+
+	select(id: string) {
+		this.selectedId = id
 	}
 
-	function invalidateAll(): void {
-		cache.invalidatePattern('contacts:*')
+	async refresh() {
+		await this.list.refetch()
 	}
-
-	return {
-		list: listQuery,
-		fetchById,
-		invalidateAll
-	}
-}
-
-let contactsStore: ReturnType<typeof createContactsStore> | null = null
-
-export function getContactsStore() {
-	if (!contactsStore) {
-		contactsStore = createContactsStore()
-	}
-	return contactsStore
 }

@@ -24,9 +24,9 @@
 	const divisionLabels: Record<string, string> = {
 		equal: m.division_method_equal(),
 		shares: m.division_method_shares(),
-		custom: m.division_method_custom()
-		// fixed: m.division_method_fixed?.() ?? 'Фиксированно',
-		// proportional: m.division_method_proportional?.() ?? 'Пропорционально'
+		custom: m.division_method_custom(),
+		fixed: m.division_method_fixed?.() ?? 'Фикс.',
+		proportional: m.division_method_proportional?.() ?? 'Процент'
 	}
 
 	function handleClick(e: MouseEvent) {
@@ -63,7 +63,6 @@
 		}
 	}
 
-	// Блокируем контекстное меню браузера
 	function handleContextMenu(e: Event) {
 		e.preventDefault()
 	}

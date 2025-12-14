@@ -3,10 +3,11 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fly } from 'svelte/transition'
 
-	import { Spinner } from '$lib/ui/components'
+	import { Emoji, Spinner } from '$lib/ui/components'
 
 	interface Props {
 		storeName?: string
+		storeEmoji?: string
 		status?: string
 		itemsLoaded?: number
 		totalItems?: number
@@ -15,6 +16,7 @@
 
 	const {
 		storeName,
+		storeEmoji,
 		status = 'Загрузка...',
 		itemsLoaded = 0,
 		totalItems,
@@ -32,14 +34,19 @@
 	}
 
 	const countText = $derived(formatCount(itemsLoaded, totalItems))
-	const hasProgress = $derived(totalItems && totalItems > 0)
-	const progressPercent = $derived(hasProgress ? (itemsLoaded / totalItems!) * 100 : 0)
+	const isIndeterminate = $derived(!totalItems && status === 'Распознавание...')
+	const hasProgress = $derived((totalItems && totalItems > 0) || isIndeterminate)
+	const progressPercent = $derived(totalItems ? (itemsLoaded / totalItems) * 100 : 0)
 </script>
 
 <div class="receipt-loader">
 	<div class="header">
 		<div class="icon">
-			<Receipt size={24} weight="duotone" />
+			{#if storeEmoji}
+				<Emoji emoji={storeEmoji} size={24} />
+			{:else}
+				<Receipt size={24} weight="duotone" />
+			{/if}
 		</div>
 		<div class="info">
 			<span class="title">{storeName ?? 'Загрузка чека'}</span>
@@ -50,7 +57,11 @@
 
 	{#if hasProgress}
 		<div class="progress">
-			<div class="progress-bar" style:width="{progressPercent}%"></div>
+			<div
+				class="progress-bar"
+				class:indeterminate={isIndeterminate}
+				style:width={isIndeterminate ? '100%' : `${progressPercent}%`}
+			></div>
 		</div>
 	{/if}
 
@@ -132,12 +143,28 @@
 		background: var(--color-bg-tertiary);
 		border-radius: 2px;
 		overflow: hidden;
+		position: relative;
 	}
 
 	.progress-bar {
 		height: 100%;
 		background: var(--color-primary);
 		transition: width 0.3s var(--ease-out);
+	}
+
+	.progress-bar.indeterminate {
+		width: 30% !important;
+		position: absolute;
+		animation: indeterminate 1.5s infinite linear;
+	}
+
+	@keyframes indeterminate {
+		0% {
+			left: -30%;
+		}
+		100% {
+			left: 100%;
+		}
 	}
 
 	.progress-footer {
@@ -162,7 +189,6 @@
 		display: flex;
 		justify-content: flex-end;
 		overflow: hidden;
-
 		/*noinspection CssInvalidPropertyValue*/
 		-webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 100%);
 		mask-image: linear-gradient(to right, transparent, black 10%, black 100%);

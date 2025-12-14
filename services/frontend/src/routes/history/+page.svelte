@@ -1,26 +1,19 @@
 <script lang="ts">
-	import { onMount } from 'svelte'
-
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
-	import { getSplitsStore } from '$lib/state'
+	import { getSplitsService } from '$lib/state/context'
 	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
 	import { CollapsibleSection } from '$lib/ui/forms'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const platform = getPlatform()
-	const splitsStore = getSplitsStore()
+	const splitsService = getSplitsService()
 
-	const history = $derived(splitsStore.grouped)
-	const data = $derived(history.data)
-	const isHistoryLoading = $derived(history.isLoading && !data)
-
-	onMount(() => {
-		splitsStore.grouped.fetch()
-	})
+	const history = $derived(splitsService.grouped)
+	const data = $derived(history.current)
 
 	function handleSplitClick(shortId: string) {
 		platform.haptic.impact('light')
@@ -29,7 +22,7 @@
 </script>
 
 <Page title={m.app_title_history()}>
-	{#if isHistoryLoading}
+	{#if history.loading && !data}
 		<SplitCardSkeleton count={3} />
 	{:else if data}
 		<div class="sections">

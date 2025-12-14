@@ -180,6 +180,6 @@ export interface DraftItem {
 	price: number
 	quantity: string
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-	defaultDivisionMethod: 'equal' | 'shares' | 'custom'
+	defaultDivisionMethod: 'equal' | 'shares' | 'custom' | 'fixed' | 'proportional'
 	icon?: string
 }

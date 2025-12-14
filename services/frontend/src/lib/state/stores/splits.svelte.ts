@@ -1,3 +1,4 @@
+import { resource } from 'runed'
 import { SvelteURLSearchParams } from 'svelte/reactivity'
 
 import { api } from '$lib/services/api/client'
@@ -12,37 +13,28 @@ import {
 	type SplitsByPeriod
 } from '$lib/services/api/types'
 
-import { cache } from '../cache.svelte'
-import { createMutation, createQuery } from '../query.svelte'
+export class SplitsService {
+	private currentId = $state<string | null>(null)
 
-const CACHE_KEYS = {
-	active: 'splits:active',
-	grouped: 'splits:grouped',
-	draft: 'splits:draft',
-	byId: (id: string) => `splits:${id}`,
-	byShortId: (shortId: string) => `splits:short:${shortId}`
-}
-
-export function createSplitsStore() {
-	const activeQuery = createQuery<Split[]>(
-		CACHE_KEYS.active,
+	active = resource(
+		() => 'active',
 		async () => {
 			const response = await api.get<PaginatedResponse<Split>>(
 				'splits/my?status=active&limit=10'
 			)
 			return response.splits ?? response.data ?? []
-		},
-		{ ttl: 2 * 60 * 1000 }
+		}
 	)
 
-	const groupedQuery = createQuery<SplitsByPeriod>(
-		CACHE_KEYS.grouped,
-		() => api.get<SplitsByPeriod>('splits/my?grouped=true'),
-		{ ttl: 2 * 60 * 1000 }
+	grouped = resource(
+		() => 'grouped',
+		async () => {
+			return api.get<SplitsByPeriod>('splits/my?grouped=true')
+		}
 	)
 
-	const draftQuery = createQuery<SplitResponse | null>(
-		CACHE_KEYS.draft,
+	draft = resource(
+		() => 'draft',
 		async () => {
 			try {
 				return await api.get<SplitResponse>('splits/draft')
@@ -52,133 +44,101 @@ export function createSplitsStore() {
 				}
 				throw e
 			}
-		},
-		{ ttl: 60 * 1000, refetchOnMount: false }
+		}
 	)
 
-	function fetchById(id: string) {
-		return createQuery<SplitResponse>(
-			CACHE_KEYS.byId(id),
-			() => api.get<SplitResponse>(`splits/${id}`),
-			{ ttl: 60 * 1000 }
-		)
-	}
-
-	function fetchByShortId(shortId: string) {
-		return createQuery<SplitResponse>(
-			CACHE_KEYS.byShortId(shortId),
-			() => api.get<SplitResponse>(`splits/s/${shortId}`),
-			{ ttl: 60 * 1000 }
-		)
-	}
-
-	const createOrUpdate = createMutation<SplitResponse, CreateSplitDto & { id?: string }>(
-		async dto => {
-			if (dto.id) {
-				return api.patch<SplitResponse>(`splits/${dto.id}`, dto)
+	current = resource(
+		() => this.currentId,
+		async id => {
+			if (!id) return null
+			if (id.length < 10) {
+				return api.get<SplitResponse>(`splits/s/${id}`)
 			}
-			return api.post<SplitResponse>('splits', dto)
-		},
-		{
-			invalidateKeys: [CACHE_KEYS.draft, CACHE_KEYS.active, CACHE_KEYS.grouped]
+			return api.get<SplitResponse>(`splits/${id}`)
 		}
 	)
 
-	const publish = createMutation<SplitResponse, string>(
-		splitId => api.post<SplitResponse>(`splits/${splitId}/publish`),
-		{
-			invalidateKeys: ['splits:*']
-		}
-	)
-
-	const join = createMutation<
-		SplitResponse,
-		{ splitId: string; anonymous?: boolean; displayName?: string }
-	>(
-		({ splitId, anonymous, displayName }) => {
-			const params = new SvelteURLSearchParams()
-			if (anonymous) params.set('anonymous', 'true')
-			if (displayName) params.set('display_name', displayName)
-			const query = params.toString()
-			return api.get<SplitResponse>(`splits/${splitId}/join${query ? `?${query}` : ''}`)
-		},
-		{
-			invalidateKeys: ['splits:*']
-		}
-	)
-
-	const addItems = createMutation<
-		SplitResponse,
-		{ splitId: string; items: Omit<SplitItem, 'id'>[] }
-	>(({ splitId, items }) => api.post<SplitResponse>(`splits/${splitId}/items`, { items }), {
-		onSuccess: (_, { splitId }) => {
-			cache.invalidate(CACHE_KEYS.byId(splitId))
-			cache.invalidate(CACHE_KEYS.draft)
-		}
-	})
-
-	// Новый метод для привязки чека
-	const linkReceipt = createMutation<SplitResponse, { splitId: string; receiptId: string }>(
-		({ splitId, receiptId }) => api.post(`splits/${splitId}/receipts/${receiptId}`),
-		{
-			onSuccess: (data, { splitId }) => {
-				// Инвалидируем кэш, чтобы обновить данные на UI
-				cache.invalidate(CACHE_KEYS.byId(splitId))
-				cache.invalidate(CACHE_KEYS.draft)
-				// Если это был черновик, обновляем его данные напрямую
-				if (data) {
-					cache.set(CACHE_KEYS.draft, data)
-				}
-			}
-		}
-	)
-
-	const selectItems = createMutation<
-		SplitResponse,
-		{ splitId: string; participantId?: string; selections: ItemSelection[] }
-	>(
-		({ splitId, participantId, selections }) =>
-			api.post<SplitResponse>(`splits/${splitId}/select`, { participantId, selections }),
-		{
-			onSuccess: (_, { splitId }) => {
-				cache.invalidate(CACHE_KEYS.byId(splitId))
-			}
-		}
-	)
-
-	const shareMessage = createMutation<
-		{ preparedMessageId: string; splitId: string; shortId: string },
-		string
-	>(splitId => api.post(`splits/${splitId}/share`))
-
-	function invalidateAll(): void {
-		cache.invalidatePattern('splits:*')
+	setCurrentId(id: string) {
+		this.currentId = id
 	}
 
-	return {
-		active: activeQuery,
-		grouped: groupedQuery,
-		draft: draftQuery,
-		fetchById,
-		fetchByShortId,
+	async createOrUpdate(dto: CreateSplitDto & { id?: string }) {
+		let res: SplitResponse
+		if (dto.id) {
+			res = await api.patch<SplitResponse>(`splits/${dto.id}`, dto)
+		} else {
+			res = await api.post<SplitResponse>('splits', dto)
+		}
 
-		createOrUpdate,
-		publish,
-		join,
-		addItems,
-		linkReceipt,
-		selectItems,
-		shareMessage,
+		await Promise.all([this.active.refetch(), this.grouped.refetch(), this.draft.refetch()])
 
-		invalidateAll
+		if (this.currentId === dto.id) {
+			await this.current.refetch()
+		}
+
+		return res
 	}
-}
 
-let splitsStore: ReturnType<typeof createSplitsStore> | null = null
-
-export function getSplitsStore() {
-	if (!splitsStore) {
-		splitsStore = createSplitsStore()
+	async publish(splitId: string) {
+		await api.post<SplitResponse>(`splits/${splitId}/publish`)
+		await this.refreshAll()
 	}
-	return splitsStore
+
+	async join(splitId: string, options?: { anonymous?: boolean; displayName?: string }) {
+		const params = new SvelteURLSearchParams()
+		if (options?.anonymous) params.set('anonymous', 'true')
+		if (options?.displayName) params.set('display_name', options.displayName)
+		const query = params.toString()
+
+		await api.get<SplitResponse>(`splits/${splitId}/join${query ? `?${query}` : ''}`)
+		await this.refreshAll()
+	}
+
+	async addItems(splitId: string, items: Omit<SplitItem, 'id'>[]) {
+		await api.post<SplitResponse>(`splits/${splitId}/items`, { items })
+		await this.refreshDetails(splitId)
+	}
+
+	async linkReceipt(splitId: string, receiptId: string) {
+		const data = await api.post<SplitResponse>(`splits/${splitId}/receipts/${receiptId}`)
+
+		if (this.draft.current?.split.id === splitId) {
+			this.draft.mutate(data)
+		}
+		if (this.currentId === splitId) {
+			this.current.mutate(data)
+		}
+
+		return data
+	}
+
+	async selectItems(
+		splitId: string,
+		payload: { participantId?: string; selections: ItemSelection[] }
+	) {
+		await api.post<SplitResponse>(`splits/${splitId}/select`, payload)
+		if (this.currentId === splitId) {
+			await this.current.refetch()
+		}
+	}
+
+	async shareMessage(splitId: string) {
+		return api.post<string>(`splits/${splitId}/share`)
+	}
+
+	async refreshAll() {
+		await Promise.all([this.active.refetch(), this.grouped.refetch(), this.draft.refetch()])
+		if (this.currentId) {
+			await this.current.refetch()
+		}
+	}
+
+	private async refreshDetails(splitId: string) {
+		if (this.currentId === splitId) {
+			await this.current.refetch()
+		}
+		if (this.draft.current?.split.id === splitId) {
+			await this.draft.refetch()
+		}
+	}
 }

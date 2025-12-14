@@ -26,6 +26,16 @@
 			label: m.division_method_shares(),
 			description: m.division_method_shares_desc()
 		},
+		// {
+		// 	value: 'proportional',
+		// 	label: m.division_method_proportional?.() ?? 'Процент',
+		// 	description: 'Для налогов и чаевых'
+		// },
+		// {
+		// 	value: 'fixed',
+		// 	label: m.division_method_fixed?.() ?? 'Фикс.',
+		// 	description: 'Фиксированная сумма'
+		// },
 		{
 			value: 'custom',
 			label: m.division_method_custom(),

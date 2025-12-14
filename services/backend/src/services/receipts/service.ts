@@ -341,22 +341,33 @@ export class ReceiptsService {
 		}
 	}
 
-	private mapSplitMethod(
-		catalogMethod?: string,
-	): 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom' | undefined {
-		if (!catalogMethod) return undefined
+	/**
+	 * maps catalog division methods to backend split strategies
+	 *
+	 * policy:
+	 * - by_fraction (pizza, shared dish) -> shares (allows granular splitting)
+	 * - by_amount (fees, tips) -> proportional
+	 * - per_unit (items count) -> shares (1 share = 1 unit)
+	 * - not_shareable -> fixed (or kept as shares but assigned to one)
+	 * - ambiguous -> shares (default)
+	 */
+	private mapSplitMethod(catalogMethod?: string): 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom' {
+		if (!catalogMethod) return 'shares' // Default when ambiguous
 
-		const mapping: Record<string, 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'> = {
-			equal: 'equal',
-			shares: 'shares',
-			fixed: 'fixed',
-			proportional: 'proportional',
-			custom: 'custom',
-			by_amount: 'proportional',
-			per_unit: 'shares',
+		switch (catalogMethod) {
+			case 'by_fraction':
+				return 'shares'
+			case 'by_amount':
+				return 'proportional'
+			case 'per_unit':
+				return 'shares'
+			case 'not_shareable':
+				return 'fixed'
+			case 'equal':
+				return 'equal'
+			default:
+				return 'shares'
 		}
-
-		return mapping[catalogMethod] ?? 'equal'
 	}
 
 	private truncateError(error: Error | string, maxLength = 2000): string {
