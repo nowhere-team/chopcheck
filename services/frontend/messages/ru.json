@@ -11,7 +11,7 @@
 	"all_splits_loaded": "Это все ваши сплиты",
 
 	"app_title_contacts": "Контакты",
-	"app_title_create": "Создать",
+	"app_title_create": "Создать сплит",
 	"app_title_history": "История",
 	"app_title_home": "Главная",
 	"app_title_profile": "Профиль",
@@ -22,11 +22,11 @@
 	"create_split_error": "Не удалось создать сплит",
 	"create_split_icon_label": "Иконка",
 	"create_split_name_label": "Название",
-	"create_split_name_placeholder": "Введите название",
+	"create_split_name_placeholder": "Например, Пицца Маргарита",
 	"create_split_participants_label": "Участники",
 	"create_split_positions_hint": "Нажмите на позицию, чтобы редактировать",
 	"create_split_positions_title": "Позиции",
-	"create_split_scan_button": "Отсканировать",
+	"create_split_scan_button": "Сканировать",
 	"create_split_scan_menu_title": "Выберите способ добавления",
 	"create_split_scan_photo_description": "Сделать фото чека для распознавания",
 	"create_split_scan_photo_title": "Сфотографировать чек",
@@ -77,7 +77,7 @@
 	"not_available_in_telegram": "Приложение доступно только в Telegram",
 
 	"participants_add_button": "Добавить участника",
-	"participants_empty": "Участники будут добавлены автоматически при присоединении к сплиту",
+	"participants_empty": "Пока никого",
 	"participants_kick_button": "Исключить",
 
 	"quantity_label": "Количество",

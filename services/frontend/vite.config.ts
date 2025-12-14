@@ -1,5 +1,6 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { sveltekit } from '@sveltejs/kit/vite'
+import devtoolsJson from 'vite-plugin-devtools-json'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
@@ -10,7 +11,9 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide'
-		})
+		}),
+		// @ts-expect-error types
+		devtoolsJson()
 	],
 	server: {
 		port: 5173,

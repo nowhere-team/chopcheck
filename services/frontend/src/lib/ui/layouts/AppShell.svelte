@@ -16,7 +16,6 @@
 	const { navbar, children }: Props = $props()
 	const platform = getPlatform()
 
-	// Прокидываем платформу для CSS хаков если понадобятся
 	const platformType = $derived(platform.type)
 
 	onMount(() => {
@@ -37,7 +36,6 @@
 <div class="shell" data-platform={platformType}>
 	<div class="container">
 		<main class="content">
-			<!-- Убрали жесткие паддинги, теперь этим рулит Page -->
 			<div class="content-viewport">
 				{@render children?.()}
 			</div>
@@ -51,8 +49,8 @@
 
 <div id="portal-root"></div>
 
+<!--suppress CssUnusedSymbol -->
 <style>
-	/* Глобальные дефолты для safe-area, чтобы calc() не ломался в вебе */
 	:global(:root) {
 		--safe-top: 0px;
 		--safe-bottom: 0px;

@@ -71,7 +71,11 @@ export class SplitsService {
 	async create(userId: string, dto: CreateSplitDto): Promise<SplitResponse> {
 		this.logger.info('creating split', { userId, name: dto.name })
 
-		const split = await this.splits.create(userId, { name: dto.name, currency: dto.currency })
+		const split = await this.splits.create(userId, {
+			name: dto.name,
+			currency: dto.currency,
+			icon: dto.icon,
+		})
 
 		if (dto.items?.length) {
 			await this.items.createMany(split.id, dto.items)
@@ -96,8 +100,13 @@ export class SplitsService {
 		if (existing.ownerId !== userId) throw new ForbiddenError('only owner can update split')
 		if (existing.status !== 'draft') throw new ForbiddenError('can only update draft splits')
 
-		await this.splits.update(dto.id, { name: dto.name, currency: dto.currency })
+		await this.splits.update(dto.id, {
+			name: dto.name,
+			currency: dto.currency,
+			icon: dto.icon,
+		})
 
+		// Only update items if items array is explicitly provided (not null/undefined)
 		if (dto.items) {
 			const currentItems = await this.items.findBySplitId(dto.id)
 			const toUpdate = dto.items.filter(i => i.id)
@@ -380,7 +389,7 @@ export class SplitsService {
 
 			const newItems = receiptItems.map(ri => ({
 				name: ri.name || ri.rawName,
-				price: ri.sum,
+				price: ri.price, // FIX: Use unit price, NOT sum
 				type: 'product' as const,
 				quantity: ri.quantity,
 				defaultDivisionMethod: (ri.suggestedSplitMethod as any) || 'equal',

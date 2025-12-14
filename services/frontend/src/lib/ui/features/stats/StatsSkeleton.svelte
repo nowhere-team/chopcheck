@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { Card } from '$lib/ui/components'
-
-	import Skeleton from '../../components/Skeleton.svelte'
+	import { Card, Skeleton } from '$lib/ui/components'
 </script>
 
 <div class="stats-skeleton">

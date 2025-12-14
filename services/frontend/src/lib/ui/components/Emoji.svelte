@@ -1,16 +1,15 @@
 <script lang="ts">
 	import emojiMapJson from 'fluent-optimized/map'
-	import { onMount } from 'svelte'
 
 	import {
 		buildUnicodeWithSkinTone,
 		type EmojiMap,
 		emojiToUnicode,
 		type EmojiVariant,
-		getCachedImage,
-		preloadImage,
 		type SkinTone
 	} from '$lib/shared/emoji'
+
+	import Spinner from './Spinner.svelte'
 
 	const emojiMap = emojiMapJson as EmojiMap
 
@@ -21,7 +20,7 @@
 		trimmed?: boolean
 		skinTone?: SkinTone
 		lazy?: boolean
-		preload?: boolean
+		showSpinner?: boolean
 	}
 
 	const {
@@ -31,11 +30,10 @@
 		trimmed = true,
 		skinTone = null,
 		lazy = true,
-		preload = false
+		showSpinner = false
 	}: Props = $props()
 
-	let container: HTMLElement
-	let isVisible = $state(!lazy)
+	let imgRef: HTMLImageElement | null = $state(null)
 	let isLoaded = $state(false)
 	let hasError = $state(false)
 
@@ -75,45 +73,22 @@
 		return `/emoji/3d/${subdir}/${resolvedUnicode}.webp`
 	})
 
-	const isCached = $derived(src ? !!getCachedImage(src) : false)
-
-	onMount(() => {
-		if (!lazy) {
-			isVisible = true
-			return
-		}
-
-		const observer = new IntersectionObserver(
-			entries => {
-				if (entries[0].isIntersecting) {
-					isVisible = true
-					observer.disconnect()
-				}
-			},
-			{
-				rootMargin: '100px',
-				threshold: 0
-			}
-		)
-
-		observer.observe(container)
-
-		return () => observer.disconnect()
+	$effect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		src
+		isLoaded = false
+		hasError = false
 	})
 
 	$effect(() => {
-		if (preload && src && !isCached) {
-			preloadImage(src).catch(() => {})
+		if (imgRef && imgRef.complete && imgRef.naturalWidth > 0) {
+			isLoaded = true
 		}
 	})
 
 	function handleLoad() {
 		isLoaded = true
 		hasError = false
-
-		if (src) {
-			preloadImage(src).catch(() => {})
-		}
 	}
 
 	function handleError() {
@@ -123,34 +98,45 @@
 </script>
 
 <span
-	bind:this={container}
 	class="emoji-wrapper"
 	style:width="{size}px"
 	style:height="{size}px"
 	role="img"
 	aria-label={entry?.cldr || emoji}
 >
-	{#if src && isVisible && !hasError}
+	{#if src && !hasError}
 		<img
+			bind:this={imgRef}
 			{src}
 			alt=""
 			class="emoji-img"
-			class:loaded={isLoaded || isCached}
+			class:loaded={isLoaded}
 			width={size}
 			height={size}
 			loading={lazy ? 'lazy' : 'eager'}
 			decoding="async"
+			draggable="false"
+			oncontextmenu={e => e.preventDefault()}
 			onload={handleLoad}
 			onerror={handleError}
+			style="pointer-events: none; user-select: none; -webkit-touch-callout: none;"
 		/>
 	{/if}
 
-	{#if !isVisible || hasError || (!isLoaded && !isCached)}
-		<span
-			class="emoji-fallback"
-			class:hidden={isLoaded || isCached}
-			style:font-size="{size * 0.8}px"
-		>
+	{#if !isLoaded && !hasError}
+		{#if showSpinner}
+			<div class="emoji-spinner">
+				<Spinner size="sm" variant="muted" />
+			</div>
+		{:else}
+			<span class="emoji-fallback" style:font-size="{size * 0.8}px">
+				{emoji}
+			</span>
+		{/if}
+	{/if}
+
+	{#if hasError}
+		<span class="emoji-fallback" style:font-size="{size * 0.8}px">
 			{emoji}
 		</span>
 	{/if}
@@ -163,6 +149,8 @@
 		justify-content: center;
 		position: relative;
 		vertical-align: middle;
+		user-select: none;
+		-webkit-user-select: none;
 	}
 
 	.emoji-img {
@@ -176,14 +164,15 @@
 		opacity: 1;
 	}
 
+	.emoji-spinner {
+		position: absolute;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.emoji-fallback {
 		position: absolute;
 		line-height: 1;
-		transition: opacity 150ms ease;
-	}
-
-	.emoji-fallback.hidden {
-		opacity: 0;
-		pointer-events: none;
 	}
 </style>

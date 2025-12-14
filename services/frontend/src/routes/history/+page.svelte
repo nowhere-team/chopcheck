@@ -6,9 +6,9 @@
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
 	import { getSplitsStore } from '$lib/state'
-	import { CollapsibleSection } from '$lib/ui/components'
 	import SplitCard from '$lib/ui/features/splits/SplitCard.svelte'
 	import SplitCardSkeleton from '$lib/ui/features/splits/SplitCardSkeleton.svelte'
+	import { CollapsibleSection } from '$lib/ui/forms'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
 	const platform = getPlatform()

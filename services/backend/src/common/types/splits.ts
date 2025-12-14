@@ -4,6 +4,7 @@ import type { Item, ParticipantWithSelections, Split } from './entities'
 
 export const createSplitSchema = z.object({
 	id: z.uuid().optional(),
+	icon: z.emoji().optional(),
 	name: z.string().min(1).max(255),
 	currency: z.string().length(3).default('RUB'),
 	items: z

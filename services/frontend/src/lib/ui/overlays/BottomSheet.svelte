@@ -5,8 +5,8 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fade, fly } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte'
-	import { swipeController } from '$lib/navigation/swipe.svelte'
+	import { getPlatform } from '$lib/app/context.svelte.js'
+	import { swipeController } from '$lib/navigation/swipe.svelte.js'
 
 	import Portal from './Portal.svelte'
 
@@ -21,9 +21,11 @@
 	const platform = getPlatform()
 
 	let sheetRef = $state<HTMLDivElement>()
+	let contentRef = $state<HTMLDivElement>()
 	let startY = 0
 	let currentY = $state(0)
 	let isDragging = $state(false)
+	let canDrag = $state(false)
 
 	function close() {
 		platform.haptic.impact('light')
@@ -32,16 +34,44 @@
 		onclose?.()
 	}
 
-	function handleStart(y: number) {
+	function handleStart(e: TouchEvent) {
+		const y = e.touches[0].clientY
 		startY = y
+
+		// check if touch started on content area and content is scrolled
+		if (contentRef) {
+			const contentRect = contentRef.getBoundingClientRect()
+			const touchInContent = y >= contentRect.top && y <= contentRect.bottom
+
+			// only allow drag if content is at top (not scrolled) or touch is outside content
+			if (touchInContent && contentRef.scrollTop > 0) {
+				canDrag = false
+				return
+			}
+		}
+
+		canDrag = true
 		isDragging = true
 	}
 
-	function handleMove(y: number) {
-		if (!isDragging) return
+	function handleMove(e: TouchEvent) {
+		if (!canDrag || !isDragging) return
+
+		const y = e.touches[0].clientY
 		const delta = y - startY
 
+		// if trying to scroll up (negative delta) and content can scroll, stop dragging
+		if (delta < 0 && contentRef && contentRef.scrollHeight > contentRef.clientHeight) {
+			isDragging = false
+			canDrag = false
+			currentY = 0
+			return
+		}
+
+		// only drag down, not up
 		if (delta > 0) {
+			// prevent default to stop content scroll while dragging sheet
+			e.preventDefault()
 			currentY = delta * 0.7
 		} else {
 			currentY = -Math.log(Math.abs(delta) + 1) * 2
@@ -49,7 +79,15 @@
 	}
 
 	function handleEnd() {
+		if (!canDrag) {
+			canDrag = false
+			isDragging = false
+			return
+		}
+
 		isDragging = false
+		canDrag = false
+
 		if (currentY > 120) {
 			close()
 		} else {
@@ -89,8 +127,8 @@
 				transition:fly={{ y: '100%', duration: 300, opacity: 1, easing: cubicOut }}
 				style:transform="translate3d(0, {currentY}px, 0)"
 				class:animate={!isDragging}
-				ontouchstart={e => handleStart(e.touches[0].clientY)}
-				ontouchmove={e => isDragging && handleMove(e.touches[0].clientY)}
+				ontouchstart={handleStart}
+				ontouchmove={handleMove}
 				ontouchend={handleEnd}
 			>
 				<div class="handle-bar">
@@ -106,7 +144,7 @@
 					</div>
 				{/if}
 
-				<div class="content">
+				<div class="content" bind:this={contentRef}>
 					{@render children?.()}
 				</div>
 			</div>
@@ -144,6 +182,7 @@
 		position: relative;
 		z-index: 2;
 		will-change: transform;
+		touch-action: none;
 	}
 
 	.sheet-container::after {
@@ -203,5 +242,6 @@
 		overflow-y: auto;
 		padding: 0 20px;
 		overscroll-behavior: contain;
+		touch-action: pan-y;
 	}
 </style>

@@ -3,8 +3,8 @@
 	import type { Snippet } from 'svelte'
 	import { slide } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte'
-	import Badge from '$lib/ui/components/Badge.svelte'
+	import { getPlatform } from '$lib/app/context.svelte.js'
+	import { Badge } from '$lib/ui/components'
 
 	interface Props {
 		title: string
