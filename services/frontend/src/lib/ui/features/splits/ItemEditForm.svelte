@@ -3,8 +3,8 @@
 
 	import { m } from '$lib/i18n'
 	import type { DraftItem } from '$lib/services/api/types'
-	import { Button, Input } from '$lib/ui/components'
-	import { PriceInput, Select } from '$lib/ui/forms'
+	import { Button, Divider, Input } from '$lib/ui/components'
+	import { EditableEmoji, PriceInput, Select } from '$lib/ui/forms'
 
 	interface Props {
 		item: DraftItem
@@ -14,6 +14,8 @@
 	}
 
 	const { item = $bindable(), onSave, onDelete, onCancel }: Props = $props()
+
+	let iconValue = $state(item.icon || '📦')
 
 	const divisionMethods = [
 		{
@@ -26,31 +28,41 @@
 			label: m.division_method_shares(),
 			description: m.division_method_shares_desc()
 		},
-		// {
-		// 	value: 'proportional',
-		// 	label: m.division_method_proportional?.() ?? 'Процент',
-		// 	description: 'Для налогов и чаевых'
-		// },
-		// {
-		// 	value: 'fixed',
-		// 	label: m.division_method_fixed?.() ?? 'Фикс.',
-		// 	description: 'Фиксированная сумма'
-		// },
+		{
+			value: 'proportional',
+			label: 'Процент', // todo
+			description: 'Для налогов и чаевых'
+		},
+		{
+			value: 'fixed',
+			label: 'Фикс.', // todo
+			description: 'Фиксированная сумма'
+		},
 		{
 			value: 'custom',
 			label: m.division_method_custom(),
 			description: m.division_method_custom_desc()
 		}
 	]
+
+	function handleEmojiChange(newEmoji: string) {
+		iconValue = newEmoji
+		item.icon = newEmoji
+	}
 </script>
 
-<form action="#">
+<form onsubmit={e => e.preventDefault()}>
 	<div class="fields">
-		<Input
-			label={m.item_name_label()}
-			bind:value={item.name}
-			placeholder={m.item_name_placeholder()}
-		/>
+		<div class="name-row">
+			<div class="icon-field">
+				<EditableEmoji value={iconValue} onchange={handleEmojiChange} size={44} />
+			</div>
+			<div class="name-input">
+				<Input bind:value={item.name} placeholder={m.item_name_placeholder()} />
+			</div>
+		</div>
+
+		<Divider />
 
 		<div class="row">
 			<Input
@@ -69,6 +81,8 @@
 		/>
 	</div>
 
+	<Divider />
+
 	<div class="actions">
 		<Button variant="danger" onclick={onDelete ?? onCancel}>
 			{#snippet iconLeft()}
@@ -83,13 +97,27 @@
 	form {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-5);
+		gap: var(--space-2);
 	}
 
 	.fields {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-5);
+		gap: var(--space-2);
+	}
+
+	.name-row {
+		display: flex;
+		gap: var(--space-3);
+		align-items: flex-end;
+	}
+
+	.icon-field {
+		padding-bottom: 2px;
+	}
+
+	.name-input {
+		flex: 1;
 	}
 
 	.row {

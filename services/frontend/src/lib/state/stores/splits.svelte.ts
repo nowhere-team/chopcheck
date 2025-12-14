@@ -62,6 +62,21 @@ export class SplitsService {
 		this.currentId = id
 	}
 
+	/**
+	 * Optimistically updates the draft resource without waiting for the backend.
+	 * Use this for immediate UI feedback.
+	 */
+	updateDraftLocal(data: { split?: Partial<Split>; items?: SplitItem[] }) {
+		const current = this.draft.current
+		if (!current) return
+
+		this.draft.mutate({
+			...current,
+			split: data.split ? { ...current.split, ...data.split } : current.split,
+			items: data.items ?? current.items
+		})
+	}
+
 	async createOrUpdate(dto: CreateSplitDto & { id?: string }) {
 		let res: SplitResponse
 		if (dto.id) {
@@ -70,7 +85,12 @@ export class SplitsService {
 			res = await api.post<SplitResponse>('splits', dto)
 		}
 
-		await Promise.all([this.active.refetch(), this.grouped.refetch(), this.draft.refetch()])
+		// Mutate draft with the real server response
+		if (this.draft.current?.split.id === res.split.id || !this.draft.current) {
+			this.draft.mutate(res)
+		}
+
+		await Promise.all([this.active.refetch(), this.grouped.refetch()])
 
 		if (this.currentId === dto.id) {
 			await this.current.refetch()
@@ -78,6 +98,37 @@ export class SplitsService {
 
 		return res
 	}
+
+	// === ATOMIC OPERATIONS START ===
+
+	async addItem(splitId: string, item: Omit<SplitItem, 'id'>) {
+		const res = await api.post<SplitResponse>(`splits/${splitId}/items`, { items: [item] })
+		this.updateResourceAfterChange(splitId, res)
+		return res
+	}
+
+	async updateItem(splitId: string, itemId: string, item: Partial<SplitItem>) {
+		const res = await api.patch<SplitResponse>(`splits/${splitId}/items/${itemId}`, item)
+		this.updateResourceAfterChange(splitId, res)
+		return res
+	}
+
+	async deleteItem(splitId: string, itemId: string) {
+		const res = await api.delete<SplitResponse>(`splits/${splitId}/items/${itemId}`)
+		this.updateResourceAfterChange(splitId, res)
+		return res
+	}
+
+	private updateResourceAfterChange(splitId: string, response: SplitResponse) {
+		if (this.draft.current?.split.id === splitId) {
+			this.draft.mutate(response)
+		}
+		if (this.currentId === splitId) {
+			this.current.mutate(response)
+		}
+	}
+
+	// === ATOMIC OPERATIONS END ===
 
 	async publish(splitId: string) {
 		await api.post<SplitResponse>(`splits/${splitId}/publish`)
@@ -94,21 +145,15 @@ export class SplitsService {
 		await this.refreshAll()
 	}
 
+	// Legacy bulk add (keep for receipts/bulk import)
 	async addItems(splitId: string, items: Omit<SplitItem, 'id'>[]) {
-		await api.post<SplitResponse>(`splits/${splitId}/items`, { items })
-		await this.refreshDetails(splitId)
+		const res = await api.post<SplitResponse>(`splits/${splitId}/items`, { items })
+		this.updateResourceAfterChange(splitId, res)
 	}
 
 	async linkReceipt(splitId: string, receiptId: string) {
 		const data = await api.post<SplitResponse>(`splits/${splitId}/receipts/${receiptId}`)
-
-		if (this.draft.current?.split.id === splitId) {
-			this.draft.mutate(data)
-		}
-		if (this.currentId === splitId) {
-			this.current.mutate(data)
-		}
-
+		this.updateResourceAfterChange(splitId, data)
 		return data
 	}
 

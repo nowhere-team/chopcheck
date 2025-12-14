@@ -41,6 +41,7 @@ const addItemsSchema = z.object({
 			type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 			quantity: z.string().default('1'),
 			defaultDivisionMethod: z.enum(['custom', 'fixed', 'equal', 'shares', 'proportional']),
+			icon: z.string().optional(),
 		}),
 	),
 })
@@ -51,6 +52,7 @@ const updateItemSchema = z.object({
 	type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).optional(),
 	quantity: z.string().optional(),
 	defaultDivisionMethod: z.enum(['equal', 'shares', 'fixed', 'proportional', 'custom']).optional(),
+	icon: z.string().optional(),
 })
 
 const addPaymentMethodSchema = z.object({

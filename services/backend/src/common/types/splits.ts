@@ -4,7 +4,7 @@ import type { Item, ParticipantWithSelections, Split } from './entities'
 
 export const createSplitSchema = z.object({
 	id: z.uuid().optional(),
-	icon: z.emoji().optional(),
+	icon: z.string().optional(),
 	name: z.string().min(1).max(255),
 	currency: z.string().length(3).default('RUB'),
 	items: z
@@ -16,6 +16,7 @@ export const createSplitSchema = z.object({
 				type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 				quantity: z.string().default('1'),
 				defaultDivisionMethod: z.enum(['equal', 'shares', 'fixed', 'proportional', 'custom']).default('equal'),
+				icon: z.string().optional(),
 			}),
 		)
 		.optional(),

@@ -119,6 +119,7 @@ export class SplitsService {
 					quantity: item.quantity,
 					type: item.type,
 					defaultDivisionMethod: item.defaultDivisionMethod,
+					icon: item.icon,
 				})
 			}
 
@@ -175,12 +176,25 @@ export class SplitsService {
 	async addItems(
 		splitId: string,
 		userId: string,
-		items: Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>[],
+		// Update type definition: combine Pick with an optional/nullable icon to satisfy Zod output
+		items: Array<
+			Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & { icon?: string | null }
+		>,
 	): Promise<SplitResponse> {
 		const split = await this.splits.findById(splitId)
 		if (!split) throw new NotFoundError('split not found')
 
-		await this.items.createMany(splitId, items)
+		// Explicitly map items to handle null/undefined mismatch for icon
+		const itemsToCreate = items.map(item => ({
+			name: item.name,
+			price: item.price,
+			type: item.type,
+			quantity: item.quantity,
+			defaultDivisionMethod: item.defaultDivisionMethod,
+			icon: item.icon ?? undefined,
+		}))
+
+		await this.items.createMany(splitId, itemsToCreate)
 		this.logger.info('items added', { splitId, count: items.length })
 
 		return (await this.getById(splitId, true))!

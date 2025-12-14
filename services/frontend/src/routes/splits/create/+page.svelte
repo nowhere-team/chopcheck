@@ -45,21 +45,27 @@
 	let draftSplitEmoji = $state('🍔')
 	let draftSplitName = $state('')
 
+	// consolidated watcher for external updates
 	watch(
-		() => [draftData.icon],
-		([icon]) => {
-			if (icon) draftSplitEmoji = icon
+		() => [draftData.icon, draftData.name],
+		([icon, name]) => {
+			if (icon && icon !== draftSplitEmoji) draftSplitEmoji = icon
+			if (name && name !== draftSplitName) draftSplitName = name
 		}
 	)
 
-	watch(
-		() => [draftData.name],
-		([name]) => {
-			if (name) draftSplitName = name
-		}
-	)
+	// save ONLY metadata (name, icon) - debounced
+	const saveMetadata = useDebounce(async () => {
+		await splitsService.createOrUpdate({
+			id: draftData.id,
+			name: draftSplitName,
+			icon: draftSplitEmoji,
+			currency: draftData.currency
+		})
+	}, 800)
 
-	const saveDraft = useDebounce(async (overrideItems?: SplitItem[]) => {
+	// fallback for full sync
+	const saveDraftFull = useDebounce(async (overrideItems?: SplitItem[]) => {
 		const currentItems = overrideItems ?? items
 		const itemsDto = currentItems.map(i => ({
 			id: i.id.startsWith('temp-') ? undefined : i.id,
@@ -67,7 +73,8 @@
 			price: i.price,
 			quantity: String(i.quantity),
 			type: i.type,
-			defaultDivisionMethod: i.defaultDivisionMethod
+			defaultDivisionMethod: i.defaultDivisionMethod,
+			icon: i.icon
 		}))
 
 		await splitsService.createOrUpdate({
@@ -76,15 +83,6 @@
 			icon: draftSplitEmoji,
 			currency: draftData.currency,
 			items: itemsDto
-		})
-	}, 800)
-
-	const saveMetadata = useDebounce(async () => {
-		await splitsService.createOrUpdate({
-			id: draftData.id,
-			name: draftSplitName,
-			icon: draftSplitEmoji,
-			currency: draftData.currency
 		})
 	}, 800)
 
@@ -107,11 +105,13 @@
 
 	async function handleNameChange(val: string) {
 		draftSplitName = val
+		splitsService.updateDraftLocal({ split: { name: val } })
 		await saveMetadata()
 	}
 
 	async function handleEmojiChange(val: string) {
 		draftSplitEmoji = val
+		splitsService.updateDraftLocal({ split: { icon: val } })
 		await saveMetadata()
 	}
 
@@ -159,8 +159,11 @@
 		if (selectedIds.size === 0) return
 		const newItems = items.filter(i => !selectedIds.has(i.id))
 		handleCancelSelection()
-		saveDraft(newItems)
-		await saveDraft.runScheduledNow()
+
+		splitsService.updateDraftLocal({ items: newItems })
+
+		await saveDraftFull(newItems)
+		await saveDraftFull.runScheduledNow()
 	}
 
 	function handleAddItem() {
@@ -169,42 +172,106 @@
 			price: 0,
 			quantity: '1',
 			type: 'product',
-			defaultDivisionMethod: 'equal'
+			defaultDivisionMethod: 'equal',
+			icon: '📦'
 		}
 		isItemEditSheetOpen = true
 	}
 
-	async function handleSaveItem() {
+	function handleSaveItem() {
 		if (!editingItem) return
+
+		const itemToSave = { ...editingItem }
+		const currentDraftId = draftData.id
+		const isNew = !itemToSave.id || itemToSave.id.startsWith('temp-')
+		const tempId = isNew ? `temp-${Date.now()}` : itemToSave.id!
+
 		let newItems = [...items]
-		if (editingItem.id) {
+		if (!isNew) {
 			newItems = newItems.map(i =>
-				i.id === editingItem!.id ? ({ ...i, ...editingItem } as SplitItem) : i
+				i.id === tempId ? ({ ...i, ...itemToSave } as SplitItem) : i
 			)
 		} else {
 			newItems.push({
-				...editingItem,
-				id: `temp-${Date.now()}`,
-				quantity: String(editingItem.quantity)
+				...itemToSave,
+				id: tempId,
+				quantity: String(itemToSave.quantity)
 			} as SplitItem)
 		}
+
+		// 1. optimistic update
+		splitsService.updateDraftLocal({ items: newItems })
+
+		// 2. unblock ui immediately
 		isItemEditSheetOpen = false
 		editingItem = null
-		await saveDraft(newItems)
-		await saveDraft.runScheduledNow()
+
+		// 3. background Sync (fire & forget)
+		;(async () => {
+			try {
+				if (!currentDraftId) {
+					await saveDraftFull(newItems)
+					await saveDraftFull.runScheduledNow()
+				} else {
+					if (isNew) {
+						await splitsService.addItem(currentDraftId, {
+							name: itemToSave.name,
+							price: itemToSave.price,
+							quantity: String(itemToSave.quantity),
+							type: itemToSave.type,
+							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+							icon: itemToSave.icon
+						})
+					} else {
+						await splitsService.updateItem(currentDraftId, tempId, {
+							name: itemToSave.name,
+							price: itemToSave.price,
+							quantity: String(itemToSave.quantity),
+							type: itemToSave.type,
+							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+							icon: itemToSave.icon
+						})
+					}
+				}
+			} catch (e) {
+				console.error('Failed to save item', e)
+				toast.error('Ошибка сохранения')
+				await splitsService.draft.refetch()
+			}
+		})()
 	}
 
-	async function handleDeleteItem() {
+	function handleDeleteItem() {
 		if (!editingItem?.id) {
 			isItemEditSheetOpen = false
 			editingItem = null
 			return
 		}
-		const newItems = items.filter(i => i.id !== editingItem!.id)
+
+		const itemId = editingItem.id
+		const currentDraftId = draftData.id
+
+		const newItems = items.filter(i => i.id !== itemId)
+
+		// 1. optimistic
+		splitsService.updateDraftLocal({ items: newItems })
+
+		// 2. unblock UI
 		isItemEditSheetOpen = false
 		editingItem = null
-		await saveDraft(newItems)
-		await saveDraft.runScheduledNow()
+
+		// 3. background sync
+		if (currentDraftId && !itemId.startsWith('temp-')) {
+			;(async () => {
+				try {
+					await splitsService.deleteItem(currentDraftId, itemId)
+				} catch (e) {
+					console.error('Failed to delete item', e)
+					toast.error('Не удалось удалить позицию')
+					await splitsService.draft.refetch()
+				}
+			})()
+		}
 	}
 
 	async function handleScanQr() {
@@ -259,7 +326,9 @@
 								(!draftSplitName || draftSplitName === 'Новый сплит') &&
 								scanner.context.storeName
 							) {
-								draftSplitName = scanner.context.storeName
+								const newName = scanner.context.storeName
+								draftSplitName = newName
+								splitsService.updateDraftLocal({ split: { name: newName } })
 								await saveMetadata()
 								await saveMetadata.runScheduledNow()
 							}
@@ -292,7 +361,7 @@
 		<EditableEmoji
 			bind:value={draftSplitEmoji}
 			centered
-			size={48}
+			size={65}
 			onchange={handleEmojiChange}
 		/>
 		<EditableText

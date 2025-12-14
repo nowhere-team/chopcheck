@@ -25,9 +25,12 @@
 		equal: m.division_method_equal(),
 		shares: m.division_method_shares(),
 		custom: m.division_method_custom(),
-		fixed: m.division_method_fixed?.() ?? 'Фикс.',
-		proportional: m.division_method_proportional?.() ?? 'Процент'
+		fixed: 'Фикс.', // todo
+		proportional: 'Процент' // todo
 	}
+
+	// Убираем лишние нули (1.000 -> 1, 1.500 -> 1.5)
+	const formattedQuantity = $derived(parseFloat(item.quantity).toString())
 
 	function handleClick(e: MouseEvent) {
 		if (isLongPress) {
@@ -87,7 +90,6 @@
 					size={40}
 				/>
 				{#if selectionMode}
-					<!-- Добавлена анимация появления -->
 					<div class="selection-indicator" class:selected>
 						{#if selected}
 							<Check size={14} weight="bold" />
@@ -99,7 +101,7 @@
 			<div class="info">
 				<span class="name">{item.name}</span>
 				<span class="meta">
-					{item.quantity} шт. · {divisionLabels[item.defaultDivisionMethod] ??
+					{formattedQuantity} шт. · {divisionLabels[item.defaultDivisionMethod] ??
 						item.defaultDivisionMethod}
 				</span>
 			</div>

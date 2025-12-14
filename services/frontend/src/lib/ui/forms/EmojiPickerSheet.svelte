@@ -71,6 +71,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
+		content-visibility: auto;
+		contain-intrinsic-size: 200px;
 	}
 
 	.category-title {
