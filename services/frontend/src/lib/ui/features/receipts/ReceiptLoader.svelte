@@ -20,6 +20,20 @@
 		totalItems,
 		lastScannedItem
 	}: Props = $props()
+
+	function formatCount(loaded: number, total?: number): string {
+		if (total && total > 0) {
+			return `${loaded} / ${total} позиций`
+		}
+		if (loaded > 0) {
+			return `${loaded} позиций`
+		}
+		return ''
+	}
+
+	const countText = $derived(formatCount(itemsLoaded, totalItems))
+	const hasProgress = $derived(totalItems && totalItems > 0)
+	const progressPercent = $derived(hasProgress ? (itemsLoaded / totalItems!) * 100 : 0)
 </script>
 
 <div class="receipt-loader">
@@ -34,12 +48,17 @@
 		<Spinner size="sm" />
 	</div>
 
-	{#if totalItems && totalItems > 0}
+	{#if hasProgress}
 		<div class="progress">
-			<div class="progress-bar" style:width="{(itemsLoaded / totalItems) * 100}%"></div>
+			<div class="progress-bar" style:width="{progressPercent}%"></div>
 		</div>
+	{/if}
+
+	{#if countText || lastScannedItem}
 		<div class="progress-footer">
-			<span class="progress-text">{itemsLoaded} / {totalItems} позиций</span>
+			{#if countText}
+				<span class="progress-text">{countText}</span>
+			{/if}
 
 			{#if lastScannedItem}
 				<div class="ticker-container">
@@ -67,7 +86,7 @@
 		background: var(--color-bg-secondary);
 		border-radius: var(--radius-lg);
 		border: 1px dashed var(--color-border);
-		overflow: hidden; /* contain animations */
+		overflow: hidden;
 	}
 
 	.header {
@@ -91,12 +110,16 @@
 		flex: 1;
 		display: flex;
 		flex-direction: column;
+		min-width: 0;
 	}
 
 	.title {
 		font-size: var(--text-base);
 		font-weight: var(--font-medium);
 		color: var(--color-text);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.status {
@@ -121,32 +144,28 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: var(--space-3);
 		min-height: 20px;
 	}
 
 	.progress-text {
 		font-size: var(--text-xs);
 		color: var(--color-text-tertiary);
+		flex-shrink: 0;
 	}
 
 	.ticker-container {
 		position: relative;
 		height: 20px;
 		flex: 1;
+		min-width: 0;
 		display: flex;
 		justify-content: flex-end;
 		overflow: hidden;
 
 		/*noinspection CssInvalidPropertyValue*/
-		-webkit-mask-image: linear-gradient(
-			to bottom,
-			transparent,
-			black 15%,
-			black 85%,
-			transparent
-		);
-
-		mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+		-webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 100%);
+		mask-image: linear-gradient(to right, transparent, black 10%, black 100%);
 	}
 
 	.ticker-item {

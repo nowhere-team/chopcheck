@@ -49,6 +49,19 @@ export async function streamReceiptFromImage(
 	await openEventSource(url, { image: imageBase64 }, onEvent, signal)
 }
 
+function extractEventData(type: string, raw: any): any {
+	switch (type) {
+		case 'item':
+			return raw.item ?? raw
+		case 'place':
+			return raw.place ?? raw
+		case 'receipt':
+			return raw.receipt ?? raw
+		default:
+			return raw
+	}
+}
+
 async function openEventSource(
 	url: string,
 	body: unknown,
@@ -88,7 +101,6 @@ async function openEventSource(
 
 			for (const line of lines) {
 				const trimmed = line.trim()
-
 				if (!trimmed) {
 					currentEventType = null
 					continue
@@ -100,18 +112,19 @@ async function openEventSource(
 				}
 
 				if (trimmed.startsWith('data:')) {
-					const dataStr = trimmed.slice(5).trim()
-					if (!dataStr) continue
+					const jsonStr = trimmed.slice(5).trim()
+					if (!jsonStr) continue
 
 					try {
-						const data = JSON.parse(dataStr)
-						const eventType = currentEventType || data.type || 'unknown'
+						const parsed = JSON.parse(jsonStr)
+						const eventType = currentEventType ?? parsed.type ?? 'unknown'
 
-						if (eventType !== 'ping') {
-							onEvent({ type: eventType as ReceiptStreamEventType, data })
-						}
+						if (eventType === 'ping') continue
+
+						const eventData = extractEventData(eventType, parsed)
+						onEvent({ type: eventType as ReceiptStreamEventType, data: eventData })
 					} catch (e) {
-						log.warn('failed to parse sse data', e)
+						log.warn('failed to parse sse data', { line: trimmed, error: e })
 					}
 				}
 			}

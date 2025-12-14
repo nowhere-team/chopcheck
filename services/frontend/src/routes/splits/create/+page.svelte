@@ -256,20 +256,33 @@
 			case 'started':
 				isLoadingReceipt = true
 				receiptStatus = 'Подключение...'
+				receiptItemsLoaded = 0
 				break
 
 			case 'fns_fetched':
-				receiptStatus = 'Получение данных...'
+				receiptStatus = 'Распознавание...'
 				receiptTotalItems = event.data.itemCount
 				break
 
 			case 'item': {
+				// если это первый item и статус ещё "Подключение" - значит image поток
+				if (receiptStatus === 'Подключение...') {
+					receiptStatus = 'Распознавание...'
+				}
 				receiptItemsLoaded++
-				const item = event.data as { name?: string; rawName?: string; emoji?: string }
+
+				const item = event.data as {
+					name?: string
+					rawName?: string
+					emoji?: string
+					quantity?: number
+				}
 				const itemName = item.name || item.rawName
 				if (itemName) {
-					receiptStatus = 'Распознавание...'
-					lastScannedItem = item.emoji ? `${item.emoji} ${itemName}` : itemName
+					const qty = formatQuantity(item.quantity)
+					const prefix = item.emoji ?? ''
+					const qtyStr = qty && qty !== '1' ? ` ×${qty}` : ''
+					lastScannedItem = `${prefix} ${itemName}${qtyStr}`.trim()
 				}
 				break
 			}
@@ -299,6 +312,14 @@
 				}
 				break
 		}
+	}
+
+	function formatQuantity(qty?: number | string): string {
+		if (qty === undefined || qty === null) return '1'
+		const num = typeof qty === 'string' ? parseFloat(qty) : qty
+		if (isNaN(num)) return '1'
+		// убираем trailing zeros: 1.000 → 1, 0.5 → 0.5, 2.500 → 2.5
+		return num % 1 === 0 ? String(Math.floor(num)) : String(parseFloat(num.toFixed(3)))
 	}
 
 	async function handleReceiptCompleted(data: ReceiptCompleteData) {
