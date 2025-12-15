@@ -35,7 +35,18 @@
 
 	let showMenu = $state(false)
 
-	const groupIcon = $derived(group.icon || (group.type === 'receipt' ? '🧾' : group.type === 'manual' ? '✏️' : '📦'))
+	function getDefaultIcon(type: string): string {
+		switch (type) {
+			case 'receipt':
+				return '🧾'
+			case 'manual':
+				return '✏️'
+			default:
+				return '📦'
+		}
+	}
+
+	const groupIcon = $derived(group.icon || getDefaultIcon(group.type))
 
 	function handleHeaderClick() {
 		platform.haptic.selection()

@@ -81,17 +81,4 @@ export class ItemGroupsRepository extends BaseRepository {
 
 		await this.invalidate(this.key(splitId))
 	}
-
-	async getOrCreateManualGroup(splitId: string): Promise<ItemGroup> {
-		const existingGroups = await this.findBySplitId(splitId)
-		const manualGroup = existingGroups.find(g => g.type === 'manual')
-
-		if (manualGroup) return manualGroup
-
-		return this.create(splitId, {
-			name: 'Added manually',
-			type: 'manual',
-			icon: '✏️',
-		})
-	}
 }
