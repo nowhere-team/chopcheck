@@ -47,7 +47,7 @@ export class ItemsRepository extends BaseRepository {
 					quantity: item.quantity || '1',
 					icon: item.icon,
 					displayOrder: index,
-					defaultDivisionMethod: item.defaultDivisionMethod || 'equal',
+					defaultDivisionMethod: item.defaultDivisionMethod || 'by_fraction',
 				})),
 			)
 			.returning()

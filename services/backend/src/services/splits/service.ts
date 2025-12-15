@@ -12,6 +12,7 @@ import type {
 	SplitResponse,
 	SplitsByPeriod,
 } from '@/common/types'
+import type { DivisionMethod } from '@/platform/database/schema/enums'
 import type { Logger } from '@/platform/logger'
 import type {
 	ContactsRepository,
@@ -229,7 +230,7 @@ export class SplitsService {
 		participantId: string,
 		selections: Array<{
 			itemId: string
-			divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+			divisionMethod: DivisionMethod
 			value?: string
 		}>,
 	): Promise<SplitResponse> {
@@ -406,7 +407,7 @@ export class SplitsService {
 				price: ri.price, // FIX: Use unit price, NOT sum
 				type: 'product' as const,
 				quantity: ri.quantity,
-				defaultDivisionMethod: (ri.suggestedSplitMethod as any) || 'equal',
+				defaultDivisionMethod: (ri.suggestedSplitMethod as DivisionMethod) || 'by_fraction',
 				receiptItemId: ri.id,
 				icon: ri.emoji || undefined,
 			}))
