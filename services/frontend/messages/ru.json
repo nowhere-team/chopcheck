@@ -197,7 +197,9 @@
 	"debug_status": "статус",
 
 	"consent_title": "Безопасность и данные",
-	"consent_description": "Используя ChopCheck, ты соглашаешься с тем, что мы обрабатываем твои данные из Telegram и чеки для работы приложения.",
+	"consent_description_prefix": "Используя ",
+	"consent_description_app_name": "ChopCheck",
+	"consent_description_suffix": ", ты соглашаешься с тем, что мы обрабатываем твои данные из Telegram и чеки для работы приложения.",
 	"consent_privacy_prefix": "Подробнее в ",
 	"consent_privacy_link": "Политике конфиденциальности",
 	"consent_privacy_suffix": ".",
