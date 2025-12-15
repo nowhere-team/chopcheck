@@ -122,7 +122,7 @@
 	"division_method_per_unit_desc": "Кто сколько съел/выпил",
 	"division_method_by_amount": "Процент или Сумма",
 	"division_method_by_amount_desc": "Для чаевых и сервисных сборов",
-	"division_method_custom": "Точные суммы",
+	"division_method_custom": "Вручную",
 	"division_method_custom_desc": "Указать суммы для каждого",
 	"division_method_fixed": "Фикс.",
 	"division_method_fixed_desc": "Фиксированная плата",
