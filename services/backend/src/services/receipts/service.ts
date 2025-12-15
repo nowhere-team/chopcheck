@@ -363,7 +363,7 @@ export class ReceiptsService {
 			case 'per_unit':
 				return 'per_unit'
 			case 'not_shareable':
-				// Rule: "not_shareable you drive under per_unit"
+				// Rule: "not_shareable is treated as per_unit"
 				return 'per_unit'
 			default:
 				return 'per_unit'
