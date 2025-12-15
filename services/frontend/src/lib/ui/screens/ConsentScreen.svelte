@@ -25,18 +25,22 @@
 
 			<h1>{m.consent_title()}</h1>
 			<p>
-				{m.consent_description()}
+				{m.consent_description_prefix()}
+				<strong>{m.consent_description_app_name()}</strong>
+				{m.consent_description_suffix()}
 			</p>
 			<p>
-				{m.consent_privacy_prefix()}<a class="link" href={resolve('/privacy')}
-					>{m.consent_privacy_link()}</a
-				>{m.consent_privacy_suffix()}
+				{m.consent_privacy_prefix()}
+				<a class="link" href={resolve('/privacy')}>
+					{m.consent_privacy_link()}
+				</a>
+				{m.consent_privacy_suffix()}
 			</p>
 		</main>
 		<footer>
-			<Button variant="primary" class="w-full" onclick={handleAgree} {loading}
-				>{m.consent_agree_button()}</Button
-			>
+			<Button variant="primary" class="w-full" onclick={handleAgree} {loading}>
+				{m.consent_agree_button()}
+			</Button>
 		</footer>
 	</div>
 </Page>
