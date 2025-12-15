@@ -12,7 +12,7 @@
 
 	let { open = $bindable(), selected, onselect, onclose }: Props = $props()
 
-	let shouldRenderContent = $state(false)
+	let hasRendered = $state(false)
 
 	// prettier-ignore
 	const categories = {
@@ -33,18 +33,15 @@
 		symbols: m.emoji_picker_symbols_category()
 	}
 
-	// dont block the animation while rendering
 	$effect(() => {
-		if (open) {
+		if (open && !hasRendered) {
 			const timeout = setTimeout(() => {
 				requestAnimationFrame(() => {
-					shouldRenderContent = true
+					hasRendered = true
 				})
 			}, 50)
 
 			return () => clearTimeout(timeout)
-		} else {
-			shouldRenderContent = false
 		}
 	})
 
@@ -54,8 +51,8 @@
 </script>
 
 <BottomSheet bind:open {onclose} title={m.emoji_picker_label()}>
-	<div class="picker" class:ready={shouldRenderContent}>
-		{#if shouldRenderContent}
+	<div class="picker" class:ready={hasRendered}>
+		{#if hasRendered}
 			{#each Object.entries(categories) as [key, emojis] (key)}
 				<div class="category">
 					<h3 class="category-title">{categoryNames[key]}</h3>
@@ -82,11 +79,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-6);
-		padding-bottom: var(--space-4);
 		max-height: 60vh;
 		min-height: 60vh;
 		opacity: 0;
 		transition: opacity 0.15s ease-out;
+		padding: 4px 4px var(--space-4);
+		margin: -4px -4px 0;
 	}
 
 	.picker.ready {
@@ -98,7 +96,7 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		content-visibility: auto;
-		contain-intrinsic-size: 180px;
+		contain-intrinsic-size: 1px 300px;
 	}
 
 	.category-title {
@@ -127,7 +125,7 @@
 		aspect-ratio: 1;
 		border-radius: var(--radius-md);
 		cursor: pointer;
-		transition: all 0.15s var(--ease-out);
+		transition: background-color 0.1s;
 		-webkit-tap-highlight-color: transparent;
 	}
 
@@ -136,11 +134,12 @@
 	}
 
 	.emoji-button:active {
-		transform: scale(0.9);
+		background: var(--color-bg-tertiary);
 	}
 
 	.emoji-button.selected {
 		background: color-mix(in srgb, var(--color-primary) 15%, transparent);
-		box-shadow: 0 0 0 2px var(--color-primary);
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
 	}
 </style>

@@ -105,6 +105,7 @@
 	aria-label={entry?.cldr || emoji}
 >
 	{#if src && !hasError}
+		<!--suppress HtmlDeprecatedAttribute -->
 		<img
 			bind:this={imgRef}
 			{src}
