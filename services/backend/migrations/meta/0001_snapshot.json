@@ -833,7 +833,7 @@
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true,
-					"default": "'equal'"
+					"default": "'by_fraction'"
 				},
 				"is_deleted": {
 					"name": "is_deleted",
