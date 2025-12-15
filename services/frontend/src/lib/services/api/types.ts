@@ -72,7 +72,7 @@ export interface SplitItem {
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity: string
 	icon?: string
-	defaultDivisionMethod: 'custom' | 'equal' | 'shares' | 'fixed' | 'proportional'
+	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
 }
 
 export interface Participant {
@@ -170,7 +170,7 @@ export interface ItemCalculation {
 
 export interface ItemSelection {
 	itemId: string
-	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	divisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
 	value?: string
 }
 
@@ -180,6 +180,6 @@ export interface DraftItem {
 	price: number
 	quantity: string
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-	defaultDivisionMethod: 'equal' | 'shares' | 'custom'
+	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
 	icon?: string
 }

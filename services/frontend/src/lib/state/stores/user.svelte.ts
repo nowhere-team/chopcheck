@@ -1,15 +1,8 @@
+import { resource } from 'runed'
+
 import { api } from '$lib/services/api/client'
-import type { User, UserStats } from '$lib/services/api/types'
+import type { User } from '$lib/services/api/types'
 
-import { cache } from '../cache.svelte'
-import { createQuery } from '../query.svelte'
-
-const CACHE_KEYS = {
-	me: 'user:me',
-	stats: 'user:stats'
-}
-
-// backend returns snake_case, we transform to camelCase
 interface BackendUser {
 	id: string
 	username?: string
@@ -33,39 +26,23 @@ function transformUser(backend: BackendUser): User {
 	}
 }
 
-export function createUserStore() {
-	const meQuery = createQuery<User>(
-		CACHE_KEYS.me,
+export class UserService {
+	me = resource(
+		() => 'me',
 		async () => {
 			const data = await api.get<BackendUser>('auth/me')
 			return transformUser(data)
-		},
-		{ ttl: 10 * 60 * 1000, refetchOnMount: false }
+		}
 	)
 
-	const statsQuery = createQuery<UserStats>(
-		CACHE_KEYS.stats,
-		() => api.get<BackendStats>('auth/me/stats'),
-		{ ttl: 5 * 60 * 1000 }
+	stats = resource(
+		() => 'stats',
+		async () => {
+			return api.get<BackendStats>('auth/me/stats')
+		}
 	)
 
-	function invalidateAll(): void {
-		cache.invalidatePattern('user:*')
+	async refresh() {
+		await Promise.all([this.me.refetch(), this.stats.refetch()])
 	}
-
-	return {
-		me: meQuery,
-		stats: statsQuery,
-		invalidateAll
-	}
-}
-
-// singleton
-let userStore: ReturnType<typeof createUserStore> | null = null
-
-export function getUserStore() {
-	if (!userStore) {
-		userStore = createUserStore()
-	}
-	return userStore
 }

@@ -7,7 +7,10 @@
 	import { app, setPlatformContext } from '$lib/app/context.svelte'
 	import { getNavigationDirection } from '$lib/navigation/routes'
 	import { createPlatform } from '$lib/platform/create'
-	import { createLogger } from '$lib/shared/logger'
+	import { setContactsService, setSplitsService, setUserService } from '$lib/state/context'
+	import { ContactsService } from '$lib/state/stores/contacts.svelte'
+	import { SplitsService } from '$lib/state/stores/splits.svelte'
+	import { UserService } from '$lib/state/stores/user.svelte'
 	import AppShell from '$lib/ui/layouts/AppShell.svelte'
 	import Navbar from '$lib/ui/layouts/Navbar.svelte'
 	import ConsentScreen from '$lib/ui/screens/ConsentScreen.svelte'
@@ -16,28 +19,35 @@
 	import LoginScreen from '$lib/ui/screens/LoginScreen.svelte'
 
 	const { children } = $props()
-	const log = createLogger('layout')
 
 	let initialized = $state(false)
-
 	const platform = createPlatform()
 	setPlatformContext(platform)
+
+	const userService = new UserService()
+	const splitsService = new SplitsService()
+	const contactsService = new ContactsService()
+
+	setUserService(userService)
+	setSplitsService(splitsService)
+	setContactsService(contactsService)
 
 	onMount(async () => {
 		try {
 			const initResult = await platform.init()
-
 			if (!initResult.ok) {
-				log.error('platform init failed', initResult.error.message)
 				app.setError(initResult.error)
 				initialized = true
 				return
 			}
-
 			await app.init(platform)
+
+			if (app.state.status === 'ready') {
+				await userService.me.refetch()
+			}
+
 			initialized = true
 		} catch (error) {
-			log.error('initialization failed', error)
 			app.setError(error instanceof Error ? error : new Error('initialization failed'))
 			initialized = true
 		}
@@ -45,12 +55,7 @@
 
 	onNavigate(navigation => {
 		if (!document.startViewTransition) return
-
-		// critical fix: skip transition on swipe/back gestures to prevent UI freeze
-		// if we try to view-transition a swipe, the browser fights with JS and loses frames
-		if (navigation.type === 'popstate' || navigation.delta === -1) {
-			return
-		}
+		if (navigation.type === 'popstate' || navigation.delta === -1) return
 
 		const from = navigation.from?.url.pathname || '/'
 		const to = navigation.to?.url.pathname || '/'
@@ -63,10 +68,6 @@
 			})
 		})
 	})
-
-	function handleRetry() {
-		window.location.reload()
-	}
 </script>
 
 <svelte:head>
@@ -77,7 +78,7 @@
 {#if !initialized}
 	<LoadingScreen message="Инициализация..." />
 {:else if app.state.status === 'error' && app.state.error}
-	<ErrorScreen error={app.state.error} onRetry={handleRetry} />
+	<ErrorScreen error={app.state.error} onRetry={() => window.location.reload()} />
 {:else if app.state.status === 'consent_required'}
 	<ConsentScreen />
 {:else if app.state.status === 'unauthenticated'}
@@ -89,7 +90,6 @@
 		{#snippet navbar()}
 			<Navbar />
 		{/snippet}
-
 		{@render children?.()}
 	</AppShell>
 {:else}

@@ -12,6 +12,8 @@
 
 	let { open = $bindable(), selected, onselect, onclose }: Props = $props()
 
+	let hasRendered = $state(false)
+
 	// prettier-ignore
 	const categories = {
 		food: ['🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🥗', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘'],
@@ -31,30 +33,44 @@
 		symbols: m.emoji_picker_symbols_category()
 	}
 
+	$effect(() => {
+		if (open && !hasRendered) {
+			const timeout = setTimeout(() => {
+				requestAnimationFrame(() => {
+					hasRendered = true
+				})
+			}, 50)
+
+			return () => clearTimeout(timeout)
+		}
+	})
+
 	function handleSelect(emoji: string) {
 		onselect?.(emoji)
 	}
 </script>
 
 <BottomSheet bind:open {onclose} title={m.emoji_picker_label()}>
-	<div class="picker">
-		{#each Object.entries(categories) as [key, emojis] (key)}
-			<div class="category">
-				<h3 class="category-title">{categoryNames[key]}</h3>
-				<div class="emoji-grid">
-					{#each emojis as emoji (emoji)}
-						<button
-							type="button"
-							class="emoji-button"
-							class:selected={emoji === selected}
-							onclick={() => handleSelect(emoji)}
-						>
-							<Emoji {emoji} size={32} lazy={true} />
-						</button>
-					{/each}
+	<div class="picker" class:ready={hasRendered}>
+		{#if hasRendered}
+			{#each Object.entries(categories) as [key, emojis] (key)}
+				<div class="category">
+					<h3 class="category-title">{categoryNames[key]}</h3>
+					<div class="emoji-grid">
+						{#each emojis as emoji (emoji)}
+							<button
+								type="button"
+								class="emoji-button"
+								class:selected={emoji === selected}
+								onclick={() => handleSelect(emoji)}
+							>
+								<Emoji {emoji} size={32} lazy={true} />
+							</button>
+						{/each}
+					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
+		{/if}
 	</div>
 </BottomSheet>
 
@@ -63,14 +79,24 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-6);
-		padding-bottom: var(--space-4);
 		max-height: 60vh;
+		min-height: 60vh;
+		opacity: 0;
+		transition: opacity 0.15s ease-out;
+		padding: 4px 4px var(--space-4);
+		margin: -4px -4px 0;
+	}
+
+	.picker.ready {
+		opacity: 1;
 	}
 
 	.category {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
+		content-visibility: auto;
+		contain-intrinsic-size: 1px 300px;
 	}
 
 	.category-title {
@@ -99,7 +125,7 @@
 		aspect-ratio: 1;
 		border-radius: var(--radius-md);
 		cursor: pointer;
-		transition: all 0.15s var(--ease-out);
+		transition: background-color 0.1s;
 		-webkit-tap-highlight-color: transparent;
 	}
 
@@ -108,11 +134,12 @@
 	}
 
 	.emoji-button:active {
-		transform: scale(0.9);
+		background: var(--color-bg-tertiary);
 	}
 
 	.emoji-button.selected {
 		background: color-mix(in srgb, var(--color-primary) 15%, transparent);
-		box-shadow: 0 0 0 2px var(--color-primary);
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
 	}
 </style>

@@ -22,12 +22,18 @@
 	let isLongPress = false
 
 	const divisionLabels: Record<string, string> = {
-		equal: m.division_method_equal(),
-		shares: m.division_method_shares(),
-		custom: m.division_method_custom()
-		// fixed: m.division_method_fixed?.() ?? 'Фиксированно',
-		// proportional: m.division_method_proportional?.() ?? 'Пропорционально'
+		equal: 'Поровну', // legacy fallback
+		shares: 'По долям', // legacy fallback
+		by_fraction: 'По долям',
+		per_unit: 'Поштучно',
+		by_amount: 'Процент/Фикс',
+		custom: m.division_method_custom(),
+		fixed: 'Фикс.', // legacy fallback
+		proportional: 'Процент' // legacy fallback
 	}
+
+	// Убираем лишние нули (1.000 -> 1, 1.500 -> 1.5)
+	const formattedQuantity = $derived(parseFloat(item.quantity).toString())
 
 	function handleClick(e: MouseEvent) {
 		if (isLongPress) {
@@ -63,7 +69,6 @@
 		}
 	}
 
-	// Блокируем контекстное меню браузера
 	function handleContextMenu(e: Event) {
 		e.preventDefault()
 	}
@@ -88,7 +93,6 @@
 					size={40}
 				/>
 				{#if selectionMode}
-					<!-- Добавлена анимация появления -->
 					<div class="selection-indicator" class:selected>
 						{#if selected}
 							<Check size={14} weight="bold" />
@@ -100,7 +104,7 @@
 			<div class="info">
 				<span class="name">{item.name}</span>
 				<span class="meta">
-					{item.quantity} шт. · {divisionLabels[item.defaultDivisionMethod] ??
+					{formattedQuantity} шт. · {divisionLabels[item.defaultDivisionMethod] ??
 						item.defaultDivisionMethod}
 				</span>
 			</div>

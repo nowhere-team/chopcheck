@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { CheckCircle, Info, Warning, X, XCircle } from 'phosphor-svelte'
+	import { useInterval } from 'runed'
 	import { type Component, onMount } from 'svelte'
 	import { fly } from 'svelte/transition'
 
@@ -30,7 +31,20 @@
 	let el = $state<HTMLDivElement | null>(null)
 
 	let progress = $state(100)
-	let progressInterval = $state<number | null>(null)
+	let elapsed = 0
+	const step = 40
+
+	const progressTimer = useInterval(() => step, {
+		immediate: false,
+		callback: () => {
+			if (item.duration <= 0) return
+			elapsed += step
+			progress = Math.max(0, 100 - (elapsed / item.duration) * 100)
+			if (elapsed >= item.duration) {
+				progressTimer.pause()
+			}
+		}
+	})
 
 	function handleDismiss() {
 		platform.haptic.impact('light')
@@ -41,10 +55,7 @@
 		if (!item.dismissible) return
 		startX = e.touches[0].clientX
 		dragging = true
-		if (progressInterval) {
-			clearInterval(progressInterval)
-			progressInterval = null
-		}
+		progressTimer.pause()
 	}
 
 	function onTouchMove(e: TouchEvent) {
@@ -66,36 +77,19 @@
 				el.style.transform = ''
 				el.style.opacity = ''
 			}
-			startProgressCountdown()
+			progressTimer.resume()
 		}
 		currentX = 0
 	}
 
-	function startProgressCountdown() {
-		if (item.duration <= 0) return
-		const total = item.duration
-		const step = 100
-		const tick = Math.max(40, Math.floor(total / step))
-		let elapsed = 0
-		progress = 100
-		progressInterval = setInterval(() => {
-			elapsed += tick
-			progress = Math.max(0, 100 - (elapsed / total) * 100)
-			if (elapsed >= total) {
-				clearInterval(progressInterval!)
-				progressInterval = null
-			}
-		}, tick) as unknown as number
-	}
-
 	onMount(() => {
-		startProgressCountdown()
-		return () => {
-			if (progressInterval) clearInterval(progressInterval)
+		if (item.duration > 0) {
+			progressTimer.resume()
 		}
 	})
 </script>
 
+<!--suppress HtmlUnknownAttribute -->
 <div
 	bind:this={el}
 	class="toast {item.type}"
@@ -110,7 +104,6 @@
 		<div class="icon-wrapper">
 			<Icon size={20} weight="fill" />
 		</div>
-
 		<span class="message">{item.message}</span>
 	</div>
 
@@ -169,11 +162,9 @@
 	.toast.success .icon-wrapper {
 		color: var(--color-success);
 	}
-
 	.toast.error .icon-wrapper {
 		color: var(--color-error);
 	}
-
 	.toast.warning .icon-wrapper {
 		color: #f59e0b;
 	}
@@ -194,7 +185,6 @@
 			color-mix(in srgb, var(--color-success) 30%, var(--color-bg))
 		);
 	}
-
 	.toast.error .progress .bar {
 		background: linear-gradient(
 			90deg,
@@ -202,7 +192,6 @@
 			color-mix(in srgb, var(--color-error) 30%, var(--color-bg))
 		);
 	}
-
 	.toast.warning .progress .bar {
 		background: linear-gradient(
 			90deg,
@@ -210,7 +199,6 @@
 			color-mix(in srgb, #f59e0b 30%, var(--color-bg))
 		);
 	}
-
 	.toast.info .progress .bar {
 		background: linear-gradient(
 			90deg,

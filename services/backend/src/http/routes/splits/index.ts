@@ -5,6 +5,7 @@ import { NotFoundError } from '@/common/errors'
 import { createSplitSchema } from '@/common/types'
 import { auth, requirePermission } from '@/http/middleware/auth'
 import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
+import { DIVISION_METHODS } from '@/platform/database/schema/enums'
 
 const joinQuerySchema = z.object({
 	anonymous: z
@@ -27,7 +28,7 @@ const selectItemsSchema = z.object({
 	selections: z.array(
 		z.object({
 			itemId: z.uuid(),
-			divisionMethod: z.enum(['equal', 'shares', 'fixed', 'proportional', 'custom']),
+			divisionMethod: z.enum(DIVISION_METHODS),
 			value: z.string().optional(),
 		}),
 	),
@@ -40,7 +41,8 @@ const addItemsSchema = z.object({
 			price: z.number().int().positive(),
 			type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 			quantity: z.string().default('1'),
-			defaultDivisionMethod: z.enum(['custom', 'fixed', 'equal', 'shares', 'proportional']),
+			defaultDivisionMethod: z.enum(DIVISION_METHODS),
+			icon: z.string().optional(),
 		}),
 	),
 })
@@ -50,7 +52,8 @@ const updateItemSchema = z.object({
 	price: z.number().int().positive().optional(),
 	type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).optional(),
 	quantity: z.string().optional(),
-	defaultDivisionMethod: z.enum(['equal', 'shares', 'fixed', 'proportional', 'custom']).optional(),
+	defaultDivisionMethod: z.enum(DIVISION_METHODS).optional(),
+	icon: z.string().optional(),
 })
 
 const addPaymentMethodSchema = z.object({

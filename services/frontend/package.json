@@ -55,6 +55,7 @@
 		"fluent-optimized": "^2025.12.11",
 		"grammy": "^1.38.3",
 		"ky": "^1.14.0",
-		"phosphor-svelte": "^3.0.1"
+		"phosphor-svelte": "^3.0.1",
+		"runed": "^0.37.0"
 	}
 }

@@ -262,6 +262,8 @@ export class ReceiptsService {
 				quantity: String(item.quantity),
 				sum: item.sum,
 				displayOrder: i,
+				// Default fallback
+				suggestedDivisionMethod: 'by_fraction',
 			})),
 		)
 	}
@@ -341,22 +343,31 @@ export class ReceiptsService {
 		}
 	}
 
-	private mapSplitMethod(
-		catalogMethod?: string,
-	): 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom' | undefined {
-		if (!catalogMethod) return undefined
+	/**
+	 * MAPPING POLICY:
+	 * by_fraction --> 'by_fraction' (replaces shares/equal)
+	 * by_amount --> 'by_amount' (replaces proportional)
+	 * per_unit --> 'per_unit' (replaces fixed/unit logic)
+	 * not_shareable --> 'per_unit' (Instruction exception: convert to per_unit)
+	 * ambiguous --> 'per_unit'
+	 */
+	private mapSplitMethod(catalogMethod?: string): 'by_fraction' | 'by_amount' | 'per_unit' | 'custom' {
+		// Rule: "when ambiguous: default to per_unit"
+		if (!catalogMethod) return 'per_unit'
 
-		const mapping: Record<string, 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'> = {
-			equal: 'equal',
-			shares: 'shares',
-			fixed: 'fixed',
-			proportional: 'proportional',
-			custom: 'custom',
-			by_amount: 'proportional',
-			per_unit: 'shares',
+		switch (catalogMethod) {
+			case 'by_fraction':
+				return 'by_fraction'
+			case 'by_amount':
+				return 'by_amount'
+			case 'per_unit':
+				return 'per_unit'
+			case 'not_shareable':
+				// Rule: "not_shareable is treated as per_unit"
+				return 'per_unit'
+			default:
+				return 'per_unit'
 		}
-
-		return mapping[catalogMethod] ?? 'equal'
 	}
 
 	private truncateError(error: Error | string, maxLength = 2000): string {

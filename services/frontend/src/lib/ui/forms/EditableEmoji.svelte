@@ -8,6 +8,7 @@
 		value: string
 		centered?: boolean
 		size?: number
+		emojiScale?: number
 		class?: string
 		onchange?: (value: string) => void
 	}
@@ -16,6 +17,7 @@
 		value = $bindable(),
 		centered = false,
 		size = 48,
+		emojiScale = 0.65,
 		class: className = '',
 		onchange
 	}: Props = $props()
@@ -25,6 +27,8 @@
 	let isPickerOpen = $state(false)
 	let isFocused = $state(false)
 
+	const emojiSize = $derived(Math.floor(size * emojiScale))
+
 	function openPicker() {
 		isPickerOpen = true
 		isFocused = true
@@ -33,7 +37,6 @@
 
 	function handleSelect(emoji: string) {
 		value = emoji
-		// Важно: вызываем onchange после обновления value
 		onchange?.(emoji)
 		isPickerOpen = false
 		isFocused = false
@@ -67,8 +70,9 @@
 		class="emoji-button"
 		class:focused={isFocused}
 		aria-label="Выбрать эмодзи"
+		style="width: {size}px; height: {size}px;"
 	>
-		<Emoji emoji={value} {size} />
+		<Emoji emoji={value} size={emojiSize} />
 	</button>
 </div>
 
@@ -101,9 +105,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		min-height: 48px;
-		min-width: 48px;
-		padding: var(--space-2);
 		background: transparent;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
@@ -113,6 +114,7 @@
 			box-shadow 0.15s var(--ease-out),
 			transform 0.1s var(--ease-out);
 		cursor: pointer;
+		box-sizing: border-box;
 	}
 
 	.emoji-button:hover {

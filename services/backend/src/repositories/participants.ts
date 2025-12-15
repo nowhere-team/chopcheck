@@ -2,12 +2,13 @@
 
 import type { Participant, ParticipantWithSelections } from '@/common/types'
 import { schema } from '@/platform/database'
+import type { DivisionMethod } from '@/platform/database/schema/enums'
 
 import { BaseRepository } from './base'
 
 interface SelectionInput {
 	itemId: string
-	divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	divisionMethod: DivisionMethod
 	value?: string
 }
 

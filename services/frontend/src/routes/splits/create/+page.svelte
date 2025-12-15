@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { Plus, QrCode } from 'phosphor-svelte'
-	import { onMount } from 'svelte'
+	import { useDebounce, watch } from 'runed'
 	import { SvelteSet } from 'svelte/reactivity'
+	import { fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
-	import type { CreateSplitDto, DraftItem, Participant, SplitItem } from '$lib/services/api/types'
+	import type { DraftItem, Participant, SplitItem } from '$lib/services/api/types'
+	import { receiptScanner } from '$lib/services/receipts/scanner.svelte'
 	import {
 		fileToBase64,
-		type ReceiptCompleteData,
-		type ReceiptStreamEvent,
 		streamReceiptFromImage,
 		streamReceiptFromQr
 	} from '$lib/services/receipts/stream'
 	import { scanQrCode } from '$lib/services/scanner/qr'
-	import { getSplitsStore } from '$lib/state'
+	import { getSplitsService } from '$lib/state/context'
 	import { AvatarStack, Button, Divider, ExpandableCard } from '$lib/ui/components'
 	import ReceiptLoader from '$lib/ui/features/receipts/ReceiptLoader.svelte'
 	import ScannerSheet from '$lib/ui/features/receipts/ScannerSheet.svelte'
@@ -26,14 +26,13 @@
 	import SelectionToolbar from '$lib/ui/layouts/SelectionToolbar.svelte'
 	import { BottomSheet } from '$lib/ui/overlays'
 
-	const splitsStore = getSplitsStore()
-	onMount(() => {
-		splitsStore.draft.fetch()
-	})
+	const splitsService = getSplitsService()
+	// Using persisted singleton scanner instead of new instance
+	const scanner = receiptScanner
 
-	const draftQuery = $derived(splitsStore.draft)
+	const draft = $derived(splitsService.draft)
 	const draftData = $derived(
-		draftQuery.data?.split ?? {
+		draft.current?.split ?? {
 			id: undefined,
 			name: '',
 			icon: '🍔',
@@ -41,19 +40,52 @@
 			items: []
 		}
 	)
-	const participants = $derived<Participant[]>(draftQuery.data?.participants ?? [])
-	const items = $derived<SplitItem[]>(draftQuery.data?.items ?? [])
+	const participants = $derived<Participant[]>(draft.current?.participants ?? [])
+	const items = $derived<SplitItem[]>(draft.current?.items ?? [])
 
 	let draftSplitEmoji = $state('🍔')
 	let draftSplitName = $state('')
-	let isTyping = false
 
-	$effect(() => {
-		if (!isTyping) {
-			if (draftData.icon) draftSplitEmoji = draftData.icon
-			if (draftData.name) draftSplitName = draftData.name
+	// consolidated watcher for external updates
+	watch(
+		() => [draftData.icon, draftData.name],
+		([icon, name]) => {
+			if (icon && icon !== draftSplitEmoji) draftSplitEmoji = icon
+			if (name && name !== draftSplitName) draftSplitName = name
 		}
-	})
+	)
+
+	// save ONLY metadata (name, icon) - debounced
+	const saveMetadata = useDebounce(async () => {
+		await splitsService.createOrUpdate({
+			id: draftData.id,
+			name: draftSplitName,
+			icon: draftSplitEmoji,
+			currency: draftData.currency
+		})
+	}, 800)
+
+	// fallback for full sync
+	const saveDraftFull = useDebounce(async (overrideItems?: SplitItem[]) => {
+		const currentItems = overrideItems ?? items
+		const itemsDto = currentItems.map(i => ({
+			id: i.id.startsWith('temp-') ? undefined : i.id,
+			name: i.name,
+			price: i.price,
+			quantity: String(i.quantity),
+			type: i.type,
+			defaultDivisionMethod: i.defaultDivisionMethod,
+			icon: i.icon
+		}))
+
+		await splitsService.createOrUpdate({
+			id: draftData.id,
+			name: draftSplitName,
+			icon: draftSplitEmoji,
+			currency: draftData.currency,
+			items: itemsDto
+		})
+	}, 800)
 
 	let isParticipantsSheetOpen = $state(false)
 	let isScannerSheetOpen = $state(false)
@@ -64,13 +96,6 @@
 	let selectedIds = $state<Set<string>>(new Set())
 	const selectedCount = $derived(selectedIds.size)
 
-	let isLoadingReceipt = $state(false)
-	let receiptStatus = $state('')
-	let receiptStoreName = $state<string | undefined>(undefined)
-	let receiptItemsLoaded = $state(0)
-	let receiptTotalItems = $state<number | undefined>(undefined)
-	let lastScannedItem = $state<string | undefined>(undefined)
-
 	const participantStackItems = $derived(
 		participants.map(p => ({
 			id: p.id,
@@ -79,67 +104,16 @@
 		}))
 	)
 
-	let saveTimeout: ReturnType<typeof setTimeout> | undefined
-
-	async function saveDraft(overrideItems?: SplitItem[]) {
-		const currentItems = overrideItems ?? items
-
-		let itemsDto: CreateSplitDto['items'] | undefined = undefined
-
-		if (currentItems) {
-			itemsDto = currentItems.map(i => ({
-				id: i.id.startsWith('temp-') ? undefined : i.id,
-				name: i.name,
-				price: i.price,
-				quantity: String(i.quantity),
-				type: i.type,
-				defaultDivisionMethod: i.defaultDivisionMethod
-			}))
-		}
-
-		const payload: CreateSplitDto & { id?: string } = {
-			id: draftData.id,
-			name: draftSplitName,
-			icon: draftSplitEmoji,
-			currency: draftData.currency,
-			items: itemsDto
-		}
-
-		await splitsStore.createOrUpdate.mutate(payload)
-		await splitsStore.draft.refetch()
-	}
-
-	async function saveMetadataOnly() {
-		const payload: CreateSplitDto & { id?: string } = {
-			id: draftData.id,
-			name: draftSplitName,
-			icon: draftSplitEmoji,
-			currency: draftData.currency,
-			items: undefined
-		}
-		await splitsStore.createOrUpdate.mutate(payload)
-		await splitsStore.draft.refetch()
-	}
-
-	function handleNameChange(val: string) {
+	async function handleNameChange(val: string) {
 		draftSplitName = val
-		isTyping = true
-
-		if (saveTimeout) clearTimeout(saveTimeout)
-		saveTimeout = setTimeout(async () => {
-			await saveMetadataOnly()
-			isTyping = false
-		}, 800)
+		splitsService.updateDraftLocal({ split: { name: val } })
+		await saveMetadata()
 	}
 
-	function handleEmojiChange(val: string) {
-		isTyping = true
+	async function handleEmojiChange(val: string) {
 		draftSplitEmoji = val
-		saveMetadataOnly().finally(() => {
-			setTimeout(() => {
-				isTyping = false
-			}, 500)
-		})
+		splitsService.updateDraftLocal({ split: { icon: val } })
+		await saveMetadata()
 	}
 
 	function handleItemClick(item: SplitItem) {
@@ -152,7 +126,7 @@
 				price: item.price,
 				quantity: item.quantity,
 				type: item.type,
-				defaultDivisionMethod: item.defaultDivisionMethod as 'equal' | 'shares' | 'custom',
+				defaultDivisionMethod: item.defaultDivisionMethod,
 				icon: item.icon
 			}
 			isItemEditSheetOpen = true
@@ -174,10 +148,7 @@
 			newSet.add(id)
 		}
 		selectedIds = newSet
-
-		if (newSet.size === 0) {
-			selectionMode = false
-		}
+		if (newSet.size === 0) selectionMode = false
 	}
 
 	function handleCancelSelection() {
@@ -187,10 +158,13 @@
 
 	async function handleDeleteSelected() {
 		if (selectedIds.size === 0) return
-
 		const newItems = items.filter(i => !selectedIds.has(i.id))
 		handleCancelSelection()
-		await saveDraft(newItems)
+
+		splitsService.updateDraftLocal({ items: newItems })
+
+		await saveDraftFull(newItems)
+		await saveDraftFull.runScheduledNow()
 	}
 
 	function handleAddItem() {
@@ -199,167 +173,113 @@
 			price: 0,
 			quantity: '1',
 			type: 'product',
-			defaultDivisionMethod: 'equal'
+			defaultDivisionMethod: 'by_fraction',
+			icon: '📦'
 		}
 		isItemEditSheetOpen = true
 	}
 
-	async function handleSaveItem() {
+	function handleSaveItem() {
 		if (!editingItem) return
 
-		let newItems = [...items]
+		const itemToSave = { ...editingItem }
+		const currentDraftId = draftData.id
+		const isNew = !itemToSave.id || itemToSave.id.startsWith('temp-')
+		const tempId = isNew ? `temp-${Date.now()}` : itemToSave.id!
 
-		if (editingItem.id) {
+		let newItems = [...items]
+		if (!isNew) {
 			newItems = newItems.map(i =>
-				i.id === editingItem!.id ? ({ ...i, ...editingItem } as SplitItem) : i
+				i.id === tempId ? ({ ...i, ...itemToSave } as SplitItem) : i
 			)
 		} else {
-			const newItem: SplitItem = {
-				...editingItem,
-				id: `temp-${Date.now()}`,
-				quantity: String(editingItem.quantity)
-			} as SplitItem
-			newItems.push(newItem)
+			newItems.push({
+				...itemToSave,
+				id: tempId,
+				quantity: String(itemToSave.quantity)
+			} as SplitItem)
 		}
 
+		// 1. optimistic update
+		splitsService.updateDraftLocal({ items: newItems })
+
+		// 2. unblock ui immediately
 		isItemEditSheetOpen = false
 		editingItem = null
 
-		await saveDraft(newItems)
+		// 3. background Sync (fire & forget)
+		;(async () => {
+			try {
+				if (!currentDraftId) {
+					await saveDraftFull(newItems)
+					await saveDraftFull.runScheduledNow()
+				} else {
+					if (isNew) {
+						await splitsService.addItem(currentDraftId, {
+							name: itemToSave.name,
+							price: itemToSave.price,
+							quantity: String(itemToSave.quantity),
+							type: itemToSave.type,
+							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+							icon: itemToSave.icon
+						})
+					} else {
+						await splitsService.updateItem(currentDraftId, tempId, {
+							name: itemToSave.name,
+							price: itemToSave.price,
+							quantity: String(itemToSave.quantity),
+							type: itemToSave.type,
+							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+							icon: itemToSave.icon
+						})
+					}
+				}
+			} catch (e) {
+				console.error('Failed to save item', e)
+				toast.error('Ошибка сохранения')
+				await splitsService.draft.refetch()
+			}
+		})()
 	}
 
-	async function handleDeleteItem() {
+	function handleDeleteItem() {
 		if (!editingItem?.id) {
 			isItemEditSheetOpen = false
 			editingItem = null
 			return
 		}
 
-		const newItems = items.filter(i => i.id !== editingItem!.id)
+		const itemId = editingItem.id
+		const currentDraftId = draftData.id
+
+		const newItems = items.filter(i => i.id !== itemId)
+
+		// 1. optimistic
+		splitsService.updateDraftLocal({ items: newItems })
+
+		// 2. unblock UI
 		isItemEditSheetOpen = false
 		editingItem = null
 
-		await saveDraft(newItems)
-	}
-
-	function resetReceiptState() {
-		isLoadingReceipt = false
-		receiptStatus = ''
-		receiptItemsLoaded = 0
-		receiptTotalItems = undefined
-		receiptStoreName = undefined
-		lastScannedItem = undefined
-	}
-
-	function handleReceiptEvent(event: ReceiptStreamEvent) {
-		switch (event.type) {
-			case 'started':
-				isLoadingReceipt = true
-				receiptStatus = 'Подключение...'
-				receiptItemsLoaded = 0
-				break
-
-			case 'fns_fetched':
-				receiptStatus = 'Распознавание...'
-				receiptTotalItems = event.data.itemCount
-				break
-
-			case 'item': {
-				// если это первый item и статус ещё "Подключение" - значит image поток
-				if (receiptStatus === 'Подключение...') {
-					receiptStatus = 'Распознавание...'
+		// 3. background sync
+		if (currentDraftId && !itemId.startsWith('temp-')) {
+			;(async () => {
+				try {
+					await splitsService.deleteItem(currentDraftId, itemId)
+				} catch (e) {
+					console.error('Failed to delete item', e)
+					toast.error('Не удалось удалить позицию')
+					await splitsService.draft.refetch()
 				}
-				receiptItemsLoaded++
-
-				const item = event.data as {
-					name?: string
-					rawName?: string
-					emoji?: string
-					quantity?: number
-				}
-				const itemName = item.name || item.rawName
-				if (itemName) {
-					const qty = formatQuantity(item.quantity)
-					const prefix = item.emoji ?? ''
-					const qtyStr = qty && qty !== '1' ? ` ×${qty}` : ''
-					lastScannedItem = `${prefix} ${itemName}${qtyStr}`.trim()
-				}
-				break
-			}
-
-			case 'place': {
-				const place = event.data as { name?: string }
-				if (place.name) {
-					receiptStoreName = place.name
-				}
-				break
-			}
-
-			case 'completed': {
-				const data = event.data as ReceiptCompleteData
-				handleReceiptCompleted(data)
-				break
-			}
-
-			case 'error':
-				toast.error('Ошибка обработки чека: ' + (event.data as any).message)
-				resetReceiptState()
-				break
-
-			case 'stream_end':
-				if (isLoadingReceipt && receiptStatus !== 'Сохранение...') {
-					resetReceiptState()
-				}
-				break
-		}
-	}
-
-	function formatQuantity(qty?: number | string): string {
-		if (qty === undefined || qty === null) return '1'
-		const num = typeof qty === 'string' ? parseFloat(qty) : qty
-		if (isNaN(num)) return '1'
-		// убираем trailing zeros: 1.000 → 1, 0.5 → 0.5, 2.500 → 2.5
-		return num % 1 === 0 ? String(Math.floor(num)) : String(parseFloat(num.toFixed(3)))
-	}
-
-	async function handleReceiptCompleted(data: ReceiptCompleteData) {
-		receiptStatus = 'Сохранение...'
-		try {
-			if (data.cached) {
-				await splitsStore.draft.refetch()
-				toast.success('Чек уже был загружен ранее')
-				resetReceiptState()
-				return
-			}
-
-			if (!draftData.id) {
-				await saveDraft([])
-			}
-
-			await splitsStore.linkReceipt.mutate({
-				splitId: draftData.id!,
-				receiptId: data.receipt.id
-			})
-
-			await splitsStore.draft.refetch()
-			toast.success('Чек успешно загружен')
-
-			if ((!draftSplitName || draftSplitName === 'Новый сплит') && receiptStoreName) {
-				draftSplitName = receiptStoreName
-				await saveMetadataOnly()
-			}
-		} catch (e) {
-			console.error(e)
-			toast.error('Не удалось сохранить товары')
-		} finally {
-			resetReceiptState()
+			})()
 		}
 	}
 
 	async function handleScanQr() {
 		const result = await scanQrCode()
 		if (result.success && result.data) {
-			await streamReceiptFromQr(result.data, handleReceiptEvent)
+			scanner.start()
+			await streamReceiptFromQr(result.data, e => scanner.handleStreamEvent(e))
 		} else if (result.error) {
 			toast.error(result.error)
 		}
@@ -368,13 +288,67 @@
 	async function handleUploadImage(file: File) {
 		try {
 			const base64 = await fileToBase64(file)
-			await streamReceiptFromImage(base64, handleReceiptEvent)
-		} catch (e) {
-			console.error(e)
+			scanner.start()
+			await streamReceiptFromImage(base64, e => scanner.handleStreamEvent(e))
+		} catch {
 			toast.error('Не удалось обработать изображение')
-			resetReceiptState()
 		}
 	}
+
+	watch(
+		[() => scanner.state, () => scanner.context.receiptData, () => scanner.context.error],
+		([state, data, error]) => {
+			if (state === 'saving' && data) {
+				const rData = data as any
+				if (rData.cached) {
+					splitsService.draft.refetch()
+					toast.success('Чек уже был загружен ранее')
+					setTimeout(() => scanner.reset(), 500)
+					return
+				}
+
+				;(async () => {
+					try {
+						let splitId = draftData.id
+						if (!splitId) {
+							const res = await splitsService.createOrUpdate({
+								name: draftSplitName,
+								currency: draftData.currency,
+								items: []
+							})
+							splitId = res.split.id
+						}
+
+						if (splitId) {
+							await splitsService.linkReceipt(splitId, rData.receipt.id)
+							toast.success('Чек успешно загружен')
+
+							if (
+								(!draftSplitName || draftSplitName === 'Новый сплит') &&
+								scanner.context.storeName
+							) {
+								const newName = scanner.context.storeName
+								draftSplitName = newName
+								splitsService.updateDraftLocal({ split: { name: newName } })
+								await saveMetadata()
+								await saveMetadata.runScheduledNow()
+							}
+
+							scanner.saved()
+							// scanner.reset is handled internally by class after delay
+						}
+					} catch {
+						scanner.failSave('Не удалось сохранить данные')
+						toast.error('Ошибка сохранения')
+						setTimeout(() => scanner.reset(), 2000)
+					}
+				})()
+			} else if (state === 'error' && error) {
+				toast.error(error as string)
+				setTimeout(() => scanner.reset(), 2000)
+			}
+		}
+	)
 </script>
 
 <SelectionToolbar
@@ -388,7 +362,7 @@
 		<EditableEmoji
 			bind:value={draftSplitEmoji}
 			centered
-			size={48}
+			size={65}
 			onchange={handleEmojiChange}
 		/>
 		<EditableText
@@ -425,23 +399,32 @@
 			<span>СБП</span>
 		{/if}
 	</ExpandableCard>
+
 	<Divider width={40} spacing="lg" />
+
 	<section class="items-section">
 		<div class="section-header">
 			<h2>Позиции</h2>
-			{#if items.length === 0 && !isLoadingReceipt}
+			{#if items.length === 0 && !scanner.isScanning}
 				<p class="hint">Разделение будет доступно после публикации сплита</p>
 			{/if}
 		</div>
 
-		{#if isLoadingReceipt}
-			<ReceiptLoader
-				storeName={receiptStoreName}
-				status={receiptStatus}
-				itemsLoaded={receiptItemsLoaded}
-				totalItems={receiptTotalItems}
-				{lastScannedItem}
-			/>
+		{#if scanner.isScanning}
+			<div transition:fly={{ y: -20, duration: 250 }}>
+				<ReceiptLoader
+					storeName={scanner.context.storeName}
+					storeEmoji={scanner.context.placeEmoji}
+					status={scanner.state === 'connecting'
+						? 'Подключение...'
+						: scanner.state === 'processing'
+							? 'Распознавание...'
+							: 'Сохранение...'}
+					itemsLoaded={scanner.context.itemsCount}
+					totalItems={scanner.context.totalItems}
+					lastScannedItem={scanner.context.lastItem}
+				/>
+			</div>
 		{/if}
 
 		{#if items.length > 0}
@@ -461,7 +444,7 @@
 				variant="secondary"
 				size="md"
 				onclick={() => (isScannerSheetOpen = true)}
-				disabled={isLoadingReceipt}
+				disabled={scanner.isScanning}
 			>
 				{#snippet iconLeft()}
 					<QrCode size={20} />
@@ -472,7 +455,7 @@
 				variant="secondary"
 				size="md"
 				onclick={handleAddItem}
-				disabled={isLoadingReceipt}
+				disabled={scanner.isScanning}
 			>
 				{#snippet iconLeft()}
 					<Plus size={20} />

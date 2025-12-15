@@ -12,6 +12,7 @@ import type {
 	SplitResponse,
 	SplitsByPeriod,
 } from '@/common/types'
+import type { DivisionMethod } from '@/platform/database/schema/enums'
 import type { Logger } from '@/platform/logger'
 import type {
 	ContactsRepository,
@@ -119,6 +120,7 @@ export class SplitsService {
 					quantity: item.quantity,
 					type: item.type,
 					defaultDivisionMethod: item.defaultDivisionMethod,
+					icon: item.icon,
 				})
 			}
 
@@ -175,12 +177,25 @@ export class SplitsService {
 	async addItems(
 		splitId: string,
 		userId: string,
-		items: Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'>[],
+		// Update type definition: combine Pick with an optional/nullable icon to satisfy Zod output
+		items: Array<
+			Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & { icon?: string | null }
+		>,
 	): Promise<SplitResponse> {
 		const split = await this.splits.findById(splitId)
 		if (!split) throw new NotFoundError('split not found')
 
-		await this.items.createMany(splitId, items)
+		// Explicitly map items to handle null/undefined mismatch for icon
+		const itemsToCreate = items.map(item => ({
+			name: item.name,
+			price: item.price,
+			type: item.type,
+			quantity: item.quantity,
+			defaultDivisionMethod: item.defaultDivisionMethod,
+			icon: item.icon ?? undefined,
+		}))
+
+		await this.items.createMany(splitId, itemsToCreate)
 		this.logger.info('items added', { splitId, count: items.length })
 
 		return (await this.getById(splitId, true))!
@@ -215,7 +230,7 @@ export class SplitsService {
 		participantId: string,
 		selections: Array<{
 			itemId: string
-			divisionMethod: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+			divisionMethod: DivisionMethod
 			value?: string
 		}>,
 	): Promise<SplitResponse> {
@@ -392,7 +407,7 @@ export class SplitsService {
 				price: ri.price, // FIX: Use unit price, NOT sum
 				type: 'product' as const,
 				quantity: ri.quantity,
-				defaultDivisionMethod: (ri.suggestedSplitMethod as any) || 'equal',
+				defaultDivisionMethod: (ri.suggestedSplitMethod as DivisionMethod) || 'by_fraction',
 				receiptItemId: ri.id,
 				icon: ri.emoji || undefined,
 			}))
