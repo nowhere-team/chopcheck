@@ -3,6 +3,7 @@ import type { Database } from '@/platform/database'
 import type { Logger } from '@/platform/logger'
 
 import { ContactsRepository } from './contacts'
+import { ItemGroupsRepository } from './item-groups'
 import { ItemsRepository } from './items'
 import { ParticipantsRepository } from './participants'
 import { PaymentMethodsRepository } from './payment-methods'
@@ -15,6 +16,7 @@ export interface Repositories {
 	users: UsersRepository
 	splits: SplitsRepository
 	items: ItemsRepository
+	itemGroups: ItemGroupsRepository
 	participants: ParticipantsRepository
 	receipts: ReceiptsRepository
 	paymentMethods: PaymentMethodsRepository
@@ -27,6 +29,7 @@ export function createRepositories(db: Database, cache: Cache, logger: Logger): 
 		users: new UsersRepository(db, cache, logger.named('repo/users')),
 		splits: new SplitsRepository(db, cache, logger.named('repo/splits')),
 		items: new ItemsRepository(db, cache, logger.named('repo/items')),
+		itemGroups: new ItemGroupsRepository(db, cache, logger.named('repo/item-groups')),
 		participants: new ParticipantsRepository(db, cache, logger.named('repo/participants')),
 		receipts: new ReceiptsRepository(db, cache, logger.named('repo/receipts')),
 		paymentMethods: new PaymentMethodsRepository(db, cache, logger.named('repo/payment-methods')),
@@ -36,6 +39,7 @@ export function createRepositories(db: Database, cache: Cache, logger: Logger): 
 }
 
 export * from './contacts'
+export * from './item-groups'
 export * from './items'
 export * from './participants'
 export * from './payment-methods'

@@ -1,8 +1,8 @@
 ﻿import { z } from 'zod'
 
-import { DIVISION_METHODS } from '@/platform/database/schema/enums'
+import { DIVISION_METHODS, ITEM_GROUP_TYPES } from '@/platform/database/schema/enums'
 
-import type { Item, ParticipantWithSelections, Split } from './entities'
+import type { Item, ItemGroup, ParticipantWithSelections, Split } from './entities'
 
 export const createSplitSchema = z.object({
 	id: z.uuid().optional(),
@@ -19,17 +19,33 @@ export const createSplitSchema = z.object({
 				quantity: z.string().default('1'),
 				defaultDivisionMethod: z.enum(DIVISION_METHODS).default('per_unit'),
 				icon: z.string().optional(),
+				groupId: z.uuid().optional(),
 			}),
 		)
 		.optional(),
 	receiptIds: z.array(z.uuid()).optional(),
 })
 
+export const createItemGroupSchema = z.object({
+	name: z.string().min(1).max(255),
+	icon: z.string().optional(),
+	type: z.enum(ITEM_GROUP_TYPES).default('custom'),
+})
+
+export const updateItemGroupSchema = z.object({
+	name: z.string().min(1).max(255).optional(),
+	icon: z.string().optional(),
+	isCollapsed: z.boolean().optional(),
+})
+
 export type CreateSplitDto = z.infer<typeof createSplitSchema>
+export type CreateItemGroupDto = z.infer<typeof createItemGroupSchema>
+export type UpdateItemGroupDto = z.infer<typeof updateItemGroupSchema>
 
 export interface SplitData {
 	split: Split
 	items: Item[]
+	itemGroups: ItemGroup[]
 	participants: ParticipantWithSelections[]
 }
 

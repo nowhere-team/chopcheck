@@ -37,6 +37,7 @@ export function createServices(
 	const splits = new SplitsService(
 		repos.splits,
 		repos.items,
+		repos.itemGroups,
 		repos.participants,
 		repos.paymentMethods,
 		repos.stats,

@@ -2,6 +2,7 @@
 
 import {
 	divisionMethodEnum,
+	itemGroupTypeEnum,
 	itemTypeEnum,
 	paymentMethodTypeEnum,
 	paymentStatusEnum,
@@ -284,6 +285,42 @@ export const splitReceipts = pgTable(
 	],
 )
 
+export const splitItemGroups = pgTable(
+	'split_item_groups',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		splitId: uuid('split_id').notNull(),
+		receiptId: uuid('receipt_id'),
+
+		type: itemGroupTypeEnum('type').notNull().default('custom'),
+		name: varchar('name', { length: 255 }).notNull(),
+		icon: varchar('icon', { length: 64 }),
+
+		displayOrder: integer('display_order').notNull().default(0),
+		isCollapsed: boolean('is_collapsed').notNull().default(false),
+
+		isDeleted: boolean('is_deleted').notNull().default(false),
+		deletedAt: timestamptz('deleted_at'),
+
+		createdAt: timestamptz('created_at').notNull().defaultNow(),
+		updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+	},
+	table => [
+		foreignKey({
+			name: 'fk_split_item_groups_split_id',
+			columns: [table.splitId],
+			foreignColumns: [splits.id],
+		}).onDelete('cascade'),
+		foreignKey({
+			name: 'fk_split_item_groups_receipt_id',
+			columns: [table.receiptId],
+			foreignColumns: [receipts.id],
+		}).onDelete('set null'),
+		index('idx_split_item_groups_split_id').on(table.splitId),
+		index('idx_split_item_groups_split_active').on(table.splitId, table.isDeleted),
+	],
+)
+
 export const splitParticipants = pgTable(
 	'split_participants',
 	{
@@ -297,7 +334,6 @@ export const splitParticipants = pgTable(
 		hasPaid: boolean('has_paid').notNull().default(false),
 		isAnonymous: boolean('is_anonymous').notNull().default(false),
 
-		// cached calculation result
 		cachedTotal: money('cached_total'),
 
 		overriddenPermissions: jsonb('overridden_permissions').notNull().default({}),
@@ -337,8 +373,8 @@ export const splitItems = pgTable(
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 		splitId: uuid('split_id').notNull(),
+		groupId: uuid('group_id'),
 
-		// optional link to receipt item
 		receiptItemId: uuid('receipt_item_id'),
 
 		type: itemTypeEnum('type').notNull().default('product'),
@@ -370,11 +406,17 @@ export const splitItems = pgTable(
 			foreignColumns: [splits.id],
 		}).onDelete('restrict'),
 		foreignKey({
+			name: 'fk_split_items_group_id',
+			columns: [table.groupId],
+			foreignColumns: [splitItemGroups.id],
+		}).onDelete('set null'),
+		foreignKey({
 			name: 'fk_split_items_receipt_item_id',
 			columns: [table.receiptItemId],
 			foreignColumns: [receiptItems.id],
 		}).onDelete('set null'),
 		index('idx_split_items_split_id').on(table.splitId),
+		index('idx_split_items_group_id').on(table.groupId),
 		index('idx_split_items_split_active').on(table.splitId, table.isDeleted),
 		index('idx_split_items_order').on(table.splitId, table.displayOrder, table.isDeleted),
 	],

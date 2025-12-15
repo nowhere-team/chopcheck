@@ -8,6 +8,7 @@ import { BaseRepository } from './base'
 type NewItem = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & {
 	id?: string
 	receiptItemId?: string
+	groupId?: string
 	icon?: string
 }
 
@@ -32,7 +33,7 @@ export class ItemsRepository extends BaseRepository {
 		return item || null
 	}
 
-	async createMany(splitId: string, items: NewItem[]): Promise<Item[]> {
+	async createMany(splitId: string, items: NewItem[], groupId?: string): Promise<Item[]> {
 		if (items.length === 0) return []
 
 		const created = await this.db
@@ -40,6 +41,7 @@ export class ItemsRepository extends BaseRepository {
 			.values(
 				items.map((item, index) => ({
 					splitId,
+					groupId: item.groupId || groupId,
 					receiptItemId: item.receiptItemId,
 					name: item.name,
 					price: item.price,
@@ -79,6 +81,21 @@ export class ItemsRepository extends BaseRepository {
 			.update(schema.splitItems)
 			.set({ isDeleted: true, deletedAt: new Date(), updatedAt: new Date() })
 			.where(and(eq(schema.splitItems.splitId, splitId), eq(schema.splitItems.isDeleted, false)))
+
+		await this.invalidate(this.key(splitId))
+	}
+
+	async deleteAllInGroup(splitId: string, groupId: string): Promise<void> {
+		await this.db
+			.update(schema.splitItems)
+			.set({ isDeleted: true, deletedAt: new Date(), updatedAt: new Date() })
+			.where(
+				and(
+					eq(schema.splitItems.splitId, splitId),
+					eq(schema.splitItems.groupId, groupId),
+					eq(schema.splitItems.isDeleted, false),
+				),
+			)
 
 		await this.invalidate(this.key(splitId))
 	}

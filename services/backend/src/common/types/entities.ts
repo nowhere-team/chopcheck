@@ -3,6 +3,7 @@ import type { schema } from '@/platform/database'
 export type User = typeof schema.users.$inferSelect
 export type Split = typeof schema.splits.$inferSelect
 export type Item = typeof schema.splitItems.$inferSelect
+export type ItemGroup = typeof schema.splitItemGroups.$inferSelect
 export type Participant = typeof schema.splitParticipants.$inferSelect
 export type ParticipantItem = typeof schema.splitItemParticipants.$inferSelect
 export type Receipt = typeof schema.receipts.$inferSelect
