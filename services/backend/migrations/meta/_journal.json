@@ -8,6 +8,13 @@
 			"when": 1764534718684,
 			"tag": "0000_initial",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1765790974385,
+			"tag": "0001_sync_division_methods",
+			"breakpoints": true
 		}
 	]
 }

@@ -262,6 +262,8 @@ export class ReceiptsService {
 				quantity: String(item.quantity),
 				sum: item.sum,
 				displayOrder: i,
+				// Default fallback
+				suggestedDivisionMethod: 'by_fraction',
 			})),
 		)
 	}
@@ -342,31 +344,29 @@ export class ReceiptsService {
 	}
 
 	/**
-	 * maps catalog division methods to backend split strategies
-	 *
-	 * policy:
-	 * - by_fraction (pizza, shared dish) -> shares (allows granular splitting)
-	 * - by_amount (fees, tips) -> proportional
-	 * - per_unit (items count) -> shares (1 share = 1 unit)
-	 * - not_shareable -> fixed (or kept as shares but assigned to one)
-	 * - ambiguous -> shares (default)
+	 * MAPPING POLICY:
+	 * by_fraction --> 'by_fraction' (replaces shares/equal)
+	 * by_amount --> 'by_amount' (replaces proportional)
+	 * per_unit --> 'per_unit' (replaces fixed/unit logic)
+	 * not_shareable --> 'per_unit' (Instruction exception: convert to per_unit)
+	 * ambiguous --> 'per_unit'
 	 */
-	private mapSplitMethod(catalogMethod?: string): 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom' {
-		if (!catalogMethod) return 'shares' // Default when ambiguous
+	private mapSplitMethod(catalogMethod?: string): 'by_fraction' | 'by_amount' | 'per_unit' | 'custom' {
+		// Rule: "when ambiguous: default to per_unit"
+		if (!catalogMethod) return 'per_unit'
 
 		switch (catalogMethod) {
 			case 'by_fraction':
-				return 'shares'
+				return 'by_fraction'
 			case 'by_amount':
-				return 'proportional'
+				return 'by_amount'
 			case 'per_unit':
-				return 'shares'
+				return 'per_unit'
 			case 'not_shareable':
-				return 'fixed'
-			case 'equal':
-				return 'equal'
+				// Rule: "not_shareable you drive under per_unit"
+				return 'per_unit'
 			default:
-				return 'shares'
+				return 'per_unit'
 		}
 	}
 

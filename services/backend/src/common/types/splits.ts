@@ -15,7 +15,7 @@ export const createSplitSchema = z.object({
 				price: z.number().int().positive(),
 				type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 				quantity: z.string().default('1'),
-				defaultDivisionMethod: z.enum(['equal', 'shares', 'fixed', 'proportional', 'custom']).default('equal'),
+				defaultDivisionMethod: z.enum(['by_fraction', 'by_amount', 'per_unit', 'custom']).default('per_unit'),
 				icon: z.string().optional(),
 			}),
 		)

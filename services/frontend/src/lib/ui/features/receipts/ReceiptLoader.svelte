@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Receipt } from 'phosphor-svelte'
+	import { CheckCircle, Receipt } from 'phosphor-svelte'
 	import { cubicOut } from 'svelte/easing'
-	import { fly } from 'svelte/transition'
+	import { fly, scale } from 'svelte/transition'
 
 	import { Emoji, Spinner } from '$lib/ui/components'
 
@@ -12,6 +12,7 @@
 		itemsLoaded?: number
 		totalItems?: number
 		lastScannedItem?: string
+		complete?: boolean
 	}
 
 	const {
@@ -20,7 +21,8 @@
 		status = 'Загрузка...',
 		itemsLoaded = 0,
 		totalItems,
-		lastScannedItem
+		lastScannedItem,
+		complete = false
 	}: Props = $props()
 
 	function formatCount(loaded: number, total?: number): string {
@@ -35,7 +37,7 @@
 
 	const countText = $derived(formatCount(itemsLoaded, totalItems))
 	const isIndeterminate = $derived(!totalItems && status === 'Распознавание...')
-	const hasProgress = $derived((totalItems && totalItems > 0) || isIndeterminate)
+	const hasProgress = $derived(((totalItems && totalItems > 0) || isIndeterminate) && !complete)
 	const progressPercent = $derived(totalItems ? (itemsLoaded / totalItems) * 100 : 0)
 </script>
 
@@ -52,11 +54,22 @@
 			<span class="title">{storeName ?? 'Загрузка чека'}</span>
 			<span class="status">{status}</span>
 		</div>
-		<Spinner size="sm" />
+		<div class="status-indicator">
+			{#if complete}
+				<div
+					class="success-icon"
+					in:scale={{ duration: 200, start: 0.5, easing: cubicOut }}
+				>
+					<CheckCircle size={24} weight="fill" color="var(--color-success)" />
+				</div>
+			{:else}
+				<Spinner size="sm" />
+			{/if}
+		</div>
 	</div>
 
 	{#if hasProgress}
-		<div class="progress">
+		<div class="progress" out:fly={{ y: -5, duration: 200 }}>
 			<div
 				class="progress-bar"
 				class:indeterminate={isIndeterminate}
@@ -65,8 +78,8 @@
 		</div>
 	{/if}
 
-	{#if countText || lastScannedItem}
-		<div class="progress-footer">
+	{#if (countText || lastScannedItem) && !complete}
+		<div class="progress-footer" out:fly={{ y: 5, duration: 200 }}>
 			{#if countText}
 				<span class="progress-text">{countText}</span>
 			{/if}
@@ -98,6 +111,7 @@
 		border-radius: var(--radius-lg);
 		border: 1px dashed var(--color-border);
 		overflow: hidden;
+		transition: border-color 0.3s ease;
 	}
 
 	.header {
@@ -136,6 +150,20 @@
 	.status {
 		font-size: var(--text-sm);
 		color: var(--color-text-tertiary);
+	}
+
+	.status-indicator {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+	}
+
+	.success-icon {
+		display: flex;
+		align-items: center;
+		color: var(--color-success);
 	}
 
 	.progress {

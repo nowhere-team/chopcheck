@@ -12,7 +12,8 @@ export interface ScannerContext {
 	receiptData?: ReceiptCompleteData
 }
 
-export class ReceiptScanner {
+// Singleton state class
+class ReceiptScannerManager {
 	private _state = $state<ScannerState>('idle')
 
 	context = $state<ScannerContext>({
@@ -25,12 +26,15 @@ export class ReceiptScanner {
 
 	get isScanning(): boolean {
 		return (
-			this._state === 'connecting' || this._state === 'processing' || this._state === 'saving'
+			this._state === 'connecting' ||
+			this._state === 'processing' ||
+			this._state === 'saving' ||
+			this._state === 'completed'
 		)
 	}
 
 	start(): void {
-		if (this._state !== 'idle') return
+		if (this._state !== 'idle' && this._state !== 'error') return
 		this.resetContext()
 		this._state = 'connecting'
 	}
@@ -39,7 +43,7 @@ export class ReceiptScanner {
 		switch (event.type) {
 			case 'started':
 				if (this._state === 'idle') {
-					this.start()
+					this._state = 'connecting'
 				}
 				break
 
@@ -83,8 +87,6 @@ export class ReceiptScanner {
 			}
 
 			case 'receipt': {
-				// receipt event contains final receipt metadata before completed
-				// можно использовать для дополнительной информации если нужно
 				break
 			}
 
@@ -103,11 +105,10 @@ export class ReceiptScanner {
 			}
 
 			case 'stream_end': {
-				// если стрим закончился без completed и мы всё ещё в processing
-				// это может быть ошибкой
+				// Problem 2 fix: if connection closes without full completion
 				if (this._state === 'connecting' || this._state === 'processing') {
 					if (!this.context.receiptData) {
-						this.context.error = 'Соединение прервано'
+						this.context.error = 'Кажется, распознавание чека было прервано'
 						this._state = 'error'
 					}
 				}
@@ -119,6 +120,12 @@ export class ReceiptScanner {
 	saved(): void {
 		if (this._state === 'saving') {
 			this._state = 'completed'
+			// Auto reset handled by UI delay usually, but safety clear here
+			setTimeout(() => {
+				if (this._state === 'completed') {
+					this.reset()
+				}
+			}, 3000)
 		}
 	}
 
@@ -150,3 +157,5 @@ export class ReceiptScanner {
 		}
 	}
 }
+
+export const receiptScanner = new ReceiptScannerManager()

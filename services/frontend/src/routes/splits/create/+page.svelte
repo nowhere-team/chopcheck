@@ -6,7 +6,7 @@
 
 	import { m } from '$lib/i18n'
 	import type { DraftItem, Participant, SplitItem } from '$lib/services/api/types'
-	import { ReceiptScanner } from '$lib/services/receipts/scanner.svelte'
+	import { receiptScanner } from '$lib/services/receipts/scanner.svelte'
 	import {
 		fileToBase64,
 		streamReceiptFromImage,
@@ -27,7 +27,8 @@
 	import { BottomSheet } from '$lib/ui/overlays'
 
 	const splitsService = getSplitsService()
-	const scanner = new ReceiptScanner()
+	// Using persisted singleton scanner instead of new instance
+	const scanner = receiptScanner
 
 	const draft = $derived(splitsService.draft)
 	const draftData = $derived(
@@ -125,7 +126,7 @@
 				price: item.price,
 				quantity: item.quantity,
 				type: item.type,
-				defaultDivisionMethod: item.defaultDivisionMethod as any,
+				defaultDivisionMethod: item.defaultDivisionMethod,
 				icon: item.icon
 			}
 			isItemEditSheetOpen = true
@@ -172,7 +173,7 @@
 			price: 0,
 			quantity: '1',
 			type: 'product',
-			defaultDivisionMethod: 'equal',
+			defaultDivisionMethod: 'by_fraction',
 			icon: '📦'
 		}
 		isItemEditSheetOpen = true
@@ -334,7 +335,7 @@
 							}
 
 							scanner.saved()
-							setTimeout(() => scanner.reset(), 2500)
+							// scanner.reset is handled internally by class after delay
 						}
 					} catch {
 						scanner.failSave('Не удалось сохранить данные')

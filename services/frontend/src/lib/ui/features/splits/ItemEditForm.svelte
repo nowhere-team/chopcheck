@@ -19,29 +19,24 @@
 
 	const divisionMethods = [
 		{
-			value: 'equal',
-			label: m.division_method_equal(),
-			description: m.division_method_equal_desc()
+			value: 'by_fraction',
+			label: 'По долям', // m.division_method_shares(),
+			description: 'Разделить поровну или частями' // m.division_method_shares_desc()
 		},
 		{
-			value: 'shares',
-			label: m.division_method_shares(),
-			description: m.division_method_shares_desc()
+			value: 'per_unit',
+			label: 'Поштучно', // implies integer counting
+			description: 'Кто сколько съел/выпил'
 		},
 		{
-			value: 'proportional',
-			label: 'Процент', // todo
-			description: 'Для налогов и чаевых'
-		},
-		{
-			value: 'fixed',
-			label: 'Фикс.', // todo
-			description: 'Фиксированная сумма'
+			value: 'by_amount',
+			label: 'Процент или Сумма',
+			description: 'Для чаевых и сервисных сборов'
 		},
 		{
 			value: 'custom',
-			label: m.division_method_custom(),
-			description: m.division_method_custom_desc()
+			label: 'Точная сумма', // m.division_method_custom(),
+			description: 'Ввести свою сумму' // m.division_method_custom_desc()
 		}
 	]
 
