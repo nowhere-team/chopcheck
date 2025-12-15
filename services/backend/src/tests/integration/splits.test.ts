@@ -75,8 +75,20 @@ describe('Splits Integration Tests', () => {
 					name: `Test Split ${Date.now()}`,
 					currency: 'RUB',
 					items: [
-						{ name: 'Pizza', price: 1200, type: 'product', quantity: '1', defaultDivisionMethod: 'equal' },
-						{ name: 'Cola', price: 300, type: 'product', quantity: '2', defaultDivisionMethod: 'equal' },
+						{
+							name: 'Pizza',
+							price: 1200,
+							type: 'product',
+							quantity: '1',
+							defaultDivisionMethod: 'by_fraction',
+						},
+						{
+							name: 'Cola',
+							price: 300,
+							type: 'product',
+							quantity: '2',
+							defaultDivisionMethod: 'by_fraction',
+						},
 					],
 				}),
 			})
@@ -124,8 +136,8 @@ describe('Splits Integration Tests', () => {
 				headers: authHeaders(participant1.token),
 				body: JSON.stringify({
 					selections: [
-						{ itemId: pizzaItem.id, divisionMethod: 'equal' },
-						{ itemId: colaItem.id, divisionMethod: 'equal' },
+						{ itemId: pizzaItem.id, divisionMethod: 'by_fraction' },
+						{ itemId: colaItem.id, divisionMethod: 'by_fraction' },
 					],
 				}),
 			})
@@ -135,7 +147,7 @@ describe('Splits Integration Tests', () => {
 				method: 'POST',
 				headers: authHeaders(participant2.token),
 				body: JSON.stringify({
-					selections: [{ itemId: pizzaItem.id, divisionMethod: 'equal' }],
+					selections: [{ itemId: pizzaItem.id, divisionMethod: 'by_fraction' }],
 				}),
 			})
 
@@ -145,8 +157,8 @@ describe('Splits Integration Tests', () => {
 				headers: authHeaders(owner.token),
 				body: JSON.stringify({
 					selections: [
-						{ itemId: pizzaItem.id, divisionMethod: 'equal' },
-						{ itemId: colaItem.id, divisionMethod: 'equal' },
+						{ itemId: pizzaItem.id, divisionMethod: 'by_fraction' },
+						{ itemId: colaItem.id, divisionMethod: 'by_fraction' },
 					],
 				}),
 			})
@@ -172,7 +184,7 @@ describe('Splits Integration Tests', () => {
 			expect(finalSplit.calculations!.totals.splitAmount).toBe(1500)
 		})
 
-		test('should handle shares division method', async () => {
+		test('should handle by_fraction division method with shares', async () => {
 			const { app } = ctx
 
 			const createRes = await app.request('/api/splits', {
@@ -187,7 +199,7 @@ describe('Splits Integration Tests', () => {
 							price: 3000,
 							type: 'product',
 							quantity: '1',
-							defaultDivisionMethod: 'shares',
+							defaultDivisionMethod: 'by_fraction',
 						},
 					],
 				}),
@@ -211,7 +223,7 @@ describe('Splits Integration Tests', () => {
 				method: 'POST',
 				headers: authHeaders(owner.token),
 				body: JSON.stringify({
-					selections: [{ itemId, divisionMethod: 'shares', value: '2' }],
+					selections: [{ itemId, divisionMethod: 'by_fraction', value: '2' }],
 				}),
 			})
 
@@ -219,7 +231,7 @@ describe('Splits Integration Tests', () => {
 				method: 'POST',
 				headers: authHeaders(participant1.token),
 				body: JSON.stringify({
-					selections: [{ itemId, divisionMethod: 'shares', value: '1' }],
+					selections: [{ itemId, divisionMethod: 'by_fraction', value: '1' }],
 				}),
 			})
 
@@ -260,8 +272,20 @@ describe('Splits Integration Tests', () => {
 				headers: authHeaders(owner.token),
 				body: JSON.stringify({
 					items: [
-						{ name: 'Coffee', price: 200, type: 'product', quantity: '1', defaultDivisionMethod: 'equal' },
-						{ name: 'Cake', price: 350, type: 'product', quantity: '1', defaultDivisionMethod: 'equal' },
+						{
+							name: 'Coffee',
+							price: 200,
+							type: 'product',
+							quantity: '1',
+							defaultDivisionMethod: 'by_fraction',
+						},
+						{
+							name: 'Cake',
+							price: 350,
+							type: 'product',
+							quantity: '1',
+							defaultDivisionMethod: 'by_fraction',
+						},
 					],
 				}),
 			})
@@ -390,7 +414,13 @@ describe('Splits Integration Tests', () => {
 					name: `ShortId Test ${Date.now()}`,
 					currency: 'RUB',
 					items: [
-						{ name: 'Test', price: 100, type: 'product', quantity: '1', defaultDivisionMethod: 'equal' },
+						{
+							name: 'Test',
+							price: 100,
+							type: 'product',
+							quantity: '1',
+							defaultDivisionMethod: 'by_fraction',
+						},
 					],
 				}),
 			})

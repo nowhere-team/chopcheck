@@ -355,7 +355,7 @@ export const splitItems = pgTable(
 		quantity: decimal('quantity', 8, 3).default('1'),
 		unit: varchar('unit', { length: 32 }).default('piece'),
 
-		defaultDivisionMethod: divisionMethodEnum('default_division_method').notNull().default('equal'),
+		defaultDivisionMethod: divisionMethodEnum('default_division_method').notNull().default('by_fraction'),
 
 		isDeleted: boolean('is_deleted').notNull().default(false),
 		deletedAt: timestamptz('deleted_at'),

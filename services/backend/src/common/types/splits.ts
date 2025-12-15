@@ -1,5 +1,7 @@
 ﻿import { z } from 'zod'
 
+import { DIVISION_METHODS } from '@/platform/database/schema/enums'
+
 import type { Item, ParticipantWithSelections, Split } from './entities'
 
 export const createSplitSchema = z.object({
@@ -15,7 +17,7 @@ export const createSplitSchema = z.object({
 				price: z.number().int().positive(),
 				type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
 				quantity: z.string().default('1'),
-				defaultDivisionMethod: z.enum(['by_fraction', 'by_amount', 'per_unit', 'custom']).default('per_unit'),
+				defaultDivisionMethod: z.enum(DIVISION_METHODS).default('per_unit'),
 				icon: z.string().optional(),
 			}),
 		)

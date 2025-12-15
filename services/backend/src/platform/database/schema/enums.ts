@@ -1,11 +1,9 @@
 ﻿import { pgEnum } from 'drizzle-orm/pg-core'
 
-export const divisionMethodEnum = pgEnum('division_method', [
-	'by_fraction',
-	'by_amount',
-	'per_unit',
-	'custom', // keeping for UI specific overrides
-])
+export const DIVISION_METHODS = ['by_fraction', 'by_amount', 'per_unit', 'custom'] as const
+export type DivisionMethod = (typeof DIVISION_METHODS)[number]
+
+export const divisionMethodEnum = pgEnum('division_method', DIVISION_METHODS)
 
 export const splitStatusEnum = pgEnum('split_status', ['draft', 'active', 'completed'])
 
