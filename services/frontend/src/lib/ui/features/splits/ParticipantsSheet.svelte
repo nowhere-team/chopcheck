@@ -2,6 +2,7 @@
 	import { Plus, UserCirclePlus } from 'phosphor-svelte'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import type { Participant } from '$lib/services/api/types'
 	import { Avatar, Button } from '$lib/ui/components'
 	import { BottomSheet } from '$lib/ui/overlays'
@@ -22,13 +23,13 @@
 	}
 </script>
 
-<BottomSheet bind:open {onclose} title="Участники">
+<BottomSheet bind:open {onclose} title={m.participants_sheet_title()}>
 	<div class="participants-content">
 		{#if participants.length === 0}
 			<div class="empty">
 				<UserCirclePlus size={48} weight="duotone" />
-				<h2>Пока никого нет</h2>
-				<span>Пригласите друзей после публикации сплита</span>
+				<h2>{m.participants_empty_state()}</h2>
+				<span>{m.participants_invite_hint()}</span>
 			</div>
 		{:else}
 			<div class="list">
@@ -36,13 +37,15 @@
 					<div class="participant-row">
 						<Avatar
 							id={p.userId ?? p.id}
-							name={p.displayName ?? p.user?.displayName ?? 'Аноним'}
+							name={p.displayName ??
+								p.user?.displayName ??
+								m.participants_anonymous()}
 							url={p.user?.avatarUrl}
 							size={44}
 						/>
 						<div class="info">
 							<span class="name">
-								{p.displayName ?? p.user?.displayName ?? 'Аноним'}
+								{p.displayName ?? p.user?.displayName ?? m.participants_anonymous()}
 							</span>
 							{#if p.user?.username}
 								<span class="username">@{p.user.username}</span>
@@ -57,7 +60,7 @@
 			{#snippet iconLeft()}
 				<Plus size={20} />
 			{/snippet}
-			Пригласить участника
+			{m.participants_invite_button()}
 		</Button>
 	</div>
 </BottomSheet>

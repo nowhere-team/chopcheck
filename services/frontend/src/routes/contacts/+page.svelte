@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/i18n'
 	import { getContactsService } from '$lib/state/context'
 	import { Avatar, Card, Spinner } from '$lib/ui/components'
 	import { CollapsibleSection } from '$lib/ui/forms'
@@ -8,8 +9,8 @@
 	const list = $derived(contactsService.list)
 </script>
 
-<Page title="Контакты">
-	<CollapsibleSection title="Все контакты" count={list.current?.length ?? 0}>
+<Page title={m.contacts_section_title()}>
+	<CollapsibleSection title={m.contacts_section_all()} count={list.current?.length ?? 0}>
 		{#if list.loading && !list.current}
 			<div class="loading">
 				<Spinner size="md" />

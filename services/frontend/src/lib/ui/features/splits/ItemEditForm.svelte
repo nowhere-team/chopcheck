@@ -20,23 +20,23 @@
 	const divisionMethods = [
 		{
 			value: 'by_fraction',
-			label: 'По долям', // m.division_method_shares(),
-			description: 'Разделить поровну или частями' // m.division_method_shares_desc()
+			label: m.division_method_shares(),
+			description: m.division_method_shares_desc()
 		},
 		{
 			value: 'per_unit',
-			label: 'Поштучно', // implies integer counting
-			description: 'Кто сколько съел/выпил'
+			label: m.division_method_per_unit(), // implies integer counting
+			description: m.division_method_per_unit_desc()
 		},
 		{
 			value: 'by_amount',
-			label: 'Процент или Сумма',
-			description: 'Для чаевых и сервисных сборов'
+			label: m.division_method_by_amount(),
+			description: m.division_method_by_amount_desc()
 		},
 		{
 			value: 'custom',
-			label: 'Точная сумма', // m.division_method_custom(),
-			description: 'Ввести свою сумму' // m.division_method_custom_desc()
+			label: m.division_method_custom(),
+			description: m.division_method_custom_desc()
 		}
 	]
 

@@ -99,7 +99,7 @@
 	const participantStackItems = $derived(
 		participants.map(p => ({
 			id: p.id,
-			name: p.displayName ?? p.user?.displayName ?? 'Аноним',
+			name: p.displayName ?? p.user?.displayName ?? m.participants_anonymous(),
 			url: p.user?.avatarUrl
 		}))
 	)
@@ -236,7 +236,7 @@
 				}
 			} catch (e) {
 				console.error('Failed to save item', e)
-				toast.error('Ошибка сохранения')
+				toast.error(m.error_saving())
 				await splitsService.draft.refetch()
 			}
 		})()
@@ -268,7 +268,7 @@
 					await splitsService.deleteItem(currentDraftId, itemId)
 				} catch (e) {
 					console.error('Failed to delete item', e)
-					toast.error('Не удалось удалить позицию')
+					toast.error(m.error_item_delete_failed())
 					await splitsService.draft.refetch()
 				}
 			})()
@@ -291,7 +291,7 @@
 			scanner.start()
 			await streamReceiptFromImage(base64, e => scanner.handleStreamEvent(e))
 		} catch {
-			toast.error('Не удалось обработать изображение')
+			toast.error(m.error_image_processing_failed())
 		}
 	}
 
@@ -302,7 +302,7 @@
 				const rData = data as any
 				if (rData.cached) {
 					splitsService.draft.refetch()
-					toast.success('Чек уже был загружен ранее')
+					toast.success(m.success_receipt_already_exists())
 					setTimeout(() => scanner.reset(), 500)
 					return
 				}
@@ -321,10 +321,11 @@
 
 						if (splitId) {
 							await splitsService.linkReceipt(splitId, rData.receipt.id)
-							toast.success('Чек успешно загружен')
+							toast.success(m.success_receipt_uploaded())
 
 							if (
-								(!draftSplitName || draftSplitName === 'Новый сплит') &&
+								(!draftSplitName ||
+									draftSplitName === m.create_split_default_name()) &&
 								scanner.context.storeName
 							) {
 								const newName = scanner.context.storeName
@@ -338,8 +339,8 @@
 							// scanner.reset is handled internally by class after delay
 						}
 					} catch {
-						scanner.failSave('Не удалось сохранить данные')
-						toast.error('Ошибка сохранения')
+						scanner.failSave(m.error_save_data_failed())
+						toast.error(m.error_saving())
 						setTimeout(() => scanner.reset(), 2000)
 					}
 				})()
@@ -382,7 +383,7 @@
 		{#if participants.length === 0}
 			<span>{m.participants_empty()}</span>
 		{:else}
-			<span>{participants.length} чел.</span>
+			<span>{participants.length} {m.participants_short()}</span>
 		{/if}
 
 		{#snippet preview()}
@@ -392,11 +393,14 @@
 		{/snippet}
 	</ExpandableCard>
 
-	<ExpandableCard title="Платежный метод" onclick={() => (isParticipantsSheetOpen = true)}>
+	<ExpandableCard
+		title={m.create_payment_method_title()}
+		onclick={() => (isParticipantsSheetOpen = true)}
+	>
 		{#if participants.length === 0}
-			<span>Не выбран</span>
+			<span>{m.payment_method_not_selected()}</span>
 		{:else}
-			<span>СБП</span>
+			<span>{m.payment_method_sbp()}</span>
 		{/if}
 	</ExpandableCard>
 
@@ -404,9 +408,9 @@
 
 	<section class="items-section">
 		<div class="section-header">
-			<h2>Позиции</h2>
+			<h2>{m.item_section_title()}</h2>
 			{#if items.length === 0 && !scanner.isScanning}
-				<p class="hint">Разделение будет доступно после публикации сплита</p>
+				<p class="hint">{m.item_hint_before_publish()}</p>
 			{/if}
 		</div>
 
@@ -416,10 +420,10 @@
 					storeName={scanner.context.storeName}
 					storeEmoji={scanner.context.placeEmoji}
 					status={scanner.state === 'connecting'
-						? 'Подключение...'
+						? m.receipt_status_connecting()
 						: scanner.state === 'processing'
-							? 'Распознавание...'
-							: 'Сохранение...'}
+							? m.receipt_status_processing()
+							: m.receipt_status_saving()}
 					itemsLoaded={scanner.context.itemsCount}
 					totalItems={scanner.context.totalItems}
 					lastScannedItem={scanner.context.lastItem}
@@ -477,8 +481,8 @@
 <BottomSheet
 	bind:open={isItemEditSheetOpen}
 	title={editingItem?.id && !editingItem.id.startsWith('temp-')
-		? 'Редактировать'
-		: 'Новая позиция'}
+		? m.item_edit_title()
+		: m.item_new_title()}
 >
 	{#if editingItem}
 		<ItemEditForm

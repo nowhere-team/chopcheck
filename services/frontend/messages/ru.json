@@ -7,17 +7,29 @@
 	"action_load_more": "Загрузить ещё",
 	"action_mark_paid": "Отметить как оплачено",
 	"action_save": "Сохранить",
+	"action_retry": "Повторить",
+	"action_try_again": "Попробовать снова",
+	"action_delete": "Удалить",
+
+	"quantity_measurement_short": "шт.",
 
 	"all_splits_loaded": "Это все ваши сплиты",
+	"aria_select_emoji": "Выбрать эмодзи",
+	"aria_close": "Закрыть",
+
+	"app_tagline": "делим счета без головной боли",
+	"login_instruction": "войдите через telegram для продолжения",
 
 	"app_title_contacts": "Контакты",
 	"app_title_create": "Создать сплит",
+	"app_title_create_short": "Создать",
 	"app_title_history": "История",
 	"app_title_home": "Главная",
 	"app_title_profile": "Профиль",
 
 	"create_split_add_item_button": "Добавить",
 	"create_split_button": "Создать сплит",
+	"create_split_default_name": "Новый сплит",
 	"create_split_currency_label": "Валюта",
 	"create_split_error": "Не удалось создать сплит",
 	"create_split_icon_label": "Иконка",
@@ -28,20 +40,38 @@
 	"create_split_positions_title": "Позиции",
 	"create_split_scan_button": "Сканировать",
 	"create_split_scan_menu_title": "Выберите способ добавления",
+	"create_split_upload_title": "Загрузка чека",
 	"create_split_scan_photo_description": "Сделать фото чека для распознавания",
-	"create_split_scan_photo_title": "Сфотографировать чек",
+	"create_split_scan_photo_title": "Сканировать чек",
 	"create_split_scan_qr_description": "Для фискальных чеков с QR-кодом",
 	"create_split_scan_qr_title": "Сканировать QR-код",
 	"create_split_scan_upload_description": "Загрузить готовое изображение чека",
-	"create_split_scan_upload_title": "Загрузить фото",
+	"create_split_scan_upload_title": "Загрузить фото чека",
 	"create_split_title": "Создать сплит",
+	"create_payment_method_title": "Платежный метод",
 
-	"division_method_custom": "Вручную",
+	"receipt_status_connecting": "Подключение...",
+	"receipt_status_processing": "Распознавание...",
+	"receipt_status_saving": "Сохранение...",
+
+	"division_method_per_unit": "Поштучно",
+	"division_method_per_unit_desc": "Кто сколько съел/выпил",
+	"division_method_by_amount": "Процент или Сумма",
+	"division_method_by_amount_desc": "Для чаевых и сервисных сборов",
+	"division_method_custom": "Точные суммы",
 	"division_method_custom_desc": "Указать суммы для каждого",
 	"division_method_equal": "Поровну",
 	"division_method_equal_desc": "Каждый платит одинаково",
 	"division_method_shares": "По долям",
 	"division_method_shares_desc": "Распределить по частям",
+	"division_method_fixed": "Фикс.",
+	"division_method_fixed_desc": "Фиксированная плата",
+	"division_method_proportional": "Процент",
+	"division_method_proportional_desc": "Каждый платит процент",
+
+	"debug_title": "отладка",
+	"debug_platform": "платформа",
+	"debug_status": "статус",
 
 	"error_draft_load_failed": "не удалось загрузить драфт",
 	"error_draft_save_failed": "не удалось сохранить драфт",
@@ -49,6 +79,15 @@
 	"error_split_name_empty": "название сплита не может быть пустым",
 	"error_split_no_items": "добавьте хотя бы одну позицию",
 	"error_split_save_failed": "не удалось сохранить сплит",
+	"error_item_delete_failed": "Не удалось удалить позицию",
+	"error_image_processing_failed": "Не удалось обработать изображение",
+
+	"notification_success": "Операция выполнена успешно",
+	"notification_error": "Операция выполнена успешно",
+	"notification_warning": "Внимание! Проверьте данные",
+	"notification_info": "Информационное сообщение",
+
+	"notification_deleted": "Удалено",
 
 	"emoji_picker_activities_category": "Развлечения",
 	"emoji_picker_drinks_category": "Напитки",
@@ -64,6 +103,9 @@
 
 	"error_generic": "Ошибка",
 	"error_loading": "Не удалось обновить данные",
+	"error_saving": "Ошибка сохранения",
+	"error_save_data_failed": "Не удалось сохранить данные",
+	"error_something_went_wrong": "что-то пошло не так",
 
 	"item_delete_button": "Удалить позицию",
 	"item_division_method_label": "Способ деления",
@@ -71,14 +113,31 @@
 	"item_name_label": "Название",
 	"item_name_placeholder": "Введите название",
 	"item_price_label": "Цена",
+	"item_section_title": "Позиции",
+	"item_total_amount_label": "Позиций",
+	"item_hint_before_publish": "Разделение будет доступно после публикации сплита",
+	"item_edit_title": "Редактировать",
+	"item_new_title": "Новая позиция",
 
 	"loading": "Загрузка...",
 	"function_coming": "Функция будет доступна скоро",
 	"not_available_in_telegram": "Приложение доступно только в Telegram",
 
+	"participants_sheet_title": "Участники",
 	"participants_add_button": "Добавить участника",
 	"participants_empty": "Пока никого",
+	"participants_empty_state": "Пока никого нет",
 	"participants_kick_button": "Исключить",
+	"participants_anonymous": "Аноним",
+	"participants_short": "чел.",
+	"participants_invite_button": "Пригласить участника",
+	"participants_invite_hint": "Пригласите друзей после публикации сплита",
+
+	"contacts_section_title": "Контакты",
+	"contacts_section_all": "Все контакты",
+
+	"payment_method_not_selected": "Не выбран",
+	"payment_method_sbp": "СБП",
 
 	"quantity_label": "Количество",
 	"quantity_per_portion": "поштучно",
@@ -122,7 +181,14 @@
 	"stats_monthly_spent": "Потрачено в этом месяце",
 	"stats_total_splits": "Всего сплитов",
 
+	"status_initializing": "Инициализация...",
+	"status_authenticating": "Авторизация...",
+
+	"selection_count": "Выбрано: {count}",
+
 	"success_split_created": "Cплит создан",
+	"success_receipt_already_exists": "Чек уже был загружен ранее",
+	"success_receipt_uploaded": "Чек успешно загружен",
 
 	"qr_scan_unavailable": "QR сканер недоступен на вашем устройстве",
 	"qr_scan_title": "Отсканируйте QR-код чека",
@@ -136,5 +202,12 @@
 	"link_copied": "Ссылка скопирована в буфер обмена",
 	"link_copy_failed": "Не удалось скопировать ссылку",
 	"share_link_unavailable": "Шаринг недоступен в этом окружении",
-	"share_link_message_creation_failed": "Не удалось создать сообщение"
+	"share_link_message_creation_failed": "Не удалось создать сообщение",
+
+	"consent_title": "Безопасность и данные",
+	"consent_description": "Используя ChopCheck, ты соглашаешься с тем, что мы обрабатываем твои данные из Telegram и чеки для работы приложения.",
+	"consent_privacy_prefix": "Подробнее в ",
+	"consent_privacy_link": "Политике конфиденциальности",
+	"consent_privacy_suffix": ".",
+	"consent_agree_button": "Понятно, поехали"
 }

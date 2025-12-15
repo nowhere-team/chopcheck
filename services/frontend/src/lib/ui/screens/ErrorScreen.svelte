@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '$lib/i18n'
+
 	interface Props {
 		error: Error
 		onRetry?: () => void
@@ -9,11 +11,11 @@
 
 <div class="screen">
 	<div class="icon">⚠️</div>
-	<h1>что-то пошло не так</h1>
+	<h1>{m.error_something_went_wrong()}</h1>
 	<p class="message">{error.message}</p>
 
 	{#if onRetry}
-		<button onclick={onRetry}>попробовать снова</button>
+		<button onclick={onRetry}>{m.action_try_again()}</button>
 	{/if}
 </div>
 

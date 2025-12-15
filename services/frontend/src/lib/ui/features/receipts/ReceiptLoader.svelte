@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fly, scale } from 'svelte/transition'
 
+	import { m } from '$lib/i18n'
 	import { Emoji, Spinner } from '$lib/ui/components'
 
 	interface Props {
@@ -18,7 +19,7 @@
 	const {
 		storeName,
 		storeEmoji,
-		status = 'Загрузка...',
+		status = m.loading(),
 		itemsLoaded = 0,
 		totalItems,
 		lastScannedItem,
@@ -27,16 +28,16 @@
 
 	function formatCount(loaded: number, total?: number): string {
 		if (total && total > 0) {
-			return `${loaded} / ${total} позиций`
+			return `${loaded} / ${total} ${m.item_total_amount_label()}`
 		}
 		if (loaded > 0) {
-			return `${loaded} позиций`
+			return `${loaded} ${m.item_total_amount_label()}`
 		}
 		return ''
 	}
 
 	const countText = $derived(formatCount(itemsLoaded, totalItems))
-	const isIndeterminate = $derived(!totalItems && status === 'Распознавание...')
+	const isIndeterminate = $derived(!totalItems && status === m.receipt_status_processing())
 	const hasProgress = $derived(((totalItems && totalItems > 0) || isIndeterminate) && !complete)
 	const progressPercent = $derived(totalItems ? (itemsLoaded / totalItems) * 100 : 0)
 </script>
@@ -51,7 +52,7 @@
 			{/if}
 		</div>
 		<div class="info">
-			<span class="title">{storeName ?? 'Загрузка чека'}</span>
+			<span class="title">{storeName ?? m.create_split_upload_title()}</span>
 			<span class="status">{status}</span>
 		</div>
 		<div class="status-indicator">

@@ -5,6 +5,7 @@
 
 	import { onNavigate } from '$app/navigation'
 	import { app, setPlatformContext } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { getNavigationDirection } from '$lib/navigation/routes'
 	import { createPlatform } from '$lib/platform/create'
 	import { setContactsService, setSplitsService, setUserService } from '$lib/state/context'
@@ -76,7 +77,7 @@
 </svelte:head>
 
 {#if !initialized}
-	<LoadingScreen message="Инициализация..." />
+	<LoadingScreen message={m.status_initializing()} />
 {:else if app.state.status === 'error' && app.state.error}
 	<ErrorScreen error={app.state.error} onRetry={() => window.location.reload()} />
 {:else if app.state.status === 'consent_required'}
@@ -84,7 +85,7 @@
 {:else if app.state.status === 'unauthenticated'}
 	<LoginScreen />
 {:else if app.state.status === 'authenticating'}
-	<LoadingScreen message="Авторизация..." />
+	<LoadingScreen message={m.status_authenticating()} />
 {:else if app.state.status === 'ready'}
 	<AppShell>
 		{#snippet navbar()}

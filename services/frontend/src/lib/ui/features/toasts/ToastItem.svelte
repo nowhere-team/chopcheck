@@ -5,6 +5,7 @@
 	import { fly } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { Button } from '$lib/ui/components'
 
 	import { type Toast, toast, type ToastType } from './toast.svelte'
@@ -113,7 +114,7 @@
 			size="sm"
 			class="dismiss"
 			onclick={handleDismiss}
-			aria-label="Закрыть"
+			aria-label={m.aria_close()}
 		>
 			{#snippet iconLeft()}
 				<X size={16} />

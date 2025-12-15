@@ -7,25 +7,26 @@
 	import { page } from '$app/state'
 	import type { RouteId } from '$app/types'
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 
 	const items: { path: RouteId; icon: Component; label: string; highlight?: boolean }[] = [
-		{ path: '/', icon: House, label: 'главная' },
+		{ path: '/', icon: House, label: m.app_title_home() },
 		{
 			path: '/history',
 			icon: Calendar,
-			label: 'История'
+			label: m.app_title_history()
 		},
 		{
 			path: '/splits/create',
 			icon: PlusCircle,
-			label: 'Создать',
+			label: m.app_title_create_short(),
 			highlight: true
 		},
-		{ path: '/contacts', icon: Users, label: 'контакты' },
+		{ path: '/contacts', icon: Users, label: m.app_title_contacts() },
 		{
 			path: '/profile',
 			icon: UserCircle,
-			label: 'Профиль'
+			label: m.app_title_profile()
 		}
 	]
 	const platform = getPlatform()

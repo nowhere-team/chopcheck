@@ -2,6 +2,7 @@
 	import { Camera, QrCode } from 'phosphor-svelte'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { Button } from '$lib/ui/components'
 	import { BottomSheet } from '$lib/ui/overlays'
 
@@ -41,14 +42,14 @@
 	}
 </script>
 
-<BottomSheet bind:open {onclose} title="Сканировать чек">
+<BottomSheet bind:open {onclose} title={m.create_split_scan_photo_title()}>
 	<div class="scanner-options">
 		{#if canScanQr}
 			<Button variant="secondary" size="lg" onclick={handleScanQr}>
 				{#snippet iconLeft()}
 					<QrCode size={24} />
 				{/snippet}
-				Сканировать QR-код
+				{m.create_split_scan_qr_title()}
 			</Button>
 		{/if}
 
@@ -56,7 +57,7 @@
 			{#snippet iconLeft()}
 				<Camera size={24} />
 			{/snippet}
-			Загрузить фото чека
+			{m.create_split_scan_upload_title()}
 		</Button>
 
 		<input
