@@ -5,6 +5,7 @@ import { api } from '$lib/services/api/client'
 import {
 	ApiError,
 	type CreateSplitDto,
+	type ItemGroup,
 	type ItemSelection,
 	type PaginatedResponse,
 	type Split,
@@ -66,14 +67,15 @@ export class SplitsService {
 	 * Optimistically updates the draft resource without waiting for the backend.
 	 * Use this for immediate UI feedback.
 	 */
-	updateDraftLocal(data: { split?: Partial<Split>; items?: SplitItem[] }) {
+	updateDraftLocal(data: { split?: Partial<Split>; items?: SplitItem[]; itemGroups?: ItemGroup[] }) {
 		const current = this.draft.current
 		if (!current) return
 
 		this.draft.mutate({
 			...current,
 			split: data.split ? { ...current.split, ...data.split } : current.split,
-			items: data.items ?? current.items
+			items: data.items ?? current.items,
+			itemGroups: data.itemGroups ?? current.itemGroups
 		})
 	}
 
@@ -169,6 +171,24 @@ export class SplitsService {
 
 	async shareMessage(splitId: string) {
 		return api.post<string>(`splits/${splitId}/share`)
+	}
+
+	async createGroup(splitId: string, data: { name: string; icon?: string; type?: ItemGroup['type'] }) {
+		const res = await api.post<SplitResponse>(`splits/${splitId}/groups`, data)
+		this.updateResourceAfterChange(splitId, res)
+		return res
+	}
+
+	async updateGroup(splitId: string, groupId: string, data: Partial<Pick<ItemGroup, 'name' | 'icon' | 'isCollapsed'>>) {
+		const res = await api.patch<SplitResponse>(`splits/${splitId}/groups/${groupId}`, data)
+		this.updateResourceAfterChange(splitId, res)
+		return res
+	}
+
+	async deleteGroup(splitId: string, groupId: string) {
+		const res = await api.delete<SplitResponse>(`splits/${splitId}/groups/${groupId}`)
+		this.updateResourceAfterChange(splitId, res)
+		return res
 	}
 
 	async refreshAll() {

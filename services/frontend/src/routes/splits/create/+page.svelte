@@ -5,7 +5,7 @@
 	import { fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
-	import type { DraftItem, Participant, SplitItem } from '$lib/services/api/types'
+	import type { DraftItem, ItemGroup, Participant, SplitItem } from '$lib/services/api/types'
 	import { receiptScanner } from '$lib/services/receipts/scanner.svelte'
 	import {
 		fileToBase64,
@@ -19,6 +19,7 @@
 	import ScannerSheet from '$lib/ui/features/receipts/ScannerSheet.svelte'
 	import ItemCard from '$lib/ui/features/splits/ItemCard.svelte'
 	import ItemEditForm from '$lib/ui/features/splits/ItemEditForm.svelte'
+	import ItemGroupCard from '$lib/ui/features/splits/ItemGroupCard.svelte'
 	import ParticipantsSheet from '$lib/ui/features/splits/ParticipantsSheet.svelte'
 	import { toast } from '$lib/ui/features/toasts'
 	import { EditableEmoji, EditableText } from '$lib/ui/forms'
@@ -27,7 +28,6 @@
 	import { BottomSheet } from '$lib/ui/overlays'
 
 	const splitsService = getSplitsService()
-	// Using persisted singleton scanner instead of new instance
 	const scanner = receiptScanner
 
 	const draft = $derived(splitsService.draft)
@@ -42,6 +42,25 @@
 	)
 	const participants = $derived<Participant[]>(draft.current?.participants ?? [])
 	const items = $derived<SplitItem[]>(draft.current?.items ?? [])
+	const itemGroups = $derived<ItemGroup[]>(draft.current?.itemGroups ?? [])
+
+	const groupedItems = $derived(() => {
+		const grouped = new Map<string | null, SplitItem[]>()
+		
+		for (const item of items) {
+			const groupId = item.groupId ?? null
+			if (!grouped.has(groupId)) {
+				grouped.set(groupId, [])
+			}
+			grouped.get(groupId)!.push(item)
+		}
+		
+		return grouped
+	})
+
+	const ungroupedItems = $derived(groupedItems().get(null) ?? [])
+
+	let collapsedGroups = $state<Set<string>>(new Set())
 
 	let draftSplitEmoji = $state('🍔')
 	let draftSplitName = $state('')
@@ -350,6 +369,82 @@
 			}
 		}
 	)
+
+	let isGroupEditSheetOpen = $state(false)
+	let editingGroup = $state<{ id?: string; name: string; icon: string } | null>(null)
+
+	function toggleGroupCollapsed(groupId: string) {
+		const newSet = new Set(collapsedGroups)
+		if (newSet.has(groupId)) {
+			newSet.delete(groupId)
+		} else {
+			newSet.add(groupId)
+		}
+		collapsedGroups = newSet
+	}
+
+	function handleEditGroup(group: ItemGroup) {
+		editingGroup = {
+			id: group.id,
+			name: group.name,
+			icon: group.icon || '📦'
+		}
+		isGroupEditSheetOpen = true
+	}
+
+	async function handleDeleteGroup(group: ItemGroup) {
+		const currentDraftId = draftData.id
+		if (!currentDraftId) return
+
+		const groupItems = groupedItems().get(group.id) ?? []
+		const newItems = items.filter(i => i.groupId !== group.id)
+		const newGroups = itemGroups.filter(g => g.id !== group.id)
+
+		splitsService.updateDraftLocal({ items: newItems, itemGroups: newGroups })
+
+		try {
+			await splitsService.deleteGroup(currentDraftId, group.id)
+		} catch (e) {
+			console.error('Failed to delete group', e)
+			toast.error(m.error_saving())
+			await splitsService.draft.refetch()
+		}
+	}
+
+	async function handleSaveGroup() {
+		if (!editingGroup) return
+
+		const currentDraftId = draftData.id
+		if (!currentDraftId) return
+
+		const groupData = { ...editingGroup }
+		isGroupEditSheetOpen = false
+		editingGroup = null
+
+		try {
+			if (groupData.id) {
+				await splitsService.updateGroup(currentDraftId, groupData.id, {
+					name: groupData.name,
+					icon: groupData.icon
+				})
+			} else {
+				await splitsService.createGroup(currentDraftId, {
+					name: groupData.name,
+					icon: groupData.icon,
+					type: 'custom'
+				})
+			}
+		} catch (e) {
+			console.error('Failed to save group', e)
+			toast.error(m.error_saving())
+			await splitsService.draft.refetch()
+		}
+	}
+
+	function getGroupTotal(group: ItemGroup): number {
+		const groupItems = groupedItems().get(group.id) ?? []
+		return groupItems.reduce((sum, item) => sum + item.price, 0)
+	}
 </script>
 
 <SelectionToolbar
@@ -431,8 +526,32 @@
 			</div>
 		{/if}
 
-		{#if items.length > 0}
-			{#each items as item (item.id)}
+		{#each itemGroups as group (group.id)}
+			{@const groupItems = groupedItems().get(group.id) ?? []}
+			{@const isCollapsed = collapsedGroups.has(group.id)}
+			<ItemGroupCard
+				{group}
+				itemsCount={groupItems.length}
+				totalPrice={getGroupTotal(group)}
+				collapsed={isCollapsed}
+				ontoggle={() => toggleGroupCollapsed(group.id)}
+				onedit={() => handleEditGroup(group)}
+				ondelete={() => handleDeleteGroup(group)}
+			>
+				{#each groupItems as item (item.id)}
+					<ItemCard
+						{item}
+						{selectionMode}
+						selected={selectedIds.has(item.id)}
+						onclick={() => handleItemClick(item)}
+						onlongpress={() => handleItemLongPress(item)}
+					/>
+				{/each}
+			</ItemGroupCard>
+		{/each}
+
+		{#if ungroupedItems.length > 0}
+			{#each ungroupedItems as item (item.id)}
 				<ItemCard
 					{item}
 					{selectionMode}
@@ -494,6 +613,34 @@
 	{/if}
 </BottomSheet>
 
+<BottomSheet
+	bind:open={isGroupEditSheetOpen}
+	title={editingGroup?.id ? m.group_edit_title() : m.group_new_title()}
+>
+	{#if editingGroup}
+		<div class="group-edit-form">
+			<div class="form-field">
+				<label for="group-name">{m.item_name_label()}</label>
+				<input
+					id="group-name"
+					type="text"
+					bind:value={editingGroup.name}
+					placeholder={m.group_name_placeholder()}
+					class="form-input"
+				/>
+			</div>
+			<div class="form-actions">
+				<Button variant="secondary" onclick={() => (isGroupEditSheetOpen = false)}>
+					{m.action_cancel()}
+				</Button>
+				<Button variant="primary" onclick={handleSaveGroup}>
+					{m.action_save()}
+				</Button>
+			</div>
+		</div>
+	{/if}
+</BottomSheet>
+
 <style>
 	.split-header {
 		display: flex;
@@ -529,5 +676,46 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: var(--space-2);
+	}
+
+	.group-edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.form-field label {
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: var(--color-text-secondary);
+	}
+
+	.form-input {
+		all: unset;
+		width: 100%;
+		padding: var(--space-3);
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		font-size: var(--text-base);
+		color: var(--color-text);
+		box-sizing: border-box;
+	}
+
+	.form-input:focus {
+		border-color: var(--color-primary);
+		outline: none;
+	}
+
+	.form-actions {
+		display: flex;
+		gap: var(--space-2);
+		justify-content: flex-end;
 	}
 </style>
