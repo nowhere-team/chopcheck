@@ -3,6 +3,7 @@
 	import { fly } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { Button } from '$lib/ui/components'
 
 	interface Props {
@@ -34,7 +35,7 @@
 						<X size={20} />
 					{/snippet}
 				</Button>
-				<span class="count">Выбрано: {count}</span>
+				<span class="count">{m.selection_count({ count: count })}</span>
 			</div>
 
 			<div class="actions">
@@ -42,7 +43,7 @@
 					{#snippet iconLeft()}
 						<Trash size={18} />
 					{/snippet}
-					Удалить
+					{m.action_delete()}
 				</Button>
 			</div>
 		</div>

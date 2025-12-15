@@ -22,14 +22,14 @@
 	let isLongPress = false
 
 	const divisionLabels: Record<string, string> = {
-		equal: 'Поровну', // legacy fallback
-		shares: 'По долям', // legacy fallback
-		by_fraction: 'По долям',
-		per_unit: 'Поштучно',
-		by_amount: 'Процент/Фикс',
+		equal: m.division_method_equal(), // legacy fallback
+		shares: m.division_method_shares(), // legacy fallback
+		by_fraction: m.division_method_shares(),
+		per_unit: m.division_method_per_unit(),
+		by_amount: m.division_method_by_amount(),
 		custom: m.division_method_custom(),
-		fixed: 'Фикс.', // legacy fallback
-		proportional: 'Процент' // legacy fallback
+		fixed: m.division_method_fixed(), // legacy fallback
+		proportional: m.division_method_proportional() // legacy fallback
 	}
 
 	// Убираем лишние нули (1.000 -> 1, 1.500 -> 1.5)
@@ -104,8 +104,10 @@
 			<div class="info">
 				<span class="name">{item.name}</span>
 				<span class="meta">
-					{formattedQuantity} шт. · {divisionLabels[item.defaultDivisionMethod] ??
-						item.defaultDivisionMethod}
+					{formattedQuantity}
+					{m.quantity_measurement_short()} · {divisionLabels[
+						item.defaultDivisionMethod
+					] ?? item.defaultDivisionMethod}
 				</span>
 			</div>
 

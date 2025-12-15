@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { m } from '$lib/i18n'
+
 	interface Props {
 		message?: string
 	}
 
-	const { message = 'загрузка...' }: Props = $props()
+	const { message = m.loading() }: Props = $props()
 </script>
 
 <div class="screen">

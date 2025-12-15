@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getApp, getPlatform } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import TelegramLoginButton from '$lib/ui/features/auth/TelegramLoginButton.svelte'
-
 	const platform = getPlatform()
 	const app = getApp()
 
@@ -12,20 +12,20 @@
 <div class="screen">
 	<div class="logo">🍔</div>
 	<h1>chopcheck</h1>
-	<p class="tagline">делим счета без головной боли</p>
+	<p class="tagline">{m.app_tagline()}</p>
 
 	<div class="login-section">
-		<p class="instruction">войдите через telegram для продолжения</p>
+		<p class="instruction">{m.login_instruction()}</p>
 		<TelegramLoginButton />
 	</div>
 
 	{#if showDebug && debugEntries.length > 0}
 		<div class="debug">
-			<h3>отладка</h3>
+			<h3>{m.debug_title()}</h3>
 			<dl>
-				<dt>платформа</dt>
+				<dt>{m.debug_platform()}</dt>
 				<dd>{platform.type}</dd>
-				<dt>статус</dt>
+				<dt>{m.debug_status()}</dt>
 				<dd>{app.state.status}</dd>
 			</dl>
 			<div class="log">

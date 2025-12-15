@@ -3,6 +3,7 @@
 
 	import { resolve } from '$app/paths'
 	import { getApp } from '$lib/app/context.svelte'
+	import { m } from '$lib/i18n'
 	import { Button, Icon } from '$lib/ui/components'
 	import Page from '$lib/ui/layouts/Page.svelte'
 
@@ -22,21 +23,24 @@
 				<ShieldCheck weight="fill" size={48} />
 			</Icon>
 
-			<h1>Безопасность и данные</h1>
+			<h1>{m.consent_title()}</h1>
 			<p>
-				Используя <strong>ChopCheck</strong>, ты соглашаешься с тем, что мы обрабатываем
-				твои данные из Telegram и чеки для работы приложения.
+				{m.consent_description_prefix()}
+				<strong>{m.consent_description_app_name()}</strong>
+				{m.consent_description_suffix()}
 			</p>
 			<p>
-				Подробнее в <a class="link" href={resolve('/privacy')}
-					>Политике конфиденциальности</a
-				>.
+				{m.consent_privacy_prefix()}
+				<a class="link" href={resolve('/privacy')}>
+					{m.consent_privacy_link()}
+				</a>
+				{m.consent_privacy_suffix()}
 			</p>
 		</main>
 		<footer>
-			<Button variant="primary" class="w-full" onclick={handleAgree} {loading}
-				>Понятно, поехали</Button
-			>
+			<Button variant="primary" class="w-full" onclick={handleAgree} {loading}>
+				{m.consent_agree_button()}
+			</Button>
 		</footer>
 	</div>
 </Page>

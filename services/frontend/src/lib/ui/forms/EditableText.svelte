@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { m } from '$lib/i18n'
+
 	interface Props {
 		value: string
 		placeholder?: string
@@ -13,7 +15,7 @@
 
 	let {
 		value = $bindable(),
-		placeholder = 'Введите название...',
+		placeholder = m.item_name_placeholder(),
 		centered = false,
 		adaptive = false,
 		fontSize = 'var(--text-xl)',

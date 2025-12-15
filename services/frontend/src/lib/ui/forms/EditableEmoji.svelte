@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getPlatform } from '$lib/app/context.svelte.js'
+	import { m } from '$lib/i18n'
 	import { Emoji } from '$lib/ui/components'
 
 	import EmojiPickerSheet from './EmojiPickerSheet.svelte'
@@ -69,7 +70,7 @@
 		type="button"
 		class="emoji-button"
 		class:focused={isFocused}
-		aria-label="Выбрать эмодзи"
+		aria-label={m.aria_select_emoji()}
 		style="width: {size}px; height: {size}px;"
 	>
 		<Emoji emoji={value} size={emojiSize} />
