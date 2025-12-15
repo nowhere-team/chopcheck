@@ -173,7 +173,7 @@
 	"success_receipt_uploaded": "Чек успешно загружен",
 
 	"notification_success": "Операция выполнена успешно",
-	"notification_error": "Операция выполнена успешно",
+	"notification_error": "Произошла ошибка",
 	"notification_warning": "Внимание! Проверьте данные",
 	"notification_info": "Информационное сообщение",
 	"notification_deleted": "Удалено",
