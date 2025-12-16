@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, QrCode } from 'phosphor-svelte'
 	import { useDebounce, watch } from 'runed'
-	import { SvelteMap, SvelteSet } from 'svelte/reactivity'
+	import { SvelteSet } from 'svelte/reactivity'
 	import { fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
@@ -17,9 +17,8 @@
 	import { AvatarStack, Button, Divider, ExpandableCard } from '$lib/ui/components'
 	import ReceiptLoader from '$lib/ui/features/receipts/ReceiptLoader.svelte'
 	import ScannerSheet from '$lib/ui/features/receipts/ScannerSheet.svelte'
-	import ItemCard from '$lib/ui/features/splits/ItemCard.svelte'
 	import ItemEditForm from '$lib/ui/features/splits/ItemEditForm.svelte'
-	import ItemGroupCard from '$lib/ui/features/splits/ItemGroupCard.svelte'
+	import ItemsList from '$lib/ui/features/splits/ItemsList.svelte'
 	import ParticipantsSheet from '$lib/ui/features/splits/ParticipantsSheet.svelte'
 	import { toast } from '$lib/ui/features/toasts'
 	import { EditableEmoji, EditableText } from '$lib/ui/forms'
@@ -28,7 +27,6 @@
 	import { BottomSheet } from '$lib/ui/overlays'
 
 	const splitsService = getSplitsService()
-	// Using persisted singleton scanner instead of new instance
 	const scanner = receiptScanner
 
 	const draft = $derived(splitsService.draft)
@@ -45,28 +43,10 @@
 	const items = $derived<SplitItem[]>(draft.current?.items ?? [])
 	const itemGroups = $derived<ItemGroup[]>(draft.current?.itemGroups ?? [])
 
-	const groupedItems = $derived(() => {
-		const grouped = new SvelteMap<string | null, SplitItem[]>()
-
-		for (const item of items) {
-			const groupId = item.groupId ?? null
-			if (!grouped.has(groupId)) {
-				grouped.set(groupId, [])
-			}
-			grouped.get(groupId)!.push(item)
-		}
-
-		return grouped
-	})
-
-	const ungroupedItems = $derived(groupedItems().get(null) ?? [])
-
 	let collapsedGroups = $state<Set<string>>(new Set())
-
 	let draftSplitEmoji = $state('🍔')
 	let draftSplitName = $state('')
 
-	// consolidated watcher for external updates
 	watch(
 		() => [draftData.icon, draftData.name],
 		([icon, name]) => {
@@ -75,7 +55,6 @@
 		}
 	)
 
-	// save ONLY metadata (name, icon) - debounced
 	const saveMetadata = useDebounce(async () => {
 		await splitsService.createOrUpdate({
 			id: draftData.id,
@@ -85,7 +64,6 @@
 		})
 	}, 800)
 
-	// fallback for full sync
 	const saveDraftFull = useDebounce(async (overrideItems?: SplitItem[]) => {
 		const currentItems = overrideItems ?? items
 		const itemsDto = currentItems.map(i => ({
@@ -182,9 +160,7 @@
 		if (selectedIds.size === 0) return
 		const newItems = items.filter(i => !selectedIds.has(i.id))
 		handleCancelSelection()
-
 		splitsService.updateDraftLocal({ items: newItems })
-
 		await saveDraftFull(newItems)
 		await saveDraftFull.runScheduledNow()
 	}
@@ -222,39 +198,32 @@
 			} as SplitItem)
 		}
 
-		// 1. optimistic update
 		splitsService.updateDraftLocal({ items: newItems })
-
-		// 2. unblock ui immediately
 		isItemEditSheetOpen = false
 		editingItem = null
-
-		// 3. background Sync (fire & forget)
 		;(async () => {
 			try {
 				if (!currentDraftId) {
 					await saveDraftFull(newItems)
 					await saveDraftFull.runScheduledNow()
+				} else if (isNew) {
+					await splitsService.addItem(currentDraftId, {
+						name: itemToSave.name,
+						price: itemToSave.price,
+						quantity: String(itemToSave.quantity),
+						type: itemToSave.type,
+						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+						icon: itemToSave.icon
+					})
 				} else {
-					if (isNew) {
-						await splitsService.addItem(currentDraftId, {
-							name: itemToSave.name,
-							price: itemToSave.price,
-							quantity: String(itemToSave.quantity),
-							type: itemToSave.type,
-							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-							icon: itemToSave.icon
-						})
-					} else {
-						await splitsService.updateItem(currentDraftId, tempId, {
-							name: itemToSave.name,
-							price: itemToSave.price,
-							quantity: String(itemToSave.quantity),
-							type: itemToSave.type,
-							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-							icon: itemToSave.icon
-						})
-					}
+					await splitsService.updateItem(currentDraftId, tempId, {
+						name: itemToSave.name,
+						price: itemToSave.price,
+						quantity: String(itemToSave.quantity),
+						type: itemToSave.type,
+						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+						icon: itemToSave.icon
+					})
 				}
 			} catch (e) {
 				console.error('Failed to save item', e)
@@ -273,17 +242,12 @@
 
 		const itemId = editingItem.id
 		const currentDraftId = draftData.id
-
 		const newItems = items.filter(i => i.id !== itemId)
 
-		// 1. optimistic
 		splitsService.updateDraftLocal({ items: newItems })
-
-		// 2. unblock UI
 		isItemEditSheetOpen = false
 		editingItem = null
 
-		// 3. background sync
 		if (currentDraftId && !itemId.startsWith('temp-')) {
 			;(async () => {
 				try {
@@ -297,7 +261,7 @@
 		}
 	}
 
-	function toggleGroupCollapsed(groupId: string) {
+	function handleToggleGroup(groupId: string) {
 		const newSet = new SvelteSet(collapsedGroups)
 		if (newSet.has(groupId)) {
 			newSet.delete(groupId)
@@ -308,11 +272,7 @@
 	}
 
 	function handleEditGroup(group: ItemGroup) {
-		editingGroup = {
-			id: group.id,
-			name: group.name,
-			icon: group.icon || '📦'
-		}
+		editingGroup = { id: group.id, name: group.name, icon: group.icon || '📦' }
 		isGroupEditSheetOpen = true
 	}
 
@@ -362,11 +322,6 @@
 			toast.error(m.error_saving())
 			await splitsService.draft.refetch()
 		}
-	}
-
-	function getGroupTotal(group: ItemGroup): number {
-		const groupItems = groupedItems().get(group.id) ?? []
-		return groupItems.reduce((sum, item) => sum + item.price, 0)
 	}
 
 	async function handleScanQr() {
@@ -430,7 +385,6 @@
 							}
 
 							scanner.saved()
-							// scanner.reset is handled internally by class after delay
 						}
 					} catch {
 						scanner.failSave(m.error_save_data_failed())
@@ -525,41 +479,18 @@
 			</div>
 		{/if}
 
-		{#each itemGroups as group (group.id)}
-			{@const groupItems = groupedItems().get(group.id) ?? []}
-			{@const isCollapsed = collapsedGroups.has(group.id)}
-			<ItemGroupCard
-				{group}
-				itemsCount={groupItems.length}
-				totalPrice={getGroupTotal(group)}
-				collapsed={isCollapsed}
-				ontoggle={() => toggleGroupCollapsed(group.id)}
-				onedit={() => handleEditGroup(group)}
-				ondelete={() => handleDeleteGroup(group)}
-			>
-				{#each groupItems as item (item.id)}
-					<ItemCard
-						{item}
-						{selectionMode}
-						selected={selectedIds.has(item.id)}
-						onclick={() => handleItemClick(item)}
-						onlongpress={() => handleItemLongPress(item)}
-					/>
-				{/each}
-			</ItemGroupCard>
-		{/each}
-
-		{#if ungroupedItems.length > 0}
-			{#each ungroupedItems as item (item.id)}
-				<ItemCard
-					{item}
-					{selectionMode}
-					selected={selectedIds.has(item.id)}
-					onclick={() => handleItemClick(item)}
-					onlongpress={() => handleItemLongPress(item)}
-				/>
-			{/each}
-		{/if}
+		<ItemsList
+			{items}
+			{itemGroups}
+			{selectionMode}
+			{selectedIds}
+			{collapsedGroups}
+			onItemClick={handleItemClick}
+			onItemLongPress={handleItemLongPress}
+			onToggleGroup={handleToggleGroup}
+			onEditGroup={handleEditGroup}
+			onDeleteGroup={handleDeleteGroup}
+		/>
 
 		<div class="action-buttons">
 			<Button
@@ -696,7 +627,6 @@
 	}
 
 	.form-input {
-		all: unset;
 		width: 100%;
 		padding: var(--space-3);
 		background: var(--color-bg-secondary);
