@@ -107,7 +107,7 @@
 				<DotsThree size={24} weight="bold" />
 			</button>
 
-			<Dropdown bind:open={menuOpen} anchor={menuAnchor} placement="bottom-end">
+			<Dropdown bind:open={menuOpen} anchor={menuAnchor} placement="bottom-end" tail>
 				<DropdownMenu>
 					<DropdownMenuItem onclick={handleEdit}>
 						{#snippet icon()}

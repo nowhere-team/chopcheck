@@ -11,6 +11,8 @@
 		open?: boolean
 		anchor: HTMLElement | undefined
 		placement?: 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end' | 'auto'
+		tail?: boolean
+		tailOffset?: number
 		children: Snippet
 		onclose?: () => void
 		class?: string
@@ -20,6 +22,8 @@
 		open = $bindable(false),
 		anchor,
 		placement = 'auto',
+		tail = false,
+		tailOffset = 0,
 		children,
 		onclose,
 		class: className = ''
@@ -27,6 +31,7 @@
 
 	let contentRef = $state<HTMLDivElement | undefined>()
 	let coords = $state({ top: 0, left: 0, right: 0, minWidth: 0 })
+	let tailPosition = $state({ left: 0, right: 0 })
 	let effectivePlacement = $state<'bottom' | 'top'>('bottom')
 	let horizontalAlign = $state<'start' | 'end'>('start')
 	let positioned = $state(false)
@@ -81,6 +86,26 @@
 			right: Math.round(viewportWidth - rect.right),
 			minWidth: Math.round(rect.width)
 		}
+
+		if (tail) {
+			const anchorCenter = rect.left + rect.width / 2
+
+			if (horizontal === 'start') {
+				const dropdownLeft = rect.left
+				const tailLeft = anchorCenter - dropdownLeft + tailOffset
+				tailPosition = {
+					left: Math.round(Math.max(12, Math.min(tailLeft, coords.minWidth - 12))),
+					right: 0
+				}
+			} else {
+				const dropdownRight = viewportWidth - rect.right
+				const tailRight = viewportWidth - anchorCenter - dropdownRight - tailOffset
+				tailPosition = {
+					left: 0,
+					right: Math.round(Math.max(12, Math.min(tailRight, coords.minWidth - 12)))
+				}
+			}
+		}
 	}
 
 	$effect(() => {
@@ -109,6 +134,7 @@
 			class="dropdown-content"
 			class:from-top={effectivePlacement === 'top'}
 			class:align-end={horizontalAlign === 'end'}
+			class:has-tail={tail}
 			style:top="{coords.top}px"
 			style:left={horizontalAlign === 'start' ? `${coords.left}px` : 'auto'}
 			style:right={horizontalAlign === 'end' ? `${coords.right}px` : 'auto'}
@@ -120,6 +146,15 @@
 				opacity: 0
 			}}
 		>
+			{#if tail}
+				<div
+					class="dropdown-tail"
+					class:from-top={effectivePlacement === 'top'}
+					class:align-end={horizontalAlign === 'end'}
+					style:left={horizontalAlign === 'start' ? `${tailPosition.left}px` : 'auto'}
+					style:right={horizontalAlign === 'end' ? `${tailPosition.right}px` : 'auto'}
+				></div>
+			{/if}
 			{@render children()}
 		</div>
 	</Portal>
@@ -147,6 +182,10 @@
 		max-width: min(280px, 90vw);
 	}
 
+	.dropdown-content.has-tail {
+		overflow: visible;
+	}
+
 	.dropdown-content.from-top {
 		transform-origin: bottom left;
 		transform: translateY(-100%);
@@ -158,5 +197,30 @@
 
 	.dropdown-content.from-top.align-end {
 		transform-origin: bottom right;
+	}
+
+	.dropdown-tail {
+		position: absolute;
+		top: -6px;
+		width: 12px;
+		height: 12px;
+		transform: translateX(-6px) rotate(45deg);
+		background: var(--color-bg-elevated, var(--color-bg));
+		border-top: 1px solid var(--color-border);
+		border-left: 1px solid var(--color-border);
+		pointer-events: none;
+	}
+
+	.dropdown-tail.align-end {
+		transform: translateX(6px) rotate(45deg);
+	}
+
+	.dropdown-tail.from-top {
+		top: auto;
+		bottom: -6px;
+		border-top: none;
+		border-left: none;
+		border-bottom: 1px solid var(--color-border);
+		border-right: 1px solid var(--color-border);
 	}
 </style>

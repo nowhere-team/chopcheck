@@ -2,7 +2,7 @@
 import { z } from 'zod'
 
 import { NotFoundError } from '@/common/errors'
-import { createSplitSchema } from '@/common/types'
+import { createItemGroupSchema, createSplitSchema, updateItemGroupSchema } from '@/common/types'
 import { auth, requirePermission } from '@/http/middleware/auth'
 import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
 import { DIVISION_METHODS } from '@/platform/database/schema/enums'
@@ -43,6 +43,7 @@ const addItemsSchema = z.object({
 			quantity: z.string().default('1'),
 			defaultDivisionMethod: z.enum(DIVISION_METHODS),
 			icon: z.string().optional(),
+			groupId: z.uuid().optional(),
 		}),
 	),
 })
@@ -54,6 +55,7 @@ const updateItemSchema = z.object({
 	quantity: z.string().optional(),
 	defaultDivisionMethod: z.enum(DIVISION_METHODS).optional(),
 	icon: z.string().optional(),
+	groupId: z.uuid().nullable().optional(),
 })
 
 const addPaymentMethodSchema = z.object({
@@ -235,6 +237,32 @@ export function createSplitsRoutes() {
 		)
 
 		return c.json({ preparedMessageId, splitId: data.split.id, shortId: data.split.shortId })
+	})
+
+	app.post('/:id/groups', uuidParam('id'), validate('json', createItemGroupSchema), async c => {
+		const split = await c
+			.get('services')
+			.splits.createItemGroup(c.req.param('id'), c.get('authContext')!.userId, c.req.valid('json'))
+		return c.json(anonymizeSplitResponse(split), 201)
+	})
+
+	app.patch('/:id/groups/:groupId', uuidParam('id', 'groupId'), validate('json', updateItemGroupSchema), async c => {
+		const split = await c
+			.get('services')
+			.splits.updateItemGroup(
+				c.req.param('id'),
+				c.req.param('groupId'),
+				c.get('authContext')!.userId,
+				c.req.valid('json'),
+			)
+		return c.json(anonymizeSplitResponse(split))
+	})
+
+	app.delete('/:id/groups/:groupId', uuidParam('id', 'groupId'), async c => {
+		const split = await c
+			.get('services')
+			.splits.deleteItemGroup(c.req.param('id'), c.req.param('groupId'), c.get('authContext')!.userId)
+		return c.json(anonymizeSplitResponse(split))
 	})
 
 	return app
