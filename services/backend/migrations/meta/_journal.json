@@ -15,6 +15,13 @@
 			"when": 1765790974385,
 			"tag": "0001_sync_division_methods",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1765868809580,
+			"tag": "0002_item_groups",
+			"breakpoints": true
 		}
 	]
 }

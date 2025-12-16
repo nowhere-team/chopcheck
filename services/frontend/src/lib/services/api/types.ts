@@ -72,7 +72,21 @@ export interface SplitItem {
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity: string
 	icon?: string
+	groupId?: string | null
 	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
+}
+
+export interface ItemGroup {
+	id: string
+	splitId: string
+	receiptId?: string | null
+	type: 'receipt' | 'manual' | 'custom'
+	name: string
+	icon?: string | null
+	displayOrder: number
+	isCollapsed: boolean
+	createdAt: string
+	updatedAt: string
 }
 
 export interface Participant {
@@ -138,6 +152,7 @@ export interface CreateSplitDto {
 export interface SplitResponse {
 	split: Split
 	items: SplitItem[]
+	itemGroups: ItemGroup[]
 	participants: Participant[]
 	calculations?: SplitCalculations
 }

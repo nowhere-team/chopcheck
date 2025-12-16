@@ -5,6 +5,11 @@ export type DivisionMethod = (typeof DIVISION_METHODS)[number]
 
 export const divisionMethodEnum = pgEnum('division_method', DIVISION_METHODS)
 
+export const ITEM_GROUP_TYPES = ['receipt', 'manual', 'custom'] as const
+export type ItemGroupType = (typeof ITEM_GROUP_TYPES)[number]
+
+export const itemGroupTypeEnum = pgEnum('item_group_type', ITEM_GROUP_TYPES)
+
 export const splitStatusEnum = pgEnum('split_status', ['draft', 'active', 'completed'])
 
 export const splitPhaseEnum = pgEnum('split_phase', ['setup', 'voting', 'payment', 'confirming'])
