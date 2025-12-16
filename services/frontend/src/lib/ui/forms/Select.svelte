@@ -14,14 +14,24 @@
 		value: string
 		options: Option[]
 		label?: string
+		onchange?: (value: string) => void
 	}
 
-	let { value = $bindable(), options, label }: Props = $props()
+	let { value = $bindable(), options, label, onchange }: Props = $props()
 	const platform = getPlatform()
 
 	let isOpen = $state(false)
+	let triggerRef = $state<HTMLButtonElement | undefined>()
 
 	const currentLabel = $derived(options.find(o => o.value === value)?.label || value)
+
+	function toggle(e: MouseEvent) {
+		e.stopPropagation()
+		if (!isOpen) {
+			platform.haptic.selection()
+		}
+		isOpen = !isOpen
+	}
 
 	function select(val: string) {
 		if (val === value) {
@@ -29,6 +39,7 @@
 			return
 		}
 		value = val
+		onchange?.(val)
 		isOpen = false
 		platform.haptic.impact('light')
 	}
@@ -39,16 +50,25 @@
 		<Label>{label}</Label>
 	{/if}
 
-	<Dropdown bind:open={isOpen} placement="bottom-start">
-		{#snippet trigger()}
-			<button type="button" class="trigger" class:active={isOpen}>
-				<span class="value-text">{currentLabel}</span>
-				<span class="icon-wrap" style:transform={isOpen ? 'rotate(180deg)' : 'rotate(0)'}>
-					<CaretDown size={16} weight="bold" />
-				</span>
-			</button>
-		{/snippet}
+	<button
+		bind:this={triggerRef}
+		type="button"
+		class="trigger"
+		class:active={isOpen}
+		onclick={toggle}
+	>
+		<span class="value-text">{currentLabel}</span>
+		<span class="icon-wrap" style:transform={isOpen ? 'rotate(180deg)' : 'rotate(0)'}>
+			<CaretDown size={16} weight="bold" />
+		</span>
+	</button>
 
+	<Dropdown
+		bind:open={isOpen}
+		anchor={triggerRef}
+		placement="bottom-start"
+		onclose={() => (isOpen = false)}
+	>
 		<div class="options-list">
 			{#each options as option (option.value)}
 				<button

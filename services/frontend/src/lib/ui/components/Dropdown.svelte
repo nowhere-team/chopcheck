@@ -1,37 +1,35 @@
 <script lang="ts">
 	import { onClickOutside } from 'runed'
 	import type { Snippet } from 'svelte'
+	import { tick } from 'svelte'
 	import { cubicOut } from 'svelte/easing'
 	import { scale } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte'
 	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Props {
 		open?: boolean
+		anchor: HTMLElement | undefined
 		placement?: 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end' | 'auto'
-		trigger: Snippet
 		children: Snippet
-		onOpenChange?: (open: boolean) => void
+		onclose?: () => void
 		class?: string
 	}
 
 	let {
 		open = $bindable(false),
+		anchor,
 		placement = 'auto',
-		trigger,
 		children,
-		onOpenChange,
+		onclose,
 		class: className = ''
 	}: Props = $props()
 
-	const platform = getPlatform()
-
-	let triggerRef = $state<HTMLDivElement | undefined>()
 	let contentRef = $state<HTMLDivElement | undefined>()
 	let coords = $state({ top: 0, left: 0, right: 0, minWidth: 0 })
 	let effectivePlacement = $state<'bottom' | 'top'>('bottom')
 	let horizontalAlign = $state<'start' | 'end'>('start')
+	let positioned = $state(false)
 
 	onClickOutside(
 		() => contentRef,
@@ -42,24 +40,34 @@
 	)
 
 	function updatePosition() {
-		if (!triggerRef) return
+		if (!anchor) return
 
-		const rect = triggerRef.getBoundingClientRect()
+		const rect = anchor.getBoundingClientRect()
+		if (rect.width === 0 && rect.height === 0) return
+
 		const viewportHeight = window.innerHeight
 		const viewportWidth = window.innerWidth
 
 		const spaceBelow = viewportHeight - rect.bottom
 		const spaceAbove = rect.top
+		const minRequiredSpace = 220
 
 		let vertical: 'bottom' | 'top' = 'bottom'
 		let horizontal: 'start' | 'end' = 'start'
 
+		const prefersTop = placement.startsWith('top')
+		const prefersEnd = placement.endsWith('end')
+
 		if (placement === 'auto') {
-			vertical = spaceBelow < 220 && spaceAbove > spaceBelow ? 'top' : 'bottom'
+			vertical = spaceBelow < minRequiredSpace && spaceAbove > spaceBelow ? 'top' : 'bottom'
 			horizontal = rect.left > viewportWidth / 2 ? 'end' : 'start'
 		} else {
-			vertical = placement.startsWith('top') ? 'top' : 'bottom'
-			horizontal = placement.endsWith('end') ? 'end' : 'start'
+			if (prefersTop) {
+				vertical = spaceAbove >= minRequiredSpace ? 'top' : 'bottom'
+			} else {
+				vertical = spaceBelow >= minRequiredSpace ? 'bottom' : 'top'
+			}
+			horizontal = prefersEnd ? 'end' : 'start'
 		}
 
 		effectivePlacement = vertical
@@ -75,72 +83,49 @@
 		}
 	}
 
-	function handleTriggerClick(e: MouseEvent) {
-		e.stopPropagation()
-		e.preventDefault()
-
-		if (!open) {
-			updatePosition()
-			platform.haptic.selection()
-			open = true
-			onOpenChange?.(true)
+	$effect(() => {
+		if (open) {
+			positioned = false
+			tick().then(() => {
+				updatePosition()
+				positioned = true
+			})
 		} else {
-			close()
+			positioned = false
 		}
-	}
+	})
 
 	function close() {
 		open = false
-		onOpenChange?.(false)
+		onclose?.()
 	}
 </script>
 
-<div class="dropdown-host {className}">
-	<div
-		bind:this={triggerRef}
-		class="trigger-wrapper"
-		onclick={handleTriggerClick}
-		onkeydown={e => e.key === 'Enter' && handleTriggerClick}
-		role="button"
-		tabindex="0"
-	>
-		{@render trigger()}
-	</div>
-
-	{#if open}
-		<Portal target="#portal-root">
-			<div class="dropdown-backdrop" onclick={close} role="presentation"></div>
-			<div
-				bind:this={contentRef}
-				class="dropdown-content"
-				class:from-top={effectivePlacement === 'top'}
-				class:align-end={horizontalAlign === 'end'}
-				style:top="{coords.top}px"
-				style:left={horizontalAlign === 'start' ? `${coords.left}px` : 'auto'}
-				style:right={horizontalAlign === 'end' ? `${coords.right}px` : 'auto'}
-				style:min-width="{coords.minWidth}px"
-				transition:scale={{
-					duration: 150,
-					easing: cubicOut,
-					start: 0.95,
-					opacity: 0
-				}}
-			>
-				{@render children()}
-			</div>
-		</Portal>
-	{/if}
-</div>
+{#if open && positioned}
+	<Portal target="#portal-root">
+		<div class="dropdown-backdrop {className}" onclick={close} role="presentation"></div>
+		<div
+			bind:this={contentRef}
+			class="dropdown-content"
+			class:from-top={effectivePlacement === 'top'}
+			class:align-end={horizontalAlign === 'end'}
+			style:top="{coords.top}px"
+			style:left={horizontalAlign === 'start' ? `${coords.left}px` : 'auto'}
+			style:right={horizontalAlign === 'end' ? `${coords.right}px` : 'auto'}
+			style:min-width="{coords.minWidth}px"
+			transition:scale={{
+				duration: 150,
+				easing: cubicOut,
+				start: 0.95,
+				opacity: 0
+			}}
+		>
+			{@render children()}
+		</div>
+	</Portal>
+{/if}
 
 <style>
-	.dropdown-host {
-		display: contents;
-	}
-
-	.trigger-wrapper {
-		display: contents;
-	}
-
 	.dropdown-backdrop {
 		position: fixed;
 		inset: 0;
