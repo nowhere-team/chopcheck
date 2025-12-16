@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { CaretDown, Check } from 'phosphor-svelte'
-	import { onClickOutside } from 'runed'
-	import { cubicOut } from 'svelte/easing'
-	import { scale } from 'svelte/transition'
 
-	import { getPlatform } from '$lib/app/context.svelte.js'
-	import Label from '$lib/ui/components/Label.svelte'
-	import Portal from '$lib/ui/overlays/Portal.svelte'
+	import { getPlatform } from '$lib/app/context.svelte'
+	import { Dropdown, Label } from '$lib/ui/components'
 
 	interface Option {
 		value: string
@@ -18,68 +14,23 @@
 		value: string
 		options: Option[]
 		label?: string
+		onchange?: (value: string) => void
 	}
 
-	let { value = $bindable(), options, label }: Props = $props()
+	let { value = $bindable(), options, label, onchange }: Props = $props()
 	const platform = getPlatform()
 
 	let isOpen = $state(false)
 	let triggerRef = $state<HTMLButtonElement | undefined>()
-	let dropdownRef = $state<HTMLDivElement | undefined>()
-	let coords = $state({ top: 0, left: 0, width: 0 })
-	let placement = $state<'bottom' | 'top'>('bottom')
 
 	const currentLabel = $derived(options.find(o => o.value === value)?.label || value)
 
-	onClickOutside(
-		() => dropdownRef,
-		() => {
-			if (isOpen) isOpen = false
-		},
-		{
-			immediate: false,
-			detectIframe: false
-		}
-	)
-
-	function updatePosition() {
-		if (!triggerRef) return
-
-		const rect = triggerRef.getBoundingClientRect()
-		const viewportHeight = window.innerHeight
-		const estimatedHeight = Math.min(options.length * 60 + 12, 320)
-		const spaceBelow = viewportHeight - rect.bottom
-		const spaceAbove = rect.top
-
-		// subpixel render fix
-		if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
-			placement = 'top'
-			coords = {
-				top: Math.round(rect.top - 6),
-				left: Math.round(rect.left),
-				width: Math.round(rect.width)
-			}
-		} else {
-			placement = 'bottom'
-			coords = {
-				top: Math.round(rect.bottom + 6),
-				left: Math.round(rect.left),
-				width: Math.round(rect.width)
-			}
-		}
-	}
-
 	function toggle(e: MouseEvent) {
 		e.stopPropagation()
-		e.preventDefault()
-
 		if (!isOpen) {
-			updatePosition()
 			platform.haptic.selection()
-			isOpen = true
-		} else {
-			isOpen = false
 		}
+		isOpen = !isOpen
 	}
 
 	function select(val: string) {
@@ -88,6 +39,7 @@
 			return
 		}
 		value = val
+		onchange?.(val)
 		isOpen = false
 		platform.haptic.impact('light')
 	}
@@ -99,8 +51,8 @@
 	{/if}
 
 	<button
-		type="button"
 		bind:this={triggerRef}
+		type="button"
 		class="trigger"
 		class:active={isOpen}
 		onclick={toggle}
@@ -111,47 +63,35 @@
 		</span>
 	</button>
 
-	{#if isOpen}
-		<Portal target="#portal-root">
-			<div class="select-portal-wrapper">
-				<div
-					bind:this={dropdownRef}
-					class="dropdown"
-					class:from-top={placement === 'top'}
-					style:top="{coords.top}px"
-					style:left="{coords.left}px"
-					style:width="{coords.width}px"
-					transition:scale={{
-						duration: 150,
-						easing: cubicOut,
-						start: 0.95,
-						opacity: 0
-					}}
+	<Dropdown
+		bind:open={isOpen}
+		anchor={triggerRef}
+		placement="bottom-start"
+		onclose={() => (isOpen = false)}
+	>
+		<div class="options-list">
+			{#each options as option (option.value)}
+				<button
+					type="button"
+					class="option-item"
+					class:selected={option.value === value}
+					onclick={() => select(option.value)}
 				>
-					{#each options as option (option.value)}
-						<button
-							type="button"
-							class="option-item"
-							class:selected={option.value === value}
-							onclick={() => select(option.value)}
-						>
-							<span class="option-content">
-								<span class="option-label">{option.label}</span>
-								{#if option.description}
-									<span class="option-desc">{option.description}</span>
-								{/if}
-							</span>
-							{#if option.value === value}
-								<div class="check-icon">
-									<Check size={16} weight="bold" />
-								</div>
-							{/if}
-						</button>
-					{/each}
-				</div>
-			</div>
-		</Portal>
-	{/if}
+					<span class="option-content">
+						<span class="option-label">{option.label}</span>
+						{#if option.description}
+							<span class="option-desc">{option.description}</span>
+						{/if}
+					</span>
+					{#if option.value === value}
+						<div class="check-icon">
+							<Check size={16} weight="bold" />
+						</div>
+					{/if}
+				</button>
+			{/each}
+		</div>
+	</Dropdown>
 </div>
 
 <style>
@@ -160,7 +100,6 @@
 		flex-direction: column;
 		gap: 6px;
 		width: 100%;
-		position: relative;
 	}
 
 	.trigger {
@@ -196,37 +135,13 @@
 		color: var(--color-text-secondary);
 	}
 
-	.select-portal-wrapper {
-		position: fixed;
-		inset: 0;
-		z-index: calc(var(--z-modal) + 100);
-		pointer-events: none;
-	}
-
-	.dropdown {
-		position: absolute;
+	.options-list {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
 		padding: 6px;
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-lg);
-		box-shadow:
-			0 10px 30px -10px rgba(0, 0, 0, 0.2),
-			0 4px 12px -4px rgba(0, 0, 0, 0.1);
-		transform-origin: top center;
-		overflow: hidden;
 		max-height: 320px;
 		overflow-y: auto;
-		pointer-events: auto;
-		isolation: isolate;
-		will-change: transform, opacity;
-	}
-
-	.dropdown.from-top {
-		transform-origin: bottom center;
-		transform: translateY(-100%);
 	}
 
 	.option-item {

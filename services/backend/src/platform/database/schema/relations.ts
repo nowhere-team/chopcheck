@@ -6,6 +6,7 @@ import {
 	receiptItems,
 	receipts,
 	splitAuditLog,
+	splitItemGroups,
 	splitItemParticipants,
 	splitItems,
 	splitParticipants,
@@ -42,6 +43,7 @@ export const receiptsRelations = relations(receipts, ({ one, many }) => ({
 	}),
 	items: many(receiptItems),
 	splitReceipts: many(splitReceipts),
+	itemGroups: many(splitItemGroups),
 }))
 
 export const receiptItemsRelations = relations(receiptItems, ({ one, many }) => ({
@@ -105,11 +107,27 @@ export const splitItemsRelations = relations(splitItems, ({ one, many }) => ({
 		fields: [splitItems.splitId],
 		references: [splits.id],
 	}),
+	group: one(splitItemGroups, {
+		fields: [splitItems.groupId],
+		references: [splitItemGroups.id],
+	}),
 	receiptItem: one(receiptItems, {
 		fields: [splitItems.receiptItemId],
 		references: [receiptItems.id],
 	}),
 	participations: many(splitItemParticipants),
+}))
+
+export const splitItemGroupsRelations = relations(splitItemGroups, ({ one, many }) => ({
+	split: one(splits, {
+		fields: [splitItemGroups.splitId],
+		references: [splits.id],
+	}),
+	receipt: one(receipts, {
+		fields: [splitItemGroups.receiptId],
+		references: [receipts.id],
+	}),
+	items: many(splitItems),
 }))
 
 export const splitItemParticipantsRelations = relations(splitItemParticipants, ({ one }) => ({

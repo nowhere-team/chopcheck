@@ -22,17 +22,16 @@
 	let isLongPress = false
 
 	const divisionLabels: Record<string, string> = {
-		equal: m.division_method_equal(), // legacy fallback
-		shares: m.division_method_shares(), // legacy fallback
+		equal: m.division_method_equal(),
+		shares: m.division_method_shares(),
 		by_fraction: m.division_method_shares(),
 		per_unit: m.division_method_per_unit(),
 		by_amount: m.division_method_by_amount(),
 		custom: m.division_method_custom(),
-		fixed: m.division_method_fixed(), // legacy fallback
-		proportional: m.division_method_proportional() // legacy fallback
+		fixed: m.division_method_fixed(),
+		proportional: m.division_method_proportional()
 	}
 
-	// Убираем лишние нули (1.000 -> 1, 1.500 -> 1.5)
 	const formattedQuantity = $derived(parseFloat(item.quantity).toString())
 
 	function handleClick(e: MouseEvent) {
@@ -183,6 +182,7 @@
 		display: flex;
 		flex-direction: column;
 	}
+
 	.name {
 		font-size: var(--text-base);
 		font-weight: var(--font-medium);
@@ -191,10 +191,12 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+
 	.meta {
 		font-size: var(--text-sm);
 		color: var(--color-text-tertiary);
 	}
+
 	.price {
 		font-size: var(--text-base);
 		font-weight: var(--font-medium);

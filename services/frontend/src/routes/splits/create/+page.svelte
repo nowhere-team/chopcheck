@@ -5,7 +5,7 @@
 	import { fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
-	import type { DraftItem, Participant, SplitItem } from '$lib/services/api/types'
+	import type { DraftItem, ItemGroup, Participant, SplitItem } from '$lib/services/api/types'
 	import { receiptScanner } from '$lib/services/receipts/scanner.svelte'
 	import {
 		fileToBase64,
@@ -17,8 +17,8 @@
 	import { AvatarStack, Button, Divider, ExpandableCard } from '$lib/ui/components'
 	import ReceiptLoader from '$lib/ui/features/receipts/ReceiptLoader.svelte'
 	import ScannerSheet from '$lib/ui/features/receipts/ScannerSheet.svelte'
-	import ItemCard from '$lib/ui/features/splits/ItemCard.svelte'
 	import ItemEditForm from '$lib/ui/features/splits/ItemEditForm.svelte'
+	import ItemsList from '$lib/ui/features/splits/ItemsList.svelte'
 	import ParticipantsSheet from '$lib/ui/features/splits/ParticipantsSheet.svelte'
 	import { toast } from '$lib/ui/features/toasts'
 	import { EditableEmoji, EditableText } from '$lib/ui/forms'
@@ -27,7 +27,6 @@
 	import { BottomSheet } from '$lib/ui/overlays'
 
 	const splitsService = getSplitsService()
-	// Using persisted singleton scanner instead of new instance
 	const scanner = receiptScanner
 
 	const draft = $derived(splitsService.draft)
@@ -42,11 +41,12 @@
 	)
 	const participants = $derived<Participant[]>(draft.current?.participants ?? [])
 	const items = $derived<SplitItem[]>(draft.current?.items ?? [])
+	const itemGroups = $derived<ItemGroup[]>(draft.current?.itemGroups ?? [])
 
+	let collapsedGroups = $state<Set<string>>(new Set())
 	let draftSplitEmoji = $state('🍔')
 	let draftSplitName = $state('')
 
-	// consolidated watcher for external updates
 	watch(
 		() => [draftData.icon, draftData.name],
 		([icon, name]) => {
@@ -55,7 +55,6 @@
 		}
 	)
 
-	// save ONLY metadata (name, icon) - debounced
 	const saveMetadata = useDebounce(async () => {
 		await splitsService.createOrUpdate({
 			id: draftData.id,
@@ -65,7 +64,6 @@
 		})
 	}, 800)
 
-	// fallback for full sync
 	const saveDraftFull = useDebounce(async (overrideItems?: SplitItem[]) => {
 		const currentItems = overrideItems ?? items
 		const itemsDto = currentItems.map(i => ({
@@ -91,6 +89,8 @@
 	let isScannerSheetOpen = $state(false)
 	let isItemEditSheetOpen = $state(false)
 	let editingItem = $state<DraftItem | null>(null)
+	let isGroupEditSheetOpen = $state(false)
+	let editingGroup = $state<{ id?: string; name: string; icon: string } | null>(null)
 
 	let selectionMode = $state(false)
 	let selectedIds = $state<Set<string>>(new Set())
@@ -160,9 +160,7 @@
 		if (selectedIds.size === 0) return
 		const newItems = items.filter(i => !selectedIds.has(i.id))
 		handleCancelSelection()
-
 		splitsService.updateDraftLocal({ items: newItems })
-
 		await saveDraftFull(newItems)
 		await saveDraftFull.runScheduledNow()
 	}
@@ -200,39 +198,32 @@
 			} as SplitItem)
 		}
 
-		// 1. optimistic update
 		splitsService.updateDraftLocal({ items: newItems })
-
-		// 2. unblock ui immediately
 		isItemEditSheetOpen = false
 		editingItem = null
-
-		// 3. background Sync (fire & forget)
 		;(async () => {
 			try {
 				if (!currentDraftId) {
 					await saveDraftFull(newItems)
 					await saveDraftFull.runScheduledNow()
+				} else if (isNew) {
+					await splitsService.addItem(currentDraftId, {
+						name: itemToSave.name,
+						price: itemToSave.price,
+						quantity: String(itemToSave.quantity),
+						type: itemToSave.type,
+						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+						icon: itemToSave.icon
+					})
 				} else {
-					if (isNew) {
-						await splitsService.addItem(currentDraftId, {
-							name: itemToSave.name,
-							price: itemToSave.price,
-							quantity: String(itemToSave.quantity),
-							type: itemToSave.type,
-							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-							icon: itemToSave.icon
-						})
-					} else {
-						await splitsService.updateItem(currentDraftId, tempId, {
-							name: itemToSave.name,
-							price: itemToSave.price,
-							quantity: String(itemToSave.quantity),
-							type: itemToSave.type,
-							defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-							icon: itemToSave.icon
-						})
-					}
+					await splitsService.updateItem(currentDraftId, tempId, {
+						name: itemToSave.name,
+						price: itemToSave.price,
+						quantity: String(itemToSave.quantity),
+						type: itemToSave.type,
+						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
+						icon: itemToSave.icon
+					})
 				}
 			} catch (e) {
 				console.error('Failed to save item', e)
@@ -251,17 +242,12 @@
 
 		const itemId = editingItem.id
 		const currentDraftId = draftData.id
-
 		const newItems = items.filter(i => i.id !== itemId)
 
-		// 1. optimistic
 		splitsService.updateDraftLocal({ items: newItems })
-
-		// 2. unblock UI
 		isItemEditSheetOpen = false
 		editingItem = null
 
-		// 3. background sync
 		if (currentDraftId && !itemId.startsWith('temp-')) {
 			;(async () => {
 				try {
@@ -272,6 +258,69 @@
 					await splitsService.draft.refetch()
 				}
 			})()
+		}
+	}
+
+	function handleToggleGroup(groupId: string) {
+		const newSet = new SvelteSet(collapsedGroups)
+		if (newSet.has(groupId)) {
+			newSet.delete(groupId)
+		} else {
+			newSet.add(groupId)
+		}
+		collapsedGroups = newSet
+	}
+
+	function handleEditGroup(group: ItemGroup) {
+		editingGroup = { id: group.id, name: group.name, icon: group.icon || '📦' }
+		isGroupEditSheetOpen = true
+	}
+
+	async function handleDeleteGroup(group: ItemGroup) {
+		const currentDraftId = draftData.id
+		if (!currentDraftId) return
+
+		const newItems = items.filter(i => i.groupId !== group.id)
+		const newGroups = itemGroups.filter(g => g.id !== group.id)
+
+		splitsService.updateDraftLocal({ items: newItems, itemGroups: newGroups })
+
+		try {
+			await splitsService.deleteGroup(currentDraftId, group.id)
+		} catch (e) {
+			console.error('Failed to delete group', e)
+			toast.error(m.error_saving())
+			await splitsService.draft.refetch()
+		}
+	}
+
+	async function handleSaveGroup() {
+		if (!editingGroup) return
+
+		const currentDraftId = draftData.id
+		if (!currentDraftId) return
+
+		const groupData = { ...editingGroup }
+		isGroupEditSheetOpen = false
+		editingGroup = null
+
+		try {
+			if (groupData.id) {
+				await splitsService.updateGroup(currentDraftId, groupData.id, {
+					name: groupData.name,
+					icon: groupData.icon
+				})
+			} else {
+				await splitsService.createGroup(currentDraftId, {
+					name: groupData.name,
+					icon: groupData.icon,
+					type: 'custom'
+				})
+			}
+		} catch (e) {
+			console.error('Failed to save group', e)
+			toast.error(m.error_saving())
+			await splitsService.draft.refetch()
 		}
 	}
 
@@ -336,7 +385,6 @@
 							}
 
 							scanner.saved()
-							// scanner.reset is handled internally by class after delay
 						}
 					} catch {
 						scanner.failSave(m.error_save_data_failed())
@@ -431,17 +479,18 @@
 			</div>
 		{/if}
 
-		{#if items.length > 0}
-			{#each items as item (item.id)}
-				<ItemCard
-					{item}
-					{selectionMode}
-					selected={selectedIds.has(item.id)}
-					onclick={() => handleItemClick(item)}
-					onlongpress={() => handleItemLongPress(item)}
-				/>
-			{/each}
-		{/if}
+		<ItemsList
+			{items}
+			{itemGroups}
+			{selectionMode}
+			{selectedIds}
+			{collapsedGroups}
+			onItemClick={handleItemClick}
+			onItemLongPress={handleItemLongPress}
+			onToggleGroup={handleToggleGroup}
+			onEditGroup={handleEditGroup}
+			onDeleteGroup={handleDeleteGroup}
+		/>
 
 		<div class="action-buttons">
 			<Button
@@ -494,6 +543,34 @@
 	{/if}
 </BottomSheet>
 
+<BottomSheet
+	bind:open={isGroupEditSheetOpen}
+	title={editingGroup?.id ? m.group_edit_title() : m.group_new_title()}
+>
+	{#if editingGroup}
+		<div class="group-edit-form">
+			<div class="form-field">
+				<label for="group-name">{m.item_name_label()}</label>
+				<input
+					id="group-name"
+					type="text"
+					bind:value={editingGroup.name}
+					placeholder={m.group_name_placeholder()}
+					class="form-input"
+				/>
+			</div>
+			<div class="form-actions">
+				<Button variant="secondary" onclick={() => (isGroupEditSheetOpen = false)}>
+					{m.action_cancel()}
+				</Button>
+				<Button variant="primary" onclick={handleSaveGroup}>
+					{m.action_save()}
+				</Button>
+			</div>
+		</div>
+	{/if}
+</BottomSheet>
+
 <style>
 	.split-header {
 		display: flex;
@@ -529,5 +606,45 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: var(--space-2);
+	}
+
+	.group-edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.form-field label {
+		font-size: var(--text-sm);
+		font-weight: var(--font-medium);
+		color: var(--color-text-secondary);
+	}
+
+	.form-input {
+		width: 100%;
+		padding: var(--space-3);
+		background: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		font-size: var(--text-base);
+		color: var(--color-text);
+		box-sizing: border-box;
+	}
+
+	.form-input:focus {
+		border-color: var(--color-primary);
+		outline: none;
+	}
+
+	.form-actions {
+		display: flex;
+		gap: var(--space-2);
+		justify-content: flex-end;
 	}
 </style>

@@ -1,6 +1,7 @@
 ﻿import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
 import type {
 	AddPaymentMethodToSplitDto,
+	CreateItemGroupDto,
 	CreateSplitDto,
 	Item,
 	Participant,
@@ -11,6 +12,7 @@ import type {
 	SplitData,
 	SplitResponse,
 	SplitsByPeriod,
+	UpdateItemGroupDto,
 } from '@/common/types'
 import type { DivisionMethod } from '@/platform/database/schema/enums'
 import type { Logger } from '@/platform/logger'
@@ -23,12 +25,14 @@ import type {
 	SplitsRepository,
 	StatsRepository,
 } from '@/repositories'
+import type { ItemGroupsRepository } from '@/repositories/item-groups'
 import type { CalculationService } from '@/services/calculation'
 
 export class SplitsService {
 	constructor(
 		private readonly splits: SplitsRepository,
 		private readonly items: ItemsRepository,
+		private readonly itemGroups: ItemGroupsRepository,
 		private readonly participants: ParticipantsRepository,
 		private readonly paymentMethods: PaymentMethodsRepository,
 		private readonly stats: StatsRepository,
@@ -86,7 +90,9 @@ export class SplitsService {
 			for (const receiptId of dto.receiptIds) {
 				await this.splits.linkReceipt(split.id, receiptId)
 			}
-			await this.importItemsFromReceipts(split.id, dto.receiptIds)
+			for (const receiptId of dto.receiptIds) {
+				await this.importItemsFromReceipt(split.id, receiptId)
+			}
 		}
 
 		this.logger.info('split created', { splitId: split.id })
@@ -176,7 +182,7 @@ export class SplitsService {
 
 	async addItems(
 		splitId: string,
-		userId: string,
+		_userId: string,
 		// Update type definition: combine Pick with an optional/nullable icon to satisfy Zod output
 		items: Array<
 			Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & { icon?: string | null }
@@ -239,12 +245,13 @@ export class SplitsService {
 
 		await this.participants.selectItems(participantId, splitId, selections)
 
-		const [items, participants] = await Promise.all([
+		const [items, itemGroups, participants] = await Promise.all([
 			this.items.findBySplitId(splitId),
+			this.itemGroups.findBySplitId(splitId),
 			this.participants.findBySplitId(splitId),
 		])
 
-		const calculated = this.calc.calculate({ split, items, participants })
+		const calculated = this.calc.calculate({ split, items, itemGroups, participants })
 
 		await this.participants.updateCalculations(
 			splitId,
@@ -319,7 +326,7 @@ export class SplitsService {
 		if (split.ownerId !== userId) throw new ForbiddenError('only owner can link receipts')
 
 		await this.splits.linkReceipt(splitId, receiptId)
-		await this.importItemsFromReceipts(splitId, [receiptId])
+		await this.importItemsFromReceipt(splitId, receiptId)
 
 		return (await this.getById(splitId, true))!
 	}
@@ -333,16 +340,62 @@ export class SplitsService {
 		return (await this.getById(splitId, true))!
 	}
 
+	async createItemGroup(splitId: string, userId: string, dto: CreateItemGroupDto): Promise<SplitResponse> {
+		const split = await this.splits.findById(splitId)
+		if (!split) throw new NotFoundError('split not found')
+		if (split.ownerId !== userId) throw new ForbiddenError('only owner can create groups')
+
+		await this.itemGroups.create(splitId, dto)
+		this.logger.info('item group created', { splitId })
+
+		return (await this.getById(splitId, false))!
+	}
+
+	async updateItemGroup(
+		splitId: string,
+		groupId: string,
+		userId: string,
+		dto: UpdateItemGroupDto,
+	): Promise<SplitResponse> {
+		const split = await this.splits.findById(splitId)
+		if (!split) throw new NotFoundError('split not found')
+		if (split.ownerId !== userId) throw new ForbiddenError('only owner can update groups')
+
+		const group = await this.itemGroups.findById(groupId)
+		if (!group || group.splitId !== splitId) throw new NotFoundError('group not found')
+
+		await this.itemGroups.update(groupId, splitId, dto)
+		this.logger.info('item group updated', { splitId, groupId })
+
+		return (await this.getById(splitId, false))!
+	}
+
+	async deleteItemGroup(splitId: string, groupId: string, userId: string): Promise<SplitResponse> {
+		const split = await this.splits.findById(splitId)
+		if (!split) throw new NotFoundError('split not found')
+		if (split.ownerId !== userId) throw new ForbiddenError('only owner can delete groups')
+
+		const group = await this.itemGroups.findById(groupId)
+		if (!group || group.splitId !== splitId) throw new NotFoundError('group not found')
+
+		await this.items.deleteAllInGroup(splitId, groupId)
+		await this.itemGroups.softDelete(groupId, splitId)
+		this.logger.info('item group deleted', { splitId, groupId })
+
+		return (await this.getById(splitId, false))!
+	}
+
 	private async buildResponse(split: Split | null, includeCalculations: boolean): Promise<SplitResponse | null> {
 		if (!split) return null
 
-		const [items, participants, receiptIds] = await Promise.all([
+		const [items, itemGroups, participants, receiptIds] = await Promise.all([
 			this.items.findBySplitId(split.id),
+			this.itemGroups.findBySplitId(split.id),
 			this.participants.findBySplitId(split.id),
 			this.splits.getReceiptIds(split.id),
 		])
 
-		const response: SplitResponse = { split, items, participants }
+		const response: SplitResponse = { split, items, itemGroups, participants }
 
 		if (receiptIds.length > 0) {
 			const receipts = await this.receipts.findByIds(receiptIds)
@@ -355,7 +408,7 @@ export class SplitsService {
 		}
 
 		if (includeCalculations) {
-			response.calculations = this.buildCalculations({ split, items, participants })
+			response.calculations = this.buildCalculations({ split, items, itemGroups, participants })
 		}
 
 		return response
@@ -398,23 +451,30 @@ export class SplitsService {
 		}
 	}
 
-	private async importItemsFromReceipts(splitId: string, receiptIds: string[]): Promise<void> {
-		for (const receiptId of receiptIds) {
-			const receiptItems = await this.receipts.getItems(receiptId)
+	private async importItemsFromReceipt(splitId: string, receiptId: string): Promise<void> {
+		const receipt = await this.receipts.findById(receiptId)
+		if (!receipt) return
+		const group = await this.itemGroups.create(splitId, {
+			name: receipt.placeName || 'Receipt',
+			type: 'receipt',
+			icon: '🧾',
+			receiptId,
+		})
 
-			const newItems = receiptItems.map(ri => ({
-				name: ri.name || ri.rawName,
-				price: ri.price, // FIX: Use unit price, NOT sum
-				type: 'product' as const,
-				quantity: ri.quantity,
-				defaultDivisionMethod: (ri.suggestedSplitMethod as DivisionMethod) || 'by_fraction',
-				receiptItemId: ri.id,
-				icon: ri.emoji || undefined,
-			}))
+		const receiptItems = await this.receipts.getItems(receiptId)
 
-			if (newItems.length > 0) {
-				await this.items.createMany(splitId, newItems)
-			}
+		const newItems = receiptItems.map(ri => ({
+			name: ri.name || ri.rawName,
+			price: ri.price,
+			type: 'product' as const,
+			quantity: ri.quantity,
+			defaultDivisionMethod: (ri.suggestedSplitMethod as DivisionMethod) || 'by_fraction',
+			receiptItemId: ri.id,
+			icon: ri.emoji || undefined,
+		}))
+
+		if (newItems.length > 0) {
+			await this.items.createMany(splitId, newItems, group.id)
 		}
 	}
 }
