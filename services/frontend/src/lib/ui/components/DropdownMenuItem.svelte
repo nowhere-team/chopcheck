@@ -34,9 +34,9 @@
 	.menu-item {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		padding: var(--space-2) var(--space-3);
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--color-text);
 		border-radius: var(--radius-md);
 		cursor: pointer;

@@ -64,7 +64,7 @@
 	}
 
 	.default {
-		background: var(--color-bg-elevated);
+		background: var(--color-bg);
 		border: 1px solid var(--color-border);
 	}
 
