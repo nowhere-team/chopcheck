@@ -9,9 +9,9 @@
 		children?: Snippet
 	}
 
-	const { title, centered = false, navPadding = false, safeTop = 0.8, children }: Props = $props()
+	const { title, centered = false, navPadding = false, safeTop = 1, children }: Props = $props()
 
-	const topMult = typeof safeTop === 'number' ? safeTop : safeTop ? 0.8 : 0
+	const topMult = typeof safeTop === 'number' ? safeTop : safeTop ? 1 : 0
 </script>
 
 <div class="page" class:centered class:with-nav={navPadding} style:--pt-mult={topMult}>
