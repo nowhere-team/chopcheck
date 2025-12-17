@@ -5,11 +5,15 @@
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
-	import type { ItemGroup } from '$lib/services/api/types'
+	import type { ItemGroup, WarningCode } from '$lib/services/api/types'
+	import { dismissWarning, getDismissedCodes } from '$lib/state/stores/dismissed.svelte'
 	import { Badge, Dropdown, DropdownMenu, DropdownMenuItem, Emoji } from '$lib/ui/components'
+	import WarningAlert from '$lib/ui/features/splits/WarningAlert.svelte'
+	import WarningBadge from '$lib/ui/features/splits/WarningBadge.svelte'
 
 	interface Props {
 		group: ItemGroup
+		splitId: string
 		itemsCount: number
 		collapsed?: boolean
 		children?: Snippet
@@ -20,6 +24,7 @@
 
 	const {
 		group,
+		splitId,
 		itemsCount,
 		collapsed = false,
 		children,
@@ -31,6 +36,13 @@
 	const platform = getPlatform()
 	let menuOpen = $state(false)
 	let menuAnchor = $state<HTMLButtonElement | undefined>()
+
+	const generalWarnings = $derived((group.warnings ?? []).filter(w => w.itemIndex == null))
+
+	const dismissedCodes = $derived(getDismissedCodes(splitId, group.id))
+
+	const visibleWarnings = $derived(generalWarnings.filter(w => !dismissedCodes.includes(w.code)))
+	const hasVisibleWarnings = $derived(visibleWarnings.length > 0)
 
 	function getDefaultIcon(type: string): string {
 		switch (type) {
@@ -74,6 +86,10 @@
 		menuOpen = false
 		ondelete?.()
 	}
+
+	function handleDismissWarning(code: WarningCode) {
+		dismissWarning(splitId, code, group.id)
+	}
 </script>
 
 <div class="item-group">
@@ -92,6 +108,9 @@
 				<div class="badge-wrapper">
 					<Badge count={itemsCount} size={24} glass={false} />
 				</div>
+			{/if}
+			{#if hasVisibleWarnings}
+				<WarningBadge count={visibleWarnings.length} size={16} />
 			{/if}
 		</span>
 
@@ -124,18 +143,26 @@
 				</DropdownMenu>
 			</Dropdown>
 
-			<div class="caret-wrapper">
+			<span class="caret-wrapper">
 				<span class="caret" class:collapsed>
 					<CaretDown size={18} weight="bold" />
 				</span>
-			</div>
+			</span>
 		</span>
 	</div>
 
-	{#if !collapsed && children}
-		<div class="group-items" transition:slide={{ duration: 200 }}>
-			{@render children()}
-		</div>
+	{#if !collapsed}
+		{#if hasVisibleWarnings}
+			<div class="group-warnings" transition:slide={{ duration: 150 }}>
+				<WarningAlert warnings={visibleWarnings} onDismiss={handleDismissWarning} />
+			</div>
+		{/if}
+
+		{#if children}
+			<div class="group-items" transition:slide={{ duration: 200 }}>
+				{@render children()}
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -190,7 +217,6 @@
 	}
 
 	.badge-wrapper {
-		margin-right: var(--space-2);
 		display: flex;
 		align-items: center;
 	}
@@ -236,6 +262,10 @@
 
 	.caret.collapsed {
 		transform: rotate(-90deg);
+	}
+
+	.group-warnings {
+		padding: 0 var(--space-4) var(--space-3);
 	}
 
 	.group-items {

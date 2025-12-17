@@ -176,6 +176,7 @@ export const receiptItems = pgTable(
 
 		// catalog reference
 		catalogItemId: uuid('catalog_item_id'),
+		warnings: jsonb('warnings').default('[]'),
 
 		createdAt: timestamptz('created_at').notNull().defaultNow(),
 	},
@@ -359,6 +360,9 @@ export const splitItems = pgTable(
 
 		defaultDivisionMethod: divisionMethodEnum('default_division_method').notNull().default('by_fraction'),
 
+		// warnings persisted to split item
+		warnings: jsonb('warnings').default('[]'),
+
 		isDeleted: boolean('is_deleted').notNull().default(false),
 		deletedAt: timestamptz('deleted_at'),
 
@@ -401,6 +405,9 @@ export const splitItemGroups = pgTable(
 
 		displayOrder: integer('display_order').notNull().default(0),
 		isCollapsed: boolean('is_collapsed').notNull().default(false),
+
+		// general warnings for the whole group (receipt)
+		warnings: jsonb('warnings').default('[]'),
 
 		isDeleted: boolean('is_deleted').notNull().default(false),
 		deletedAt: timestamptz('deleted_at'),

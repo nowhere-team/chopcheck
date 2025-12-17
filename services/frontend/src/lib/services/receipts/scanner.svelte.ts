@@ -10,6 +10,7 @@ export interface ScannerContext {
 	lastItem?: string
 	error?: string
 	receiptData?: ReceiptCompleteData
+	isCached?: boolean
 }
 
 // Singleton state class
@@ -17,7 +18,8 @@ class ReceiptScannerManager {
 	private _state = $state<ScannerState>('idle')
 
 	context = $state<ScannerContext>({
-		itemsCount: 0
+		itemsCount: 0,
+		isCached: false
 	})
 
 	get state(): ScannerState {
@@ -92,6 +94,9 @@ class ReceiptScannerManager {
 
 			case 'completed': {
 				this.context.receiptData = event.data
+				if (event.data.cached) {
+					this.context.isCached = true
+				}
 				if (this._state === 'connecting' || this._state === 'processing') {
 					this._state = 'saving'
 				}
@@ -105,7 +110,7 @@ class ReceiptScannerManager {
 			}
 
 			case 'stream_end': {
-				// Problem 2 fix: if connection closes without full completion
+				// fix: if connection closes without full completion
 				if (this._state === 'connecting' || this._state === 'processing') {
 					if (!this.context.receiptData) {
 						this.context.error = 'Кажется, распознавание чека было прервано'
@@ -153,7 +158,8 @@ class ReceiptScannerManager {
 			totalItems: undefined,
 			lastItem: undefined,
 			error: undefined,
-			receiptData: undefined
+			receiptData: undefined,
+			isCached: false
 		}
 	}
 }

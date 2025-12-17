@@ -10,6 +10,7 @@ type NewItemGroup = Pick<ItemGroup, 'name'> & {
 	type?: ItemGroupType
 	icon?: string
 	receiptId?: string
+	warnings?: unknown
 }
 
 export class ItemGroupsRepository extends BaseRepository {
@@ -57,6 +58,7 @@ export class ItemGroupsRepository extends BaseRepository {
 				name: data.name,
 				icon: data.icon,
 				displayOrder: maxOrder + 1,
+				warnings: (data.warnings as any) || [],
 			})
 			.returning()
 

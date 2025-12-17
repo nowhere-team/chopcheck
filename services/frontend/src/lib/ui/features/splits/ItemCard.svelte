@@ -3,19 +3,31 @@
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
-	import type { SplitItem } from '$lib/services/api/types'
+	import type { SplitItem, WarningCode } from '$lib/services/api/types'
 	import { formatPrice } from '$lib/shared/money'
+	import { dismissWarning, getDismissedCodes } from '$lib/state/stores/dismissed.svelte'
 	import { Avatar, Card } from '$lib/ui/components'
+	import WarningAlert from '$lib/ui/features/splits/WarningAlert.svelte'
+	import WarningBadge from '$lib/ui/features/splits/WarningBadge.svelte'
 
 	interface Props {
 		item: SplitItem
+		splitId: string
 		selected?: boolean
 		selectionMode?: boolean
 		onclick?: () => void
 		onlongpress?: () => void
 	}
 
-	const { item, selected = false, selectionMode = false, onclick, onlongpress }: Props = $props()
+	const {
+		item,
+		splitId,
+		selected = false,
+		selectionMode = false,
+		onclick,
+		onlongpress
+	}: Props = $props()
+
 	const platform = getPlatform()
 
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null
@@ -32,7 +44,26 @@
 		proportional: m.division_method_proportional()
 	}
 
+	const unitLabels: Record<string, string> = {
+		piece: m.quantity_measurement_short(),
+		g: 'г',
+		kg: 'кг',
+		ml: 'мл',
+		l: 'л',
+		pack: 'уп',
+		portion: 'порц',
+		set: 'сет'
+	}
+
 	const formattedQuantity = $derived(parseFloat(item.quantity).toString())
+	const unitLabel = $derived(unitLabels[item.unit || 'piece'] || item.unit || '')
+
+	const dismissedCodes = $derived(getDismissedCodes(splitId, item.id))
+
+	const visibleWarnings = $derived(
+		(item.warnings ?? []).filter(w => !dismissedCodes.includes(w.code))
+	)
+	const hasVisibleWarnings = $derived(visibleWarnings.length > 0)
 
 	function handleClick(e: MouseEvent) {
 		if (isLongPress) {
@@ -71,13 +102,17 @@
 	function handleContextMenu(e: Event) {
 		e.preventDefault()
 	}
+
+	function handleDismissWarning(code: WarningCode) {
+		dismissWarning(splitId, code, item.id)
+	}
 </script>
 
 <div class="item-card-wrapper" oncontextmenu={handleContextMenu} role="presentation">
 	<Card
 		interactive
 		onclick={handleClick}
-		class="item-card no-callout"
+		class="item-card no-callout {hasVisibleWarnings ? 'has-warnings' : ''}"
 		ontouchstart={handleTouchStart}
 		ontouchend={handleTouchEnd}
 		ontouchmove={handleTouchMove}
@@ -104,16 +139,26 @@
 				<span class="name">{item.name}</span>
 				<span class="meta">
 					{formattedQuantity}
-					{m.quantity_measurement_short()} · {divisionLabels[
-						item.defaultDivisionMethod
-					] ?? item.defaultDivisionMethod}
+					{unitLabel} · {divisionLabels[item.defaultDivisionMethod] ??
+						item.defaultDivisionMethod}
 				</span>
 			</div>
 
-			<div class="price">
-				{formatPrice(item.price)}
+			<div class="right-section">
+				{#if hasVisibleWarnings}
+					<WarningBadge count={visibleWarnings.length} size={18} />
+				{/if}
+				<div class="price">
+					{formatPrice(item.price)}
+				</div>
 			</div>
 		</div>
+
+		{#if hasVisibleWarnings}
+			<div class="warnings-section">
+				<WarningAlert warnings={visibleWarnings} compact onDismiss={handleDismissWarning} />
+			</div>
+		{/if}
 	</Card>
 </div>
 
@@ -129,6 +174,10 @@
 			background 0.15s var(--ease-out);
 		user-select: none;
 		-webkit-user-select: none;
+	}
+
+	:global(.item-card.has-warnings) {
+		padding-bottom: var(--space-2) !important;
 	}
 
 	:global(.item-card.no-callout) {
@@ -197,11 +246,22 @@
 		color: var(--color-text-tertiary);
 	}
 
+	.right-section {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: var(--space-1);
+		flex-shrink: 0;
+	}
+
 	.price {
 		font-size: var(--text-base);
 		font-weight: var(--font-medium);
 		color: var(--color-text);
 		font-variant-numeric: tabular-nums;
-		flex-shrink: 0;
+	}
+
+	.warnings-section {
+		margin-top: var(--space-2);
 	}
 </style>

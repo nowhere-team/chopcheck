@@ -1,4 +1,6 @@
-﻿import type { CatalogClient, EnrichResponse } from '@/platform/catalog'
+﻿// noinspection DuplicatedCode
+
+import type { CatalogClient, EnrichResponse, Warning } from '@/platform/catalog'
 import type { FnsClient, FnsReceiptData } from '@/platform/fns'
 import type { Logger } from '@/platform/logger'
 import type { SpanContext } from '@/platform/tracing'
@@ -313,6 +315,7 @@ export class ReceiptsService {
 				suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
 				displayOrder: i,
 				catalogItemId: ei.id,
+				warnings: this.getItemWarnings(enriched, i),
 			})),
 		)
 	}
@@ -335,6 +338,7 @@ export class ReceiptsService {
 						unit: ei.unit,
 						suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
 						catalogItemId: ei.id,
+						warnings: this.getItemWarnings(enriched, i),
 					})
 				}
 			}
@@ -380,5 +384,9 @@ export class ReceiptsService {
 		const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' })
 		const first = segmenter.segment(emoji)[Symbol.iterator]().next().value
 		return first?.segment
+	}
+
+	private getItemWarnings(enriched: EnrichResponse, index: number): Warning[] {
+		return enriched.warnings?.filter(w => w.itemIndex === index) || []
 	}
 }

@@ -10,6 +10,8 @@ type NewItem = Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivis
 	groupId?: string
 	receiptItemId?: string
 	icon?: string
+	unit?: string
+	warnings?: unknown
 }
 
 export class ItemsRepository extends BaseRepository {
@@ -50,6 +52,7 @@ export class ItemsRepository extends BaseRepository {
 					icon: item.icon,
 					displayOrder: index,
 					defaultDivisionMethod: item.defaultDivisionMethod || 'by_fraction',
+					warnings: (item.warnings as any) || [],
 				})),
 			)
 			.returning()
