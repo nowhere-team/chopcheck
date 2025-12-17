@@ -2,6 +2,7 @@
 	import { Warning, X } from 'phosphor-svelte'
 	import { slide } from 'svelte/transition'
 
+	import { m } from '$lib/i18n'
 	import type { Warning as WarningType, WarningCode } from '$lib/services/api/types'
 
 	interface Props {
@@ -14,18 +15,18 @@
 	const { warnings, dismissible = true, compact = false, onDismiss }: Props = $props()
 
 	const warningLabels: Record<WarningCode, string> = {
-		low_confidence_item: 'Низкая уверенность распознавания',
-		possible_ocr_error: 'Возможная ошибка распознавания',
-		price_anomaly: 'Необычная цена',
-		missing_price: 'Цена не найдена',
-		missing_quantity: 'Количество не найдено',
-		multiple_alcohol_items: 'Несколько алкогольных позиций',
-		total_mismatch: 'Сумма не сходится',
-		unknown_category: 'Неизвестная категория',
-		duplicate_item: 'Возможный дубликат',
-		incomplete_place_data: 'Неполные данные о магазине',
-		unreadable_receipt: 'Чек плохо читается',
-		partial_extraction: 'Распознано частично'
+		low_confidence_item: m.warning_low_confidence_item(),
+		possible_ocr_error: m.warning_possible_ocr_error(),
+		price_anomaly: m.warning_price_anomaly(),
+		missing_price: m.warning_missing_price(),
+		missing_quantity: m.warning_missing_quantity(),
+		multiple_alcohol_items: m.warning_multiple_alcohol_items(),
+		total_mismatch: m.warning_total_mismatch(),
+		unknown_category: m.warning_unknown_category(),
+		duplicate_item: m.warning_duplicate_item(),
+		incomplete_place_data: m.warning_incomplete_place_data(),
+		unreadable_receipt: m.warning_unreadable_receipt(),
+		partial_extraction: m.warning_partial_extraction()
 	}
 
 	function handleDismiss(code: WarningCode, e: MouseEvent) {
@@ -52,7 +53,7 @@
 						type="button"
 						class="dismiss-btn"
 						onclick={e => handleDismiss(warning.code, e)}
-						aria-label="Скрыть"
+						aria-label={m.warning_dismiss_label()}
 					>
 						<X size={compact ? 12 : 14} weight="bold" />
 					</button>
