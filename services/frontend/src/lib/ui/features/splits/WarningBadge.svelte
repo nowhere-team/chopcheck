@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Warning } from 'phosphor-svelte'
 
+	import { m } from '$lib/i18n'
+
 	interface Props {
 		count?: number
 		size?: number
@@ -9,7 +11,7 @@
 	const { count = 1, size = 16 }: Props = $props()
 </script>
 
-<div class="warning-badge" title="Есть предупреждения">
+<div class="warning-badge" title={m.warning_badge_title()}>
 	<Warning {size} weight="fill" />
 	{#if count > 1}
 		<span class="count">{count}</span>
