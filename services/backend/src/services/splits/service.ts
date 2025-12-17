@@ -454,11 +454,18 @@ export class SplitsService {
 	private async importItemsFromReceipt(splitId: string, receiptId: string): Promise<void> {
 		const receipt = await this.receipts.findById(receiptId)
 		if (!receipt) return
+
+		const generalWarnings =
+			(receipt.enrichmentData as any)?.warnings?.filter(
+				(w: any) => w.itemIndex === undefined || w.itemIndex === null,
+			) || []
+
 		const group = await this.itemGroups.create(splitId, {
 			name: receipt.placeName || 'Receipt',
 			type: 'receipt',
 			icon: '🧾',
 			receiptId,
+			...(generalWarnings.length > 0 && { warnings: generalWarnings }),
 		})
 
 		const receiptItems = await this.receipts.getItems(receiptId)
@@ -471,6 +478,7 @@ export class SplitsService {
 			defaultDivisionMethod: (ri.suggestedSplitMethod as DivisionMethod) || 'by_fraction',
 			receiptItemId: ri.id,
 			icon: ri.emoji || undefined,
+			warnings: ri.warnings,
 		}))
 
 		if (newItems.length > 0) {

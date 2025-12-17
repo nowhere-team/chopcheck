@@ -22,6 +22,13 @@
 			"when": 1765868809580,
 			"tag": "0002_item_groups",
 			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1766006140040,
+			"tag": "0003_receipt_warnings",
+			"breakpoints": true
 		}
 	]
 }

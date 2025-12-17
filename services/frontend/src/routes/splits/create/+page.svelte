@@ -482,6 +482,7 @@
 		<ItemsList
 			{items}
 			{itemGroups}
+			splitId={draftData.id ?? ''}
 			{selectionMode}
 			{selectedIds}
 			{collapsedGroups}

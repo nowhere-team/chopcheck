@@ -9,6 +9,7 @@
 	interface Props {
 		items: SplitItem[]
 		itemGroups: ItemGroup[]
+		splitId: string
 		selectionMode?: boolean
 		selectedIds?: Set<string>
 		collapsedGroups?: Set<string>
@@ -22,6 +23,7 @@
 	const {
 		items,
 		itemGroups,
+		splitId,
 		selectionMode = false,
 		selectedIds = new Set(),
 		collapsedGroups = new Set(),
@@ -56,6 +58,7 @@
 
 		<ItemGroupCard
 			{group}
+			{splitId}
 			itemsCount={groupItems.length}
 			collapsed={isCollapsed}
 			ontoggle={() => onToggleGroup?.(group.id)}
@@ -65,6 +68,7 @@
 			{#each groupItems as item (item.id)}
 				<ItemCard
 					{item}
+					{splitId}
 					{selectionMode}
 					selected={selectedIds.has(item.id)}
 					onclick={() => onItemClick?.(item)}
@@ -78,6 +82,7 @@
 		{#each ungroupedItems as item (item.id)}
 			<ItemCard
 				{item}
+				{splitId}
 				{selectionMode}
 				selected={selectedIds.has(item.id)}
 				onclick={() => onItemClick?.(item)}
