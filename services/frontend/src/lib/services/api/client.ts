@@ -1,5 +1,5 @@
 import type { PlatformStorage } from '$lib/platform/types'
-import { API_BASE_URL, API_TIMEOUT, STORAGE_KEYS } from '$lib/shared/constants'
+import { API_TIMEOUT, getApiUrl, STORAGE_KEYS } from '$lib/shared/constants'
 import { createLogger } from '$lib/shared/logger'
 import { sleep } from '$lib/shared/time'
 
@@ -16,7 +16,7 @@ class ApiClient {
 	private readonly maxRetries = 2
 	private readonly backoffBase = 300
 
-	constructor(baseUrl: string = API_BASE_URL) {
+	constructor(baseUrl: string = getApiUrl()) {
 		this.baseUrl = baseUrl
 	}
 

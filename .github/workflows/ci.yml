@@ -16,7 +16,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       telegram: ${{ steps.filter.outputs.telegram }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Check which services changed
         uses: dorny/paths-filter@v3
@@ -25,13 +25,13 @@ jobs:
           filters: |
             frontend:
               - 'services/frontend/**'
-              - 'bun.lockb'
+              - 'bun.lock'
             backend:
               - 'services/backend/**'
-              - 'bun.lockb'
+              - 'bun.lock'
             telegram:
               - 'services/telegram/**'
-              - 'bun.lockb'
+              - 'bun.lock'
 
   lint-frontend:
     name: Lint & Type Check (Frontend)
@@ -39,7 +39,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -47,7 +47,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -70,7 +70,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -78,7 +78,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -101,7 +101,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.telegram == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -109,7 +109,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -132,7 +132,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -140,7 +140,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -163,7 +163,7 @@ jobs:
     needs: [changes, lint-frontend]
     if: needs.changes.outputs.frontend == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -171,7 +171,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -194,7 +194,7 @@ jobs:
     needs: [changes, lint-backend, test-integration]
     if: needs.changes.outputs.backend == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -202,7 +202,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -225,7 +225,7 @@ jobs:
     needs: [changes, lint-telegram]
     if: needs.changes.outputs.telegram == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -233,7 +233,7 @@ jobs:
           bun-version: latest
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache

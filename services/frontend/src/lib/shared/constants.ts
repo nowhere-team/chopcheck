@@ -12,6 +12,14 @@ export const API_BASE_URL = import.meta.env.DEV
 	? '/api'
 	: import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
+export const API_SERVER_URL = import.meta.env.SSR
+	? process.env.API_INTERNAL_URL || 'http://backend:8080/api'
+	: ''
+
+export const API_CLIENT_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api'
+
+export const getApiUrl = () => (import.meta.env.SSR ? API_SERVER_URL : API_CLIENT_URL)
+
 export const API_TIMEOUT = 15000
 
 export const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'chopcheck_bot'

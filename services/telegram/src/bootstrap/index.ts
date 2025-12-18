@@ -7,7 +7,8 @@ export interface App {
 	config: Config
 	logger: Logger
 	bot: Bot
-	httpServer: Bun.Server
+	// noinspection TypeScriptValidateGenericTypes
+	httpServer: Bun.Server<never>
 }
 
 export async function start(): Promise<App> {
