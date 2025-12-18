@@ -32,7 +32,7 @@ RUN bun run build
 FROM base AS backend
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/services/backend/node_modules ./services/backend/node_modules
+COPY --from=deps /app/package.json ./package.json
 COPY services/backend ./services/backend
 WORKDIR /app/services/backend
 ENV NODE_ENV=production
@@ -43,7 +43,7 @@ CMD ["bun", "run", "start"]
 FROM base AS telegram
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/services/telegram/node_modules ./services/telegram/node_modules
+COPY --from=deps /app/package.json ./package.json
 COPY services/telegram ./services/telegram
 WORKDIR /app/services/telegram
 ENV NODE_ENV=production
@@ -61,7 +61,10 @@ EXPOSE 3000
 CMD ["bun", "./build/index.js"]
 
 # ===== migrator =====
-FROM deps AS migrator
+FROM base AS migrator
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
+COPY services/backend ./services/backend
 WORKDIR /app/services/backend
-COPY services/backend ./
 CMD ["bun", "run", "db:migrate"]
