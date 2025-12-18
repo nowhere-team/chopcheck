@@ -89,6 +89,9 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: self-hosted
+    concurrency:
+      group: deploy-chopcheck
+      cancel-in-progress: true
 
     steps:
       - name: Checkout
