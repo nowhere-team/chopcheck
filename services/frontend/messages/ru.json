@@ -97,6 +97,15 @@
 	"item_group_none": "Без группы",
 	"item_group_create_new": "Создать группу",
 	"item_group_name_placeholder": "Название группы",
+	"item_group_suggested": "Последняя",
+
+	"error_create_split": "Не удалось создать сплит",
+	"error_save_split": "Не удалось сохранить сплит",
+	"error_add_item": "Не удалось добавить позицию",
+	"error_update_item": "Не удалось обновить позицию",
+	"error_delete_item": "Не удалось удалить позицию",
+	"error_add_payment_method": "Не удалось добавить способ оплаты",
+	"error_remove_payment_method": "Не удалось удалить способ оплаты",
 
 	"quantity_label": "Количество",
 	"quantity_unit": "шт",

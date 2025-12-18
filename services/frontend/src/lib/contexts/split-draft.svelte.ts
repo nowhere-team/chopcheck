@@ -18,6 +18,15 @@ import type {
 
 const SPLIT_DRAFT_KEY = Symbol('split-draft')
 
+// Generate a unique ID with fallback for environments without crypto.randomUUID
+function generateId(): string {
+	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+		return crypto.randomUUID()
+	}
+	// Fallback for older browsers/SSR
+	return 'id-' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
+}
+
 interface SplitDraftContext {
 	// Split data
 	split: Split | null
@@ -190,7 +199,7 @@ export function setSplitDraftContext() {
 				selectedPaymentMethods = [
 					...selectedPaymentMethods,
 					{
-						id: crypto.randomUUID(), // temporary id
+						id: generateId(),
 						splitId: split.id,
 						paymentMethodId,
 						isPreferred,
@@ -225,7 +234,7 @@ export function setSplitDraftContext() {
 
 	const createGroup = (name: string): ItemGroup => {
 		const group: ItemGroup = {
-			id: crypto.randomUUID(),
+			id: generateId(),
 			name,
 			itemIds: []
 		}

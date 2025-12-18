@@ -88,7 +88,7 @@
 						<div class="group-info">
 							<span class="group-name">{group.name}</span>
 							{#if group.id === suggestedGroupId}
-								<span class="suggested-badge">Последняя</span>
+								<span class="suggested-badge">{m.item_group_suggested()}</span>
 							{/if}
 						</div>
 						{#if selectedGroupId === group.id}
