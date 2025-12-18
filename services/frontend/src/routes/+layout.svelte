@@ -8,8 +8,14 @@
 	import { m } from '$lib/i18n'
 	import { getNavigationDirection } from '$lib/navigation/routes'
 	import { createPlatform } from '$lib/platform/create'
-	import { setContactsService, setSplitsService, setUserService } from '$lib/state/context'
+	import {
+		setContactsService,
+		setPaymentMethodsService,
+		setSplitsService,
+		setUserService
+	} from '$lib/state/context'
 	import { ContactsService } from '$lib/state/stores/contacts.svelte'
+	import { PaymentMethodsService } from '$lib/state/stores/payment-methods.svelte'
 	import { SplitsService } from '$lib/state/stores/splits.svelte'
 	import { UserService } from '$lib/state/stores/user.svelte'
 	import AppShell from '$lib/ui/layouts/AppShell.svelte'
@@ -28,10 +34,12 @@
 	const userService = new UserService()
 	const splitsService = new SplitsService()
 	const contactsService = new ContactsService()
+	const paymentMethodsService = new PaymentMethodsService()
 
 	setUserService(userService)
 	setSplitsService(splitsService)
 	setContactsService(contactsService)
+	setPaymentMethodsService(paymentMethodsService)
 
 	onMount(async () => {
 		try {

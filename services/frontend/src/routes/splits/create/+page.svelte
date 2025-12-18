@@ -13,8 +13,9 @@
 		streamReceiptFromQr
 	} from '$lib/services/receipts/stream'
 	import { scanQrCode } from '$lib/services/scanner/qr'
-	import { getSplitsService } from '$lib/state/context'
+	import { getPaymentMethodsService, getSplitsService } from '$lib/state/context'
 	import { AvatarStack, Button, Divider, ExpandableCard } from '$lib/ui/components'
+	import { PaymentMethodIcon, PaymentMethodsSheet } from '$lib/ui/features/payments'
 	import ReceiptLoader from '$lib/ui/features/receipts/ReceiptLoader.svelte'
 	import ScannerSheet from '$lib/ui/features/receipts/ScannerSheet.svelte'
 	import ItemEditForm from '$lib/ui/features/splits/ItemEditForm.svelte'
@@ -27,6 +28,7 @@
 	import { BottomSheet } from '$lib/ui/overlays'
 
 	const splitsService = getSplitsService()
+	const paymentMethodsService = getPaymentMethodsService()
 	const scanner = receiptScanner
 
 	const draft = $derived(splitsService.draft)
@@ -42,6 +44,45 @@
 	const participants = $derived<Participant[]>(draft.current?.participants ?? [])
 	const items = $derived<SplitItem[]>(draft.current?.items ?? [])
 	const itemGroups = $derived<ItemGroup[]>(draft.current?.itemGroups ?? [])
+
+	watch(
+		() => draftData.id,
+		id => {
+			if (id) {
+				paymentMethodsService.setSplitId(id)
+			}
+		}
+	)
+
+	const allPaymentMethods = $derived(paymentMethodsService.list.current ?? [])
+	const splitPaymentMethods = $derived(paymentMethodsService.splitMethods.current ?? [])
+	const selectedPaymentMethodIds = $derived(
+		new Set(splitPaymentMethods.map(m => m.paymentMethodId))
+	)
+
+	let isPaymentMethodsSheetOpen = $state(false)
+
+	const selectedPaymentMethods = $derived(
+		allPaymentMethods.filter(m => selectedPaymentMethodIds.has(m.id))
+	)
+	const paymentMethodsPreview = $derived(
+		selectedPaymentMethods.length > 0
+			? selectedPaymentMethods.map(m => m.displayName || getTypeLabel(m.type)).join(', ')
+			: m.payment_method_not_selected()
+	)
+
+	function getTypeLabel(type: string): string {
+		const labels: Record<string, string> = {
+			sbp: 'СБП',
+			card: 'Карта',
+			phone: 'Телефон',
+			bank_transfer: 'Перевод',
+			cash: 'Наличные',
+			crypto: 'Крипто',
+			custom: 'Другое'
+		}
+		return labels[type] || type
+	}
 
 	let collapsedGroups = $state<Set<string>>(new Set())
 	let draftSplitEmoji = $state('🍔')
@@ -114,6 +155,11 @@
 		draftSplitEmoji = val
 		splitsService.updateDraftLocal({ split: { icon: val } })
 		await saveMetadata()
+	}
+
+	function handlePaymentMethodsChange() {
+		// методы уже сохранены в PaymentMethodsSheet при handleConfirm
+		// данные обновятся автоматически через splitMethods
 	}
 
 	function handleItemClick(item: SplitItem) {
@@ -443,13 +489,22 @@
 
 	<ExpandableCard
 		title={m.create_payment_method_title()}
-		onclick={() => (isParticipantsSheetOpen = true)}
+		onclick={() => (isPaymentMethodsSheetOpen = true)}
 	>
-		{#if participants.length === 0}
-			<span>{m.payment_method_not_selected()}</span>
-		{:else}
-			<span>{m.payment_method_sbp()}</span>
-		{/if}
+		<span class="payment-preview-text">{paymentMethodsPreview}</span>
+
+		{#snippet preview()}
+			{#if selectedPaymentMethods.length > 0}
+				<div class="payment-icons-stack">
+					{#each selectedPaymentMethods.slice(0, 3) as method (method.id)}
+						<PaymentMethodIcon type={method.type} size={28} />
+					{/each}
+					{#if selectedPaymentMethods.length > 3}
+						<span class="more-badge">+{selectedPaymentMethods.length - 3}</span>
+					{/if}
+				</div>
+			{/if}
+		{/snippet}
 	</ExpandableCard>
 
 	<Divider width={40} spacing="lg" />
@@ -521,6 +576,13 @@
 </Page>
 
 <ParticipantsSheet bind:open={isParticipantsSheetOpen} {participants} />
+
+<PaymentMethodsSheet
+	bind:open={isPaymentMethodsSheetOpen}
+	splitId={draftData.id}
+	selectedIds={selectedPaymentMethodIds}
+	onchange={handlePaymentMethodsChange}
+/>
 
 <ScannerSheet
 	bind:open={isScannerSheetOpen}
@@ -647,5 +709,39 @@
 		display: flex;
 		gap: var(--space-2);
 		justify-content: flex-end;
+	}
+
+	.payment-preview-text {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.payment-icons-stack {
+		display: flex;
+		align-items: center;
+		gap: -4px;
+	}
+
+	.payment-icons-stack > :global(*) {
+		margin-left: -8px;
+	}
+
+	.payment-icons-stack > :global(*:first-child) {
+		margin-left: 0;
+	}
+
+	.more-badge {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		background: var(--color-bg-tertiary);
+		border-radius: var(--radius-md);
+		font-size: var(--text-xs);
+		font-weight: var(--font-semibold);
+		color: var(--color-text-secondary);
+		margin-left: -8px;
 	}
 </style>

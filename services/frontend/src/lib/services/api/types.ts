@@ -226,3 +226,57 @@ export interface DraftItem {
 	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
 	icon?: string
 }
+
+// payment methods
+export type PaymentMethodType =
+	| 'sbp'
+	| 'card'
+	| 'phone'
+	| 'bank_transfer'
+	| 'cash'
+	| 'crypto'
+	| 'custom'
+
+export interface PaymentMethod {
+	id: string
+	userId: string
+	type: PaymentMethodType
+	displayName: string | null
+	currency: string
+	paymentData: Record<string, unknown>
+	isTemporary: boolean
+	isDefault: boolean
+	displayOrder: number
+	isDeleted: boolean
+	createdAt: string
+	updatedAt: string
+}
+
+export interface CreatePaymentMethodDto {
+	type: PaymentMethodType
+	displayName?: string
+	currency?: string
+	paymentData: Record<string, unknown>
+	isTemporary?: boolean
+	isDefault?: boolean
+}
+
+export interface UpdatePaymentMethodDto {
+	displayName?: string
+	isDefault?: boolean
+}
+
+export interface SplitPaymentMethod {
+	id: string
+	splitId: string
+	paymentMethodId: string
+	comment: string | null
+	isPreferred: boolean
+	paymentMethod: PaymentMethod
+}
+
+export interface AddPaymentMethodToSplitDto {
+	paymentMethodId: string
+	comment?: string
+	isPreferred?: boolean
+}

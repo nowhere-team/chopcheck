@@ -1,13 +1,15 @@
 import { getContext, setContext } from 'svelte'
 
 import type { ContactsService } from './stores/contacts.svelte'
+import type { PaymentMethodsService } from './stores/payment-methods.svelte'
 import type { SplitsService } from './stores/splits.svelte'
 import type { UserService } from './stores/user.svelte'
 
 const KEYS = {
 	USER: Symbol('USER'),
 	SPLITS: Symbol('SPLITS'),
-	CONTACTS: Symbol('CONTACTS')
+	CONTACTS: Symbol('CONTACTS'),
+	PAYMENT_METHODS: Symbol('PAYMENT_METHODS')
 }
 
 export function setUserService(service: UserService) {
@@ -35,4 +37,13 @@ export function setContactsService(service: ContactsService) {
 
 export function getContactsService() {
 	return getContext<ContactsService>(KEYS.CONTACTS)
+}
+
+export function setPaymentMethodsService(service: PaymentMethodsService) {
+	setContext(KEYS.PAYMENT_METHODS, service)
+	return service
+}
+
+export function getPaymentMethodsService() {
+	return getContext<PaymentMethodsService>(KEYS.PAYMENT_METHODS)
 }

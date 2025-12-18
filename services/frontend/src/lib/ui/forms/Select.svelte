@@ -66,7 +66,7 @@
 	<Dropdown
 		bind:open={isOpen}
 		anchor={triggerRef}
-		placement="bottom-start"
+		placement="auto"
 		onclose={() => (isOpen = false)}
 	>
 		<div class="options-list">
