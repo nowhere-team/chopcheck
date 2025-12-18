@@ -1,8 +1,6 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -107,8 +105,17 @@ jobs:
           docker pull ghcr.io/${{ github.repository }}/frontend:latest
           docker pull ghcr.io/${{ github.repository }}/migrator:latest
 
-      - name: Deploy
+      - name: Update configs and Deploy
         run: |
+          mkdir -p /opt/chopcheck/nginx
+
+          if [ -d "/opt/chopcheck/nginx/nginx.conf" ]; then
+            rm -rf /opt/chopcheck/nginx/nginx.conf
+          fi
+
+          cp docker-compose.prod.yml /opt/chopcheck/
+          cp nginx/nginx.conf /opt/chopcheck/nginx/nginx.conf
+
           cd /opt/chopcheck
           docker compose -f docker-compose.prod.yml pull
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
