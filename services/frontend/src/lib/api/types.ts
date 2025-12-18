@@ -93,6 +93,7 @@ export interface AddItemDto {
 	type?: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity?: string
 	defaultDivisionMethod: 'custom' | 'fixed' | 'equal' | 'shares' | 'proportional'
+	groupId?: string
 }
 
 export interface UpdateItemDto {
@@ -101,6 +102,7 @@ export interface UpdateItemDto {
 	type?: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	quantity?: string
 	defaultDivisionMethod?: 'equal' | 'shares' | 'fixed' | 'proportional' | 'custom'
+	groupId?: string
 }
 
 export interface PaginationParams {
@@ -124,4 +126,66 @@ export interface MySplitsResponse {
 		limit: number
 		hasMore: boolean
 	}
+}
+
+export type PaymentMethodType =
+	| 'sbp'
+	| 'card'
+	| 'phone'
+	| 'bank_transfer'
+	| 'cash'
+	| 'crypto'
+	| 'custom'
+
+export interface PaymentMethod {
+	id: string
+	userId: string
+	type: PaymentMethodType
+	displayName?: string
+	currency: string
+	paymentData: Record<string, unknown>
+	isTemporary: boolean
+	isDefault: boolean
+	displayOrder: number
+	createdAt: string
+	updatedAt: string
+}
+
+export interface CreatePaymentMethodDto {
+	type: PaymentMethodType
+	displayName?: string
+	currency?: string
+	paymentData: Record<string, unknown>
+	isTemporary?: boolean
+	isDefault?: boolean
+}
+
+export interface UpdatePaymentMethodDto {
+	displayName?: string
+	currency?: string
+	paymentData?: Record<string, unknown>
+	isDefault?: boolean
+	displayOrder?: number
+}
+
+export interface SplitPaymentMethod {
+	id: string
+	splitId: string
+	paymentMethodId: string
+	comment?: string
+	isPreferred: boolean
+	displayOrder: number
+	paymentMethod: PaymentMethod
+}
+
+export interface AddSplitPaymentMethodDto {
+	paymentMethodId: string
+	comment?: string
+	isPreferred?: boolean
+}
+
+export interface ItemGroup {
+	id: string
+	name: string
+	itemIds: string[]
 }

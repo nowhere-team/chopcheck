@@ -1,72 +1,109 @@
 {
-  "$schema": "https://inlang.com/schema/inlang-message-format",
+	"$schema": "https://inlang.com/schema/inlang-message-format",
 
-  "app_title_home": "Главная",
-  "app_title_history": "История",
-  "app_title_create": "Создать",
-  "app_title_contacts": "Контакты",
-  "app_title_profile": "Профиль",
+	"app_title_home": "Главная",
+	"app_title_history": "История",
+	"app_title_create": "Создать",
+	"app_title_contacts": "Контакты",
+	"app_title_profile": "Профиль",
 
-  "stats_total_splits": "Всего сплитов",
-  "stats_monthly_spent": "Разделено за месяц",
-  "stats_loading_error": "Не удалось загрузить статистику",
+	"stats_total_splits": "Всего сплитов",
+	"stats_monthly_spent": "Разделено за месяц",
+	"stats_loading_error": "Не удалось загрузить статистику",
 
-  "section_your_splits": "Ваши сплиты",
-  "section_this_week": "На этой неделе",
-  "section_this_month": "В этом месяце",
-  "section_earlier": "Раньше",
+	"section_your_splits": "Ваши сплиты",
+	"section_this_week": "На этой неделе",
+	"section_this_month": "В этом месяце",
+	"section_earlier": "Раньше",
 
-  "split_status_completed": "Завершён",
-  "split_status_waiting": [{
-    "declarations": ["input count", "local countPlural = count: plural"],
-    "selectors": ["countPlural"],
-    "match": {
-      "countPlural=one": "Ждём {count} участника",
-      "countPlural=few": "Ждём {count} участников",
-      "countPlural=other": "Ждём {count} участников"
-    }
-  }],
-  "split_status_voting": "Ждут вашего ответа",
-  "split_status_payment": "Ожидание оплаты",
-  "split_status_confirming": "Подтверждение",
-  "split_status_setup": "Настройка",
+	"split_status_completed": "Завершён",
+	"split_status_waiting": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Ждём {count} участника",
+				"countPlural=few": "Ждём {count} участников",
+				"countPlural=other": "Ждём {count} участников"
+			}
+		}
+	],
+	"split_status_voting": "Ждут вашего ответа",
+	"split_status_payment": "Ожидание оплаты",
+	"split_status_confirming": "Подтверждение",
+	"split_status_setup": "Настройка",
 
-  "split_card_aria_label": "Сплит {name}",
+	"split_card_aria_label": "Сплит {name}",
 
-  "empty_active_splits": "У вас пока нет активных сплитов",
-  "empty_all_splits": "У вас пока нет сплитов",
-  "empty_section": "Пусто",
+	"empty_active_splits": "У вас пока нет активных сплитов",
+	"empty_all_splits": "У вас пока нет сплитов",
+	"empty_section": "Пусто",
 
-  "action_load_more": "Загрузить ещё",
-  "action_create_split": "Создать сплит",
-  "action_join_split": "Присоединиться",
-  "action_mark_paid": "Отметить как оплачено",
+	"action_load_more": "Загрузить ещё",
+	"action_create_split": "Создать сплит",
+	"action_join_split": "Присоединиться",
+	"action_mark_paid": "Отметить как оплачено",
+	"action_select": "Выбрать",
+	"action_cancel": "Отмена",
+	"action_save": "Сохранить",
+	"action_add": "Добавить",
+	"action_create": "Создать",
 
-  "all_splits_loaded": "Это все ваши сплиты",
+	"all_splits_loaded": "Это все ваши сплиты",
 
-  "split_detail_participants": "Участники",
-  "split_detail_select_positions": "Выберите свои позиции",
-  "split_detail_select_hint": "Отметьте, что заказали и укажите количество",
-  "split_detail_summary": "Итого",
-  "split_detail_selected_positions": "Выбрано позиций",
-  "split_detail_your_amount": "Ваша сумма",
-  "split_detail_payment_details": "Реквизиты для оплаты",
+	"split_detail_participants": "Участники",
+	"split_detail_select_positions": "Выберите свои позиции",
+	"split_detail_select_hint": "Отметьте, что заказали и укажите количество",
+	"split_detail_summary": "Итого",
+	"split_detail_selected_positions": "Выбрано позиций",
+	"split_detail_your_amount": "Ваша сумма",
+	"split_detail_payment_details": "Реквизиты для оплаты",
 
-  "split_created_by": "Создан {date}",
-  "split_owner": "{name}",
+	"split_created_by": "Создан {date}",
+	"split_owner": "{name}",
 
-  "create_split_title": "Создать сплит",
-  "create_split_name_label": "Название",
-  "create_split_name_placeholder": "Ужин в ресторане",
-  "create_split_currency_label": "Валюта",
-  "create_split_error": "Не удалось создать сплит",
+	"create_split_title": "Создать сплит",
+	"create_split_name_label": "Название",
+	"create_split_name_placeholder": "Ужин в ресторане",
+	"create_split_currency_label": "Валюта",
+	"create_split_error": "Не удалось создать сплит",
 
-  "quantity_label": "Количество",
-  "quantity_unit": "шт",
-  "quantity_per_portion": "поштучно",
-  "quantity_per_share": "по долям",
+	"payment_methods_title": "Способы оплаты",
+	"payment_methods_select": "Выберите способы оплаты",
+	"payment_methods_not_selected": "Не выбрано",
+	"payment_methods_selected": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Выбран {count} способ",
+				"countPlural=few": "Выбрано {count} способа",
+				"countPlural=other": "Выбрано {count} способов"
+			}
+		}
+	],
+	"payment_methods_empty": "У вас пока нет способов оплаты",
+	"payment_methods_add_new": "Добавить способ оплаты",
+	"payment_method_type_sbp": "СБП",
+	"payment_method_type_card": "Карта",
+	"payment_method_type_phone": "По номеру телефона",
+	"payment_method_type_bank_transfer": "Банковский перевод",
+	"payment_method_type_cash": "Наличные",
+	"payment_method_type_crypto": "Криптовалюта",
+	"payment_method_type_custom": "Другое",
 
-  "not_available_in_telegram": "Приложение доступно только в Telegram",
-  "error_generic": "Ошибка",
-  "loading": "Загрузка..."
+	"item_group_title": "Группа",
+	"item_group_select": "Выберите группу",
+	"item_group_none": "Без группы",
+	"item_group_create_new": "Создать группу",
+	"item_group_name_placeholder": "Название группы",
+
+	"quantity_label": "Количество",
+	"quantity_unit": "шт",
+	"quantity_per_portion": "поштучно",
+	"quantity_per_share": "по долям",
+
+	"not_available_in_telegram": "Приложение доступно только в Telegram",
+	"error_generic": "Ошибка",
+	"loading": "Загрузка..."
 }
