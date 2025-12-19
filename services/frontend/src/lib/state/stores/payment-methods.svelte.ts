@@ -5,7 +5,6 @@ import { api } from '$lib/services/api/client'
 import type {
 	CreatePaymentMethodDto,
 	PaymentMethod,
-	SplitPaymentMethod,
 	UpdatePaymentMethodDto
 } from '$lib/services/api/types'
 
@@ -17,11 +16,6 @@ interface PaymentMethodsResponse {
 interface PaymentMethodResponse {
 	success: boolean
 	data: PaymentMethod
-}
-
-interface SplitPaymentMethodsResponse {
-	success: boolean
-	data: SplitPaymentMethod[]
 }
 
 export class PaymentMethodsService {
@@ -40,7 +34,7 @@ export class PaymentMethodsService {
 		async splitId => {
 			if (!splitId) return []
 			try {
-				const response = await api.get<SplitPaymentMethodsResponse>(
+				const response = await api.get<PaymentMethodsResponse>(
 					`splits/${splitId}/payment-methods`
 				)
 				return response.data
@@ -94,7 +88,7 @@ export class PaymentMethodsService {
 
 	getSelectedIdsForSplit(): Set<string> {
 		const methods = this.splitMethods.current ?? []
-		return new SvelteSet(methods.map(m => m.paymentMethodId))
+		return new SvelteSet(methods.map(m => m.id))
 	}
 
 	async refresh(): Promise<void> {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, DotsThree, PencilSimple, Star, Trash } from 'phosphor-svelte'
+	import { DotsThree, PencilSimple, Star, Trash } from 'phosphor-svelte'
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
@@ -10,21 +10,11 @@
 
 	interface Props {
 		method: PaymentMethod
-		selected?: boolean
-		selectable?: boolean
-		onselect?: () => void
 		onedit?: () => void
 		ondelete?: () => void
 	}
 
-	const {
-		method,
-		selected = false,
-		selectable = false,
-		onselect,
-		onedit,
-		ondelete
-	}: Props = $props()
+	const { method, onedit, ondelete }: Props = $props()
 	const platform = getPlatform()
 
 	let menuOpen = $state(false)
@@ -41,13 +31,6 @@
 	}
 
 	const displayName = $derived(method.displayName || typeLabels[method.type] || method.type)
-
-	function handleCardClick() {
-		if (selectable) {
-			platform.haptic.selection()
-			onselect?.()
-		}
-	}
 
 	function toggleMenu(e: MouseEvent) {
 		e.stopPropagation()
@@ -66,115 +49,55 @@
 	}
 </script>
 
-{#if selectable}
-	<Card
-		interactive
-		onclick={handleCardClick}
-		class="payment-method-card {selected ? 'selected' : ''}"
-	>
-		<div class="card-content">
-			<div class="left">
-				<div class="checkbox" class:checked={selected}>
-					{#if selected}
-						<Check size={14} weight="bold" />
+<Card class="payment-method-card">
+	<div class="card-content">
+		<div class="left">
+			<PaymentMethodIcon type={method.type} size={40} />
+			<div class="info">
+				<span class="name">
+					{displayName}
+					{#if method.isDefault}
+						<Star size={14} weight="fill" class="default-star" />
 					{/if}
-				</div>
-				<PaymentMethodIcon type={method.type} size={40} />
-				<div class="info">
-					<span class="name">
-						{displayName}
-						{#if method.isDefault}
-							<Star size={14} weight="fill" class="default-star" />
-						{/if}
-					</span>
-					<span class="type">{typeLabels[method.type]}</span>
-				</div>
+				</span>
+				<span class="type">{typeLabels[method.type]}</span>
 			</div>
-
-			<button
-				bind:this={menuAnchor}
-				type="button"
-				class="menu-btn"
-				class:active={menuOpen}
-				onclick={toggleMenu}
-				aria-label="Меню"
-			>
-				<DotsThree size={24} weight="bold" />
-			</button>
-
-			<Dropdown bind:open={menuOpen} anchor={menuAnchor} placement="bottom-end" tail>
-				<DropdownMenu>
-					<DropdownMenuItem onclick={handleEdit}>
-						{#snippet icon()}
-							<PencilSimple size={20} />
-						{/snippet}
-						{m.action_edit()}
-					</DropdownMenuItem>
-					<DropdownMenuItem variant="danger" onclick={handleDelete}>
-						{#snippet icon()}
-							<Trash size={20} />
-						{/snippet}
-						{m.action_delete()}
-					</DropdownMenuItem>
-				</DropdownMenu>
-			</Dropdown>
 		</div>
-	</Card>
-{:else}
-	<Card class="payment-method-card {selected ? 'selected' : ''}">
-		<div class="card-content">
-			<div class="left">
-				<PaymentMethodIcon type={method.type} size={40} />
-				<div class="info">
-					<span class="name">
-						{displayName}
-						{#if method.isDefault}
-							<Star size={14} weight="fill" class="default-star" />
-						{/if}
-					</span>
-					<span class="type">{typeLabels[method.type]}</span>
-				</div>
-			</div>
 
-			<button
-				bind:this={menuAnchor}
-				type="button"
-				class="menu-btn"
-				class:active={menuOpen}
-				onclick={toggleMenu}
-				aria-label="Меню"
-			>
-				<DotsThree size={24} weight="bold" />
-			</button>
+		<button
+			bind:this={menuAnchor}
+			type="button"
+			class="menu-btn"
+			class:active={menuOpen}
+			onclick={toggleMenu}
+			aria-label="Меню"
+		>
+			<DotsThree size={24} weight="bold" />
+		</button>
 
-			<Dropdown bind:open={menuOpen} anchor={menuAnchor} placement="bottom-end" tail>
-				<DropdownMenu>
-					<DropdownMenuItem onclick={handleEdit}>
-						{#snippet icon()}
-							<PencilSimple size={20} />
-						{/snippet}
-						{m.action_edit()}
-					</DropdownMenuItem>
-					<DropdownMenuItem variant="danger" onclick={handleDelete}>
-						{#snippet icon()}
-							<Trash size={20} />
-						{/snippet}
-						{m.action_delete()}
-					</DropdownMenuItem>
-				</DropdownMenu>
-			</Dropdown>
-		</div>
-	</Card>
-{/if}
+		<Dropdown bind:open={menuOpen} anchor={menuAnchor} placement="bottom-end" tail>
+			<DropdownMenu>
+				<DropdownMenuItem onclick={handleEdit}>
+					{#snippet icon()}
+						<PencilSimple size={20} />
+					{/snippet}
+					{m.action_edit()}
+				</DropdownMenuItem>
+				<DropdownMenuItem variant="danger" onclick={handleDelete}>
+					{#snippet icon()}
+						<Trash size={20} />
+					{/snippet}
+					{m.action_delete()}
+				</DropdownMenuItem>
+			</DropdownMenu>
+		</Dropdown>
+	</div>
+</Card>
 
 <style>
 	:global(.payment-method-card) {
 		padding: var(--space-3) var(--space-4) !important;
-	}
-
-	:global(.payment-method-card.selected) {
-		border-color: var(--color-primary);
-		background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg));
+		flex: 1;
 	}
 
 	.card-content {
@@ -190,25 +113,6 @@
 		gap: var(--space-3);
 		flex: 1;
 		min-width: 0;
-	}
-
-	.checkbox {
-		width: 22px;
-		height: 22px;
-		border-radius: 6px;
-		border: 2px solid var(--color-border);
-		background: var(--color-bg-secondary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: all 0.2s var(--ease-out);
-		flex-shrink: 0;
-	}
-
-	.checkbox.checked {
-		background: var(--color-primary);
-		border-color: var(--color-primary);
-		color: var(--color-primary-text);
 	}
 
 	.info {

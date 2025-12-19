@@ -23,7 +23,19 @@
 	let isOpen = $state(false)
 	let triggerRef = $state<HTMLButtonElement | undefined>()
 
-	const currentLabel = $derived(options.find(o => o.value === value)?.label || value)
+	// internal value synced with prop
+	let internalValue = $state(value)
+
+	// sync when external value changes
+	$effect(() => {
+		if (value !== internalValue) {
+			internalValue = value
+		}
+	})
+
+	const currentLabel = $derived(
+		options.find(o => o.value === internalValue)?.label || internalValue
+	)
 
 	function toggle(e: MouseEvent) {
 		e.stopPropagation()
@@ -34,10 +46,11 @@
 	}
 
 	function select(val: string) {
-		if (val === value) {
+		if (val === internalValue) {
 			isOpen = false
 			return
 		}
+		internalValue = val
 		value = val
 		onchange?.(val)
 		isOpen = false
@@ -74,7 +87,7 @@
 				<button
 					type="button"
 					class="option-item"
-					class:selected={option.value === value}
+					class:selected={option.value === internalValue}
 					onclick={() => select(option.value)}
 				>
 					<span class="option-content">
@@ -83,7 +96,7 @@
 							<span class="option-desc">{option.description}</span>
 						{/if}
 					</span>
-					{#if option.value === value}
+					{#if option.value === internalValue}
 						<div class="check-icon">
 							<Check size={16} weight="bold" />
 						</div>

@@ -18,6 +18,7 @@
 		onToggleGroup?: (groupId: string) => void
 		onEditGroup?: (group: ItemGroup) => void
 		onDeleteGroup?: (group: ItemGroup) => void
+		onDisbandGroup?: (group: ItemGroup) => void
 	}
 
 	const {
@@ -31,7 +32,8 @@
 		onItemLongPress,
 		onToggleGroup,
 		onEditGroup,
-		onDeleteGroup
+		onDeleteGroup,
+		onDisbandGroup
 	}: Props = $props()
 
 	const groupedItems = $derived.by(() => {
@@ -64,6 +66,7 @@
 			ontoggle={() => onToggleGroup?.(group.id)}
 			onedit={() => onEditGroup?.(group)}
 			ondelete={() => onDeleteGroup?.(group)}
+			ondisband={() => onDisbandGroup?.(group)}
 		>
 			{#each groupItems as item (item.id)}
 				<ItemCard

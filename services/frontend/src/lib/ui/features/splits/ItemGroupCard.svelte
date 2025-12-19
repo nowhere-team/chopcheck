@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CaretDown, DotsThree, PencilSimple, Trash } from 'phosphor-svelte'
+	import { CaretDown, DotsThree, PencilSimple, Trash, UsersThree } from 'phosphor-svelte'
 	import type { Snippet } from 'svelte'
 	import { slide } from 'svelte/transition'
 
@@ -20,6 +20,7 @@
 		ontoggle?: () => void
 		onedit?: () => void
 		ondelete?: () => void
+		ondisband?: () => void
 	}
 
 	const {
@@ -30,7 +31,8 @@
 		children,
 		ontoggle,
 		onedit,
-		ondelete
+		ondelete,
+		ondisband
 	}: Props = $props()
 
 	const platform = getPlatform()
@@ -87,6 +89,11 @@
 		ondelete?.()
 	}
 
+	function handleDisband() {
+		menuOpen = false
+		ondisband?.()
+	}
+
 	function handleDismissWarning(code: WarningCode) {
 		dismissWarning(splitId, code, group.id)
 	}
@@ -134,6 +141,14 @@
 						{/snippet}
 						{m.group_rename_button()}
 					</DropdownMenuItem>
+					{#if itemsCount > 0}
+						<DropdownMenuItem onclick={handleDisband}>
+							{#snippet icon()}
+								<UsersThree size={20} />
+							{/snippet}
+							Расформировать
+						</DropdownMenuItem>
+					{/if}
 					<DropdownMenuItem variant="danger" onclick={handleDelete}>
 						{#snippet icon()}
 							<Trash size={20} />

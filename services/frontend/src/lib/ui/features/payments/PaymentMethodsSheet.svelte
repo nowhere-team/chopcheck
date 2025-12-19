@@ -4,13 +4,13 @@
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import type { CreatePaymentMethodDto, PaymentMethod } from '$lib/services/api/types'
-	import { getPaymentMethodsService } from '$lib/state/context'
+	import { getPaymentMethodsService, getSplitsService } from '$lib/state/context'
 	import { Button } from '$lib/ui/components'
 	import { toast } from '$lib/ui/features/toasts'
 	import { BottomSheet } from '$lib/ui/overlays'
 
-	import PaymentMethodCard from './PaymentMethodCard.svelte'
 	import PaymentMethodEditSheet from './PaymentMethodEditSheet.svelte'
+	import PaymentMethodIcon from './PaymentMethodIcon.svelte'
 
 	interface Props {
 		open: boolean
@@ -18,6 +18,7 @@
 		selectedIds?: Set<string>
 		onclose?: () => void
 		onchange?: (selectedIds: Set<string>) => void
+		onSplitCreated?: (splitId: string) => void
 	}
 
 	let {
@@ -25,11 +26,13 @@
 		splitId,
 		selectedIds = new Set(),
 		onclose,
-		onchange
+		onchange,
+		onSplitCreated
 	}: Props = $props()
 
 	const platform = getPlatform()
 	const paymentMethodsService = getPaymentMethodsService()
+	const splitsService = getSplitsService()
 
 	const methods = $derived(paymentMethodsService.list.current ?? [])
 	const isLoading = $derived(paymentMethodsService.list.loading)
@@ -37,12 +40,28 @@
 	let localSelectedIds = $state<Set<string>>(new Set())
 	let isEditSheetOpen = $state(false)
 	let editingMethod = $state<PaymentMethod | null>(null)
+	let isSaving = $state(false)
+	let initializedSplitId = $state<string | null>(null)
 
 	$effect(() => {
 		if (open) {
 			localSelectedIds = new SvelteSet(selectedIds)
+			if (splitId && splitId !== initializedSplitId) {
+				initializedSplitId = splitId
+				paymentMethodsService.setSplitId(splitId)
+			}
 		}
 	})
+
+	// unified close function
+	function closeSheet() {
+		open = false
+		onclose?.()
+	}
+
+	function isSelected(id: string): boolean {
+		return localSelectedIds.has(id)
+	}
 
 	function toggleSelection(id: string) {
 		const newSet = new SvelteSet(localSelectedIds)
@@ -55,45 +74,81 @@
 		platform.haptic.selection()
 	}
 
+	async function ensureSplitExists(): Promise<string | null> {
+		if (splitId) return splitId
+
+		try {
+			const draftData = splitsService.draft.current
+			const res = await splitsService.createOrUpdate({
+				name: draftData?.split.name || '',
+				icon: draftData?.split.icon || '🍔',
+				currency: draftData?.split.currency || 'RUB'
+			})
+			const newId = res.split.id
+			onSplitCreated?.(newId)
+			return newId
+		} catch (e) {
+			console.error('Failed to create draft for payment methods', e)
+			toast.error('Не удалось сохранить черновик')
+			return null
+		}
+	}
+
 	async function handleConfirm() {
-		// если есть splitId, сохраняем методы в сплит
-		if (splitId) {
-			try {
-				const currentMethods = paymentMethodsService.splitMethods.current ?? []
-				const currentIds = new Set(currentMethods.map(m => m.paymentMethodId))
+		const hasChanges =
+			selectedIds.size !== localSelectedIds.size ||
+			[...selectedIds].some(id => !localSelectedIds.has(id)) ||
+			[...localSelectedIds].some(id => !selectedIds.has(id))
 
-				// добавляем новые
-				for (const id of localSelectedIds) {
-					if (!currentIds.has(id)) {
-						await paymentMethodsService.addToSplit(splitId, id)
-					}
-				}
-
-				// удаляем убранные
-				for (const id of currentIds) {
-					if (!localSelectedIds.has(id)) {
-						await paymentMethodsService.removeFromSplit(splitId, id)
-					}
-				}
-			} catch {
-				toast.error('Не удалось сохранить способы оплаты')
-			}
+		if (!hasChanges) {
+			closeSheet()
+			return
 		}
 
-		onchange?.(localSelectedIds)
-		open = false
-		platform.haptic.impact('light')
+		if (localSelectedIds.size === 0 && selectedIds.size === 0) {
+			closeSheet()
+			return
+		}
+
+		isSaving = true
+
+		try {
+			const targetSplitId = await ensureSplitExists()
+			if (!targetSplitId) {
+				isSaving = false
+				return
+			}
+
+			if (targetSplitId !== initializedSplitId) {
+				initializedSplitId = targetSplitId
+				paymentMethodsService.setSplitId(targetSplitId)
+			}
+
+			const currentMethods = paymentMethodsService.splitMethods.current ?? []
+			const currentIds = new Set(currentMethods.map(m => m.id))
+
+			const toAdd = [...localSelectedIds].filter(id => !currentIds.has(id))
+			const toRemove = [...currentIds].filter(id => !localSelectedIds.has(id))
+
+			await Promise.all([
+				...toAdd.map(id => paymentMethodsService.addToSplit(targetSplitId, id)),
+				...toRemove.map(id => paymentMethodsService.removeFromSplit(targetSplitId, id))
+			])
+
+			onchange?.(localSelectedIds)
+			closeSheet()
+			platform.haptic.impact('light')
+		} catch {
+			toast.error('Не удалось сохранить способы оплаты')
+		} finally {
+			isSaving = false
+		}
 	}
 
 	function handleAddNew() {
 		editingMethod = null
 		isEditSheetOpen = true
 		platform.haptic.impact('light')
-	}
-
-	function handleEdit(method: PaymentMethod) {
-		editingMethod = method
-		isEditSheetOpen = true
 	}
 
 	async function handleDelete(method: PaymentMethod) {
@@ -135,14 +190,47 @@
 		editingMethod = null
 	}
 
+	const typeLabels: Record<string, string> = {
+		sbp: 'СБП',
+		card: 'Карта',
+		phone: 'Телефон',
+		bank_transfer: 'Перевод',
+		cash: 'Наличные',
+		crypto: 'Крипто',
+		custom: 'Другое'
+	}
+
+	function getMethodDisplayInfo(method: PaymentMethod): { name: string; detail?: string } {
+		const data = method.paymentData as Record<string, string> | null
+		const baseName = method.displayName || typeLabels[method.type] || method.type
+
+		switch (method.type) {
+			case 'sbp':
+			case 'phone':
+				return { name: baseName, detail: data?.phone }
+			case 'card':
+				return {
+					name: baseName,
+					detail: data?.cardNumber?.slice(-4)
+						? `•••• ${data.cardNumber.slice(-4)}`
+						: undefined
+				}
+			case 'crypto':
+				return { name: baseName, detail: data?.network }
+			default:
+				return { name: baseName }
+		}
+	}
+
 	const selectedCount = $derived(localSelectedIds.size)
 	const hasChanges = $derived(
 		selectedIds.size !== localSelectedIds.size ||
-			[...selectedIds].some(id => !localSelectedIds.has(id))
+			[...selectedIds].some(id => !localSelectedIds.has(id)) ||
+			[...localSelectedIds].some(id => !selectedIds.has(id))
 	)
 </script>
 
-<BottomSheet bind:open {onclose} title="Способы оплаты">
+<BottomSheet bind:open onclose={closeSheet} title="Способы оплаты">
 	<div class="sheet-content">
 		{#if isLoading}
 			<div class="loading">Загрузка...</div>
@@ -155,14 +243,35 @@
 		{:else}
 			<div class="methods-list">
 				{#each methods as method (method.id)}
-					<PaymentMethodCard
-						{method}
-						selectable
-						selected={localSelectedIds.has(method.id)}
-						onselect={() => toggleSelection(method.id)}
-						onedit={() => handleEdit(method)}
-						ondelete={() => handleDelete(method)}
-					/>
+					{@const info = getMethodDisplayInfo(method)}
+					<button
+						type="button"
+						class="method-row"
+						class:selected={isSelected(method.id)}
+						onclick={() => toggleSelection(method.id)}
+					>
+						<PaymentMethodIcon type={method.type} size={40} />
+						<div class="method-info">
+							<span class="method-name">{info.name}</span>
+							<span class="method-type">
+								{typeLabels[method.type]}{#if info.detail}
+									· {info.detail}{/if}
+							</span>
+						</div>
+						<div class="method-check" class:checked={isSelected(method.id)}>
+							{#if isSelected(method.id)}
+								<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+									<path
+										d="M2 7L5.5 10.5L12 4"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							{/if}
+						</div>
+					</button>
 				{/each}
 			</div>
 		{/if}
@@ -172,18 +281,21 @@
 				{#snippet iconLeft()}
 					<Plus size={20} />
 				{/snippet}
-				Добавить способ
+				Добавить
 			</Button>
 
-			{#if methods.length > 0}
-				<Button
-					variant="primary"
-					onclick={handleConfirm}
-					disabled={!hasChanges && selectedCount === 0}
-				>
-					{selectedCount > 0 ? `Выбрать (${selectedCount})` : 'Подтвердить'}
-				</Button>
-			{/if}
+			<Button
+				variant="primary"
+				onclick={handleConfirm}
+				loading={isSaving}
+				class="confirm-btn"
+			>
+				{#if hasChanges && selectedCount > 0}
+					Готово ({selectedCount})
+				{:else}
+					Готово
+				{/if}
+			</Button>
 		</div>
 	</div>
 </BottomSheet>
@@ -241,10 +353,70 @@
 		gap: var(--space-2);
 	}
 
-	.actions {
+	.method-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-3) var(--space-4);
+		background: var(--color-bg-secondary);
+		border-radius: var(--radius-lg);
+		cursor: pointer;
+		transition: all 0.15s var(--ease-out);
+		border: 2px solid transparent;
+	}
+
+	.method-row:active {
+		transform: scale(0.98);
+	}
+
+	.method-row.selected {
+		border-color: var(--color-primary);
+	}
+
+	.method-info {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		min-width: 0;
+		text-align: left;
+	}
+
+	.method-name {
+		font-size: var(--text-base);
+		font-weight: var(--font-medium);
+		color: var(--color-text);
+	}
+
+	.method-type {
+		font-size: var(--text-sm);
+		color: var(--color-text-tertiary);
+	}
+
+	.method-check {
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		border: 2px solid var(--color-border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.15s var(--ease-out);
+		flex-shrink: 0;
+	}
+
+	.method-check.checked {
+		background: var(--color-primary);
+		border-color: var(--color-primary);
+		color: white;
+	}
+
+	.actions {
+		display: flex;
+		gap: var(--space-3);
 		margin-top: var(--space-2);
+	}
+
+	:global(.confirm-btn) {
+		flex: 1;
 	}
 </style>
