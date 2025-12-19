@@ -183,15 +183,16 @@ export class SplitsService {
 	async addItems(
 		splitId: string,
 		_userId: string,
-		// Update type definition: combine Pick with an optional/nullable icon to satisfy Zod output
 		items: Array<
-			Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & { icon?: string | null }
+			Pick<Item, 'name' | 'price' | 'type' | 'quantity' | 'defaultDivisionMethod'> & {
+				icon?: string | null
+				groupId?: string | null
+			}
 		>,
 	): Promise<SplitResponse> {
 		const split = await this.splits.findById(splitId)
 		if (!split) throw new NotFoundError('split not found')
 
-		// Explicitly map items to handle null/undefined mismatch for icon
 		const itemsToCreate = items.map(item => ({
 			name: item.name,
 			price: item.price,
@@ -199,6 +200,7 @@ export class SplitsService {
 			quantity: item.quantity,
 			defaultDivisionMethod: item.defaultDivisionMethod,
 			icon: item.icon ?? undefined,
+			groupId: item.groupId ?? undefined,
 		}))
 
 		await this.items.createMany(splitId, itemsToCreate)

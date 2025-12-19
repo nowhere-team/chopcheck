@@ -243,7 +243,10 @@
 	async function handleScanQr() {
 		const result = await scanQrCode()
 		if (result.success && result.data) {
-			scanner.start()
+			if (!scanner.start()) {
+				console.warn('Scanner already running')
+				return
+			}
 			await streamReceiptFromQr(result.data, e => scanner.handleStreamEvent(e))
 		} else if (result.error) {
 			toast.error(result.error)
@@ -253,7 +256,10 @@
 	async function handleUploadImage(file: File) {
 		try {
 			const base64 = await fileToBase64(file)
-			scanner.start()
+			if (!scanner.start()) {
+				console.warn('Scanner already running')
+				return
+			}
 			await streamReceiptFromImage(base64, e => scanner.handleStreamEvent(e))
 		} catch {
 			toast.error(m.error_image_processing_failed())

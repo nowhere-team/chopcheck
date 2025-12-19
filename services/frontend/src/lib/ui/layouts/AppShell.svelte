@@ -6,6 +6,7 @@
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { swipeController } from '$lib/navigation/swipe.svelte'
 	import { connectionMonitor } from '$lib/services/connection.svelte'
+	import { ModalContainer } from '$lib/ui/features/modals'
 	import { ToastContainer } from '$lib/ui/features/toasts'
 
 	interface Props {
@@ -32,6 +33,7 @@
 </script>
 
 <ToastContainer />
+<ModalContainer />
 
 <div class="shell" data-platform={platformType}>
 	<div class="container">

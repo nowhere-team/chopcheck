@@ -1,3 +1,4 @@
+// file: services/frontend/src/lib/services/receipts/scanner.svelte.ts
 import type { ReceiptCompleteData, ReceiptStreamEvent } from './stream'
 
 export type ScannerState = 'idle' | 'connecting' | 'processing' | 'saving' | 'completed' | 'error'
@@ -13,9 +14,9 @@ export interface ScannerContext {
 	isCached?: boolean
 }
 
-// Singleton state class
 class ReceiptScannerManager {
 	private _state = $state<ScannerState>('idle')
+	private _isLocked = false // prevent duplicate starts
 
 	context = $state<ScannerContext>({
 		itemsCount: 0,
@@ -35,18 +36,28 @@ class ReceiptScannerManager {
 		)
 	}
 
-	start(): void {
-		if (this._state !== 'idle' && this._state !== 'error') return
+	start(): boolean {
+		// prevent duplicate starts
+		if (this._isLocked || this.isScanning) {
+			console.warn('[scanner] already running, ignoring start()')
+			return false
+		}
+
+		this._isLocked = true
 		this.resetContext()
 		this._state = 'connecting'
+		return true
 	}
 
 	handleStreamEvent(event: ReceiptStreamEvent): void {
+		// ignore events if not in valid state
+		if (this._state === 'idle' || this._state === 'error' || this._state === 'completed') {
+			return
+		}
+
 		switch (event.type) {
 			case 'started':
-				if (this._state === 'idle') {
-					this._state = 'connecting'
-				}
+				this._state = 'connecting'
 				break
 
 			case 'fns_fetched': {
@@ -106,15 +117,16 @@ class ReceiptScannerManager {
 			case 'error': {
 				this.context.error = event.data?.message || 'Неизвестная ошибка'
 				this._state = 'error'
+				this._isLocked = false
 				break
 			}
 
 			case 'stream_end': {
-				// fix: if connection closes without full completion
 				if (this._state === 'connecting' || this._state === 'processing') {
 					if (!this.context.receiptData) {
 						this.context.error = 'Кажется, распознавание чека было прервано'
 						this._state = 'error'
+						this._isLocked = false
 					}
 				}
 				break
@@ -125,7 +137,6 @@ class ReceiptScannerManager {
 	saved(): void {
 		if (this._state === 'saving') {
 			this._state = 'completed'
-			// Auto reset handled by UI delay usually, but safety clear here
 			setTimeout(() => {
 				if (this._state === 'completed') {
 					this.reset()
@@ -137,10 +148,12 @@ class ReceiptScannerManager {
 	failSave(message: string): void {
 		this.context.error = message
 		this._state = 'error'
+		this._isLocked = false
 	}
 
 	reset(): void {
 		this._state = 'idle'
+		this._isLocked = false
 		this.resetContext()
 	}
 
