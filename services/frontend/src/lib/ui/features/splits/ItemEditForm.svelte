@@ -1,21 +1,53 @@
 <script lang="ts">
-	import { Trash } from 'phosphor-svelte'
+	import { Plus, Trash } from 'phosphor-svelte'
 
 	import { m } from '$lib/i18n'
-	import type { DraftItem } from '$lib/services/api/types'
+	import type { DraftItem, ItemGroup } from '$lib/services/api/types'
 	import { Button, Divider, Input } from '$lib/ui/components'
 	import { EditableEmoji, PriceInput, Select } from '$lib/ui/forms'
 
 	interface Props {
 		item: DraftItem
+		groups?: ItemGroup[]
 		onSave?: () => void
 		onDelete?: () => void
 		onCancel?: () => void
+		onCreateGroup?: () => void
 	}
 
-	const { item = $bindable(), onSave, onDelete, onCancel }: Props = $props()
+	const { item = $bindable(), groups = [], onSave, onDelete, onCancel, onCreateGroup }: Props = $props()
 
 	let iconValue = $state(item.icon || '📦')
+
+	const NO_GROUP_VALUE = '__no_group__'
+	const CREATE_GROUP_VALUE = '__create_group__'
+
+	const groupOptions = $derived(() => {
+		const options = [
+			{ value: NO_GROUP_VALUE, label: m.group_none() }
+		]
+		for (const group of groups) {
+			options.push({
+				value: group.id,
+				label: group.icon ? `${group.icon} ${group.name}` : group.name
+			})
+		}
+		options.push({
+			value: CREATE_GROUP_VALUE,
+			label: m.group_create_new()
+		})
+		return options
+	})
+
+	const selectedGroupValue = $derived(item.groupId ?? NO_GROUP_VALUE)
+
+	function handleGroupChange(value: string) {
+		if (value === CREATE_GROUP_VALUE) {
+			onCreateGroup?.()
+			return
+		}
+		item.groupId = value === NO_GROUP_VALUE ? null : value
+	}
 
 	const divisionMethods = [
 		{
@@ -74,6 +106,15 @@
 			options={divisionMethods}
 			bind:value={item.defaultDivisionMethod}
 		/>
+
+		{#if groups.length > 0 || onCreateGroup}
+			<Select
+				label={m.item_group_label()}
+				options={groupOptions()}
+				value={selectedGroupValue}
+				onchange={handleGroupChange}
+			/>
+		{/if}
 	</div>
 
 	<Divider />

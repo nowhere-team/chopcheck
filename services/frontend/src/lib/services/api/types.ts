@@ -225,6 +225,7 @@ export interface DraftItem {
 	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
 	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
 	icon?: string
+	groupId?: string | null
 }
 
 // payment methods

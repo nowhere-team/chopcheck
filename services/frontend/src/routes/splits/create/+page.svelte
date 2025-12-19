@@ -56,9 +56,19 @@
 
 	const allPaymentMethods = $derived(paymentMethodsService.list.current ?? [])
 	const splitPaymentMethods = $derived(paymentMethodsService.splitMethods.current ?? [])
-	const selectedPaymentMethodIds = $derived(
-		new Set(splitPaymentMethods.map(m => m.paymentMethodId))
-	)
+	
+	// Локальное хранение выбранных платежных методов (для случая когда сплит ещё не создан)
+	let localSelectedPaymentMethodIds = $state<Set<string>>(new Set())
+	
+	// Синхронизируем локальные выбранные методы с сервером когда сплит существует
+	$effect(() => {
+		if (splitPaymentMethods.length > 0) {
+			localSelectedPaymentMethodIds = new Set(splitPaymentMethods.map(m => m.paymentMethodId))
+		}
+	})
+	
+	// Используем локальное состояние для отображения
+	const selectedPaymentMethodIds = $derived(localSelectedPaymentMethodIds)
 
 	let isPaymentMethodsSheetOpen = $state(false)
 
@@ -132,6 +142,8 @@
 	let editingItem = $state<DraftItem | null>(null)
 	let isGroupEditSheetOpen = $state(false)
 	let editingGroup = $state<{ id?: string; name: string; icon: string } | null>(null)
+	let lastSelectedGroupId = $state<string | null>(null)
+	let pendingGroupForItem = $state(false)
 
 	let selectionMode = $state(false)
 	let selectedIds = $state<Set<string>>(new Set())
@@ -157,9 +169,12 @@
 		await saveMetadata()
 	}
 
-	function handlePaymentMethodsChange() {
-		// методы уже сохранены в PaymentMethodsSheet при handleConfirm
-		// данные обновятся автоматически через splitMethods
+	async function handlePaymentMethodsChange(newSelectedIds: Set<string>) {
+		// Обновляем локальное состояние немедленно для отображения в UI
+		localSelectedPaymentMethodIds = new Set(newSelectedIds)
+		
+		// Если сплит ещё не создан - сохраняем только локально
+		// Методы синхронизируются с сервером в PaymentMethodsSheet.handleConfirm() если есть splitId
 	}
 
 	function handleItemClick(item: SplitItem) {
@@ -218,7 +233,8 @@
 			quantity: '1',
 			type: 'product',
 			defaultDivisionMethod: 'by_fraction',
-			icon: '📦'
+			icon: '📦',
+			groupId: lastSelectedGroupId
 		}
 		isItemEditSheetOpen = true
 	}
@@ -230,6 +246,11 @@
 		const currentDraftId = draftData.id
 		const isNew = !itemToSave.id || itemToSave.id.startsWith('temp-')
 		const tempId = isNew ? `temp-${Date.now()}` : itemToSave.id!
+
+		// Запоминаем последнюю выбранную группу
+		if (itemToSave.groupId !== undefined) {
+			lastSelectedGroupId = itemToSave.groupId
+		}
 
 		let newItems = [...items]
 		if (!isNew) {
@@ -259,7 +280,8 @@
 						quantity: String(itemToSave.quantity),
 						type: itemToSave.type,
 						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-						icon: itemToSave.icon
+						icon: itemToSave.icon,
+						groupId: itemToSave.groupId
 					})
 				} else {
 					await splitsService.updateItem(currentDraftId, tempId, {
@@ -268,7 +290,8 @@
 						quantity: String(itemToSave.quantity),
 						type: itemToSave.type,
 						defaultDivisionMethod: itemToSave.defaultDivisionMethod,
-						icon: itemToSave.icon
+						icon: itemToSave.icon,
+						groupId: itemToSave.groupId
 					})
 				}
 			} catch (e) {
@@ -351,23 +374,41 @@
 		editingGroup = null
 
 		try {
+			let createdGroupId: string | undefined
 			if (groupData.id) {
 				await splitsService.updateGroup(currentDraftId, groupData.id, {
 					name: groupData.name,
 					icon: groupData.icon
 				})
 			} else {
-				await splitsService.createGroup(currentDraftId, {
+				const res = await splitsService.createGroup(currentDraftId, {
 					name: groupData.name,
 					icon: groupData.icon,
 					type: 'custom'
 				})
+				// Находим созданную группу для присвоения к предмету
+				const newGroup = res.itemGroups.find(g => g.name === groupData.name && g.icon === groupData.icon)
+				createdGroupId = newGroup?.id
 			}
+
+			// Если группа была создана из формы редактирования предмета, присваиваем её
+			if (pendingGroupForItem && createdGroupId && editingItem) {
+				editingItem.groupId = createdGroupId
+				lastSelectedGroupId = createdGroupId
+			}
+			pendingGroupForItem = false
 		} catch (e) {
 			console.error('Failed to save group', e)
 			toast.error(m.error_saving())
+			pendingGroupForItem = false
 			await splitsService.draft.refetch()
 		}
+	}
+
+	function handleCreateGroupFromItem() {
+		pendingGroupForItem = true
+		editingGroup = { name: '', icon: '📦' }
+		isGroupEditSheetOpen = true
 	}
 
 	async function handleScanQr() {
@@ -599,9 +640,11 @@
 	{#if editingItem}
 		<ItemEditForm
 			bind:item={editingItem}
+			groups={itemGroups}
 			onSave={handleSaveItem}
 			onDelete={handleDeleteItem}
 			onCancel={() => (isItemEditSheetOpen = false)}
+			onCreateGroup={handleCreateGroupFromItem}
 		/>
 	{/if}
 </BottomSheet>
