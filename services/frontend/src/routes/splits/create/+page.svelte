@@ -423,7 +423,8 @@
 
 			// Если группа была создана из формы редактирования предмета, присваиваем её
 			if (pendingGroupForItem && createdGroupId && editingItem) {
-				editingItem.groupId = createdGroupId
+				// Создаём новый объект для триггера реактивности
+				editingItem = { ...editingItem, groupId: createdGroupId }
 				lastSelectedGroupId = createdGroupId
 			}
 			pendingGroupForItem = false
