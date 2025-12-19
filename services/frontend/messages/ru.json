@@ -119,6 +119,8 @@
 	"group_manual_name": "Добавленные вручную",
 	"group_receipt_name": "Чек",
 	"group_custom_name": "Группа",
+	"group_none": "Без группы",
+	"group_create_new": "+ Создать новую группу",
 	"group_delete_button": "Удалить группу",
 	"group_rename_button": "Переименовать",
 	"group_collapse_button": "Свернуть",

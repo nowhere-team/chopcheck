@@ -37,11 +37,14 @@
 	let localSelectedIds = $state<Set<string>>(new Set())
 	let isEditSheetOpen = $state(false)
 	let editingMethod = $state<PaymentMethod | null>(null)
+	let wasOpen = $state(false)
 
+	// Инициализируем localSelectedIds только при открытии sheet (переход из closed в open)
 	$effect(() => {
-		if (open) {
+		if (open && !wasOpen) {
 			localSelectedIds = new SvelteSet(selectedIds)
 		}
+		wasOpen = open
 	})
 
 	function toggleSelection(id: string) {
