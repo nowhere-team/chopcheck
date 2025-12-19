@@ -56,17 +56,42 @@
 
 	const allPaymentMethods = $derived(paymentMethodsService.list.current ?? [])
 	const splitPaymentMethods = $derived(paymentMethodsService.splitMethods.current ?? [])
-	
-	// Локальное хранение выбранных платежных методов (для случая когда сплит ещё не создан)
+
+	// Локальное хранение выбранных платежных методов (для случая когда сплит еще не создан)
 	let localSelectedPaymentMethodIds = $state<Set<string>>(new Set())
-	
-	// Синхронизируем локальные выбранные методы с сервером когда сплит существует
+	// Флаг для отслеживания, были ли методы выбраны пользователем до создания сплита
+	let pendingPaymentMethodsSync = $state(false)
+	// Флаг для отслеживания инициализации с сервера
+	let serverPaymentMethodsInitialized = $state(false)
+
+	// Синхронизируем локальные выбранные методы с сервером только при первой загрузке
 	$effect(() => {
-		if (splitPaymentMethods.length > 0) {
+		if (splitPaymentMethods.length > 0 && !serverPaymentMethodsInitialized) {
+			serverPaymentMethodsInitialized = true
 			localSelectedPaymentMethodIds = new Set(splitPaymentMethods.map(m => m.paymentMethodId))
 		}
 	})
-	
+
+	// Когда сплит создан и есть несинхронизированные методы - сохраняем их
+	watch(
+		() => draftData.id,
+		splitId => {
+			if (splitId && pendingPaymentMethodsSync && localSelectedPaymentMethodIds.size > 0) {
+				pendingPaymentMethodsSync = false
+				;(async () => {
+					try {
+						for (const methodId of localSelectedPaymentMethodIds) {
+							await paymentMethodsService.addToSplit(splitId, methodId)
+						}
+					} catch (e) {
+						console.error('Failed to sync payment methods', e)
+						toast.error(m.error_saving())
+					}
+				})()
+			}
+		}
+	)
+
 	// Используем локальное состояние для отображения
 	const selectedPaymentMethodIds = $derived(localSelectedPaymentMethodIds)
 
@@ -172,9 +197,11 @@
 	async function handlePaymentMethodsChange(newSelectedIds: Set<string>) {
 		// Обновляем локальное состояние немедленно для отображения в UI
 		localSelectedPaymentMethodIds = new Set(newSelectedIds)
-		
-		// Если сплит ещё не создан - сохраняем только локально
-		// Методы синхронизируются с сервером в PaymentMethodsSheet.handleConfirm() если есть splitId
+
+		// Если сплит еще не создан - отмечаем что нужна синхронизация при создании
+		if (!draftData.id && newSelectedIds.size > 0) {
+			pendingPaymentMethodsSync = true
+		}
 	}
 
 	function handleItemClick(item: SplitItem) {
@@ -188,7 +215,8 @@
 				quantity: item.quantity,
 				type: item.type,
 				defaultDivisionMethod: item.defaultDivisionMethod,
-				icon: item.icon
+				icon: item.icon,
+				groupId: item.groupId
 			}
 			isItemEditSheetOpen = true
 		}
@@ -387,7 +415,9 @@
 					type: 'custom'
 				})
 				// Находим созданную группу для присвоения к предмету
-				const newGroup = res.itemGroups.find(g => g.name === groupData.name && g.icon === groupData.icon)
+				const newGroup = res.itemGroups.find(
+					g => g.name === groupData.name && g.icon === groupData.icon
+				)
 				createdGroupId = newGroup?.id
 			}
 

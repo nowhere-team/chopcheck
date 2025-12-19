@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Plus, Trash } from 'phosphor-svelte'
+	import { Trash } from 'phosphor-svelte'
 
 	import { m } from '$lib/i18n'
 	import type { DraftItem, ItemGroup } from '$lib/services/api/types'
@@ -15,7 +15,14 @@
 		onCreateGroup?: () => void
 	}
 
-	const { item = $bindable(), groups = [], onSave, onDelete, onCancel, onCreateGroup }: Props = $props()
+	const {
+		item = $bindable(),
+		groups = [],
+		onSave,
+		onDelete,
+		onCancel,
+		onCreateGroup
+	}: Props = $props()
 
 	let iconValue = $state(item.icon || '📦')
 
@@ -23,9 +30,7 @@
 	const CREATE_GROUP_VALUE = '__create_group__'
 
 	const groupOptions = $derived(() => {
-		const options = [
-			{ value: NO_GROUP_VALUE, label: m.group_none() }
-		]
+		const options = [{ value: NO_GROUP_VALUE, label: m.group_none() }]
 		for (const group of groups) {
 			options.push({
 				value: group.id,
