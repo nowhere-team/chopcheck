@@ -150,7 +150,7 @@ export class TelegramPlatform implements Platform {
 
 			applyThemePalette(palette)
 
-			const sa = this.sdk.viewport.safeAreaInsets()
+			const sa = this.sdk.viewport.contentSafeAreaInsets()
 			applySafeArea({ top: sa.top, bottom: sa.bottom, left: sa.left, right: sa.right })
 		} catch (e) {
 			log.warn('failed to apply theme', e)
