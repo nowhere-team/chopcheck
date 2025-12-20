@@ -116,7 +116,7 @@ services:
     container_name: chopcheck-telegram
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       HTTP_PORT: 8081
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_WEB_APP_URL: ${TELEGRAM_WEB_APP_URL}
