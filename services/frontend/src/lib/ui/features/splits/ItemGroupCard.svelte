@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { CaretDown, DotsThree, PencilSimple, Trash, UsersThree } from 'phosphor-svelte'
 	import type { Snippet } from 'svelte'
-	import { slide } from 'svelte/transition'
 
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
@@ -166,19 +165,21 @@
 		</span>
 	</div>
 
-	{#if !collapsed}
-		{#if hasVisibleWarnings}
-			<div class="group-warnings" transition:slide={{ duration: 150 }}>
-				<WarningAlert warnings={visibleWarnings} onDismiss={handleDismissWarning} />
-			</div>
-		{/if}
+	<div class="group-content-wrapper" class:is-collapsed={collapsed}>
+		<div class="group-content-inner">
+			{#if hasVisibleWarnings}
+				<div class="group-warnings">
+					<WarningAlert warnings={visibleWarnings} onDismiss={handleDismissWarning} />
+				</div>
+			{/if}
 
-		{#if children}
-			<div class="group-items" transition:slide={{ duration: 200 }}>
-				{@render children()}
-			</div>
-		{/if}
-	{/if}
+			{#if children}
+				<div class="group-items">
+					{@render children()}
+				</div>
+			{/if}
+		</div>
+	</div>
 </div>
 
 <style>
@@ -279,6 +280,21 @@
 		transform: rotate(-90deg);
 	}
 
+	.group-content-wrapper {
+		display: grid;
+		grid-template-rows: 1fr;
+		transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.group-content-wrapper.is-collapsed {
+		grid-template-rows: 0fr;
+	}
+
+	.group-content-inner {
+		min-height: 0;
+		overflow: hidden;
+	}
+
 	.group-warnings {
 		padding: 0 var(--space-4) var(--space-3);
 	}
@@ -288,5 +304,6 @@
 		flex-direction: column;
 		gap: var(--space-2);
 		padding: 0 var(--space-4) var(--space-4);
+		content-visibility: auto;
 	}
 </style>

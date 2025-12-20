@@ -12,8 +12,6 @@
 
 	let { open = $bindable(), selected, onselect, onclose }: Props = $props()
 
-	let hasRendered = $state(false)
-
 	// prettier-ignore
 	const categories = {
 		food: ['🍕', '🍔', '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🥗', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘'],
@@ -33,17 +31,25 @@
 		symbols: m.emoji_picker_symbols_category()
 	}
 
-	$effect(() => {
-		if (open && !hasRendered) {
-			const timeout = setTimeout(() => {
-				requestAnimationFrame(() => {
-					hasRendered = true
-				})
-			}, 50)
+	let renderedCategoriesCount = $state(0)
 
-			return () => clearTimeout(timeout)
+	const categoriesList = Object.entries(categories)
+
+	$effect(() => {
+		if (open) {
+			renderedCategoriesCount = 1
+
+			const timer = requestAnimationFrame(renderNextBatch)
+			return () => cancelAnimationFrame(timer)
 		}
 	})
+
+	function renderNextBatch() {
+		if (renderedCategoriesCount < categoriesList.length) {
+			renderedCategoriesCount++
+			requestAnimationFrame(renderNextBatch)
+		}
+	}
 
 	function handleSelect(emoji: string) {
 		onselect?.(emoji)
@@ -51,25 +57,27 @@
 </script>
 
 <BottomSheet bind:open {onclose} title={m.emoji_picker_label()}>
-	<div class="picker" class:ready={hasRendered}>
-		{#if hasRendered}
-			{#each Object.entries(categories) as [key, emojis] (key)}
-				<div class="category">
-					<h3 class="category-title">{categoryNames[key]}</h3>
-					<div class="emoji-grid">
-						{#each emojis as emoji (emoji)}
-							<button
-								type="button"
-								class="emoji-button"
-								class:selected={emoji === selected}
-								onclick={() => handleSelect(emoji)}
-							>
-								<Emoji {emoji} size={32} lazy={true} />
-							</button>
-						{/each}
-					</div>
+	<div class="picker">
+		{#each categoriesList.slice(0, renderedCategoriesCount) as [key, emojis] (key)}
+			<div class="category">
+				<h3 class="category-title">{categoryNames[key]}</h3>
+				<div class="emoji-grid">
+					{#each emojis as emoji (emoji)}
+						<button
+							type="button"
+							class="emoji-button"
+							class:selected={emoji === selected}
+							onclick={() => handleSelect(emoji)}
+						>
+							<Emoji {emoji} size={32} />
+						</button>
+					{/each}
 				</div>
-			{/each}
+			</div>
+		{/each}
+
+		{#if renderedCategoriesCount < categoriesList.length}
+			<div style="height: 100px;"></div>
 		{/if}
 	</div>
 </BottomSheet>
@@ -81,14 +89,8 @@
 		gap: var(--space-6);
 		max-height: 60vh;
 		min-height: 60vh;
-		opacity: 0;
-		transition: opacity 0.15s ease-out;
 		padding: 4px 4px var(--space-4);
 		margin: -4px -4px 0;
-	}
-
-	.picker.ready {
-		opacity: 1;
 	}
 
 	.category {
@@ -96,7 +98,7 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		content-visibility: auto;
-		contain-intrinsic-size: 1px 300px;
+		contain-intrinsic-size: 1px 150px;
 	}
 
 	.category-title {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte'
 	import { SvelteMap } from 'svelte/reactivity'
 
 	import type { ItemGroup, SplitItem } from '$lib/services/api/types'
@@ -51,10 +52,22 @@
 	})
 
 	const ungroupedItems = $derived(groupedItems.get(null) ?? [])
+
+	let renderLimit = $state(10)
+
+	onMount(() => {
+		const interval = requestAnimationFrame(() => {
+			renderLimit = 1000
+		})
+		return () => cancelAnimationFrame(interval)
+	})
+
+	const visibleGroups = $derived(itemGroups.slice(0, renderLimit))
+	const showUngrouped = $derived(itemGroups.length < renderLimit)
 </script>
 
 <div class="items-list">
-	{#each itemGroups as group (group.id)}
+	{#each visibleGroups as group (group.id)}
 		{@const groupItems = groupedItems.get(group.id) ?? []}
 		{@const isCollapsed = collapsedGroups.has(group.id)}
 
@@ -81,7 +94,7 @@
 		</ItemGroupCard>
 	{/each}
 
-	{#if ungroupedItems.length > 0}
+	{#if showUngrouped && ungroupedItems.length > 0}
 		{#each ungroupedItems as item (item.id)}
 			<ItemCard
 				{item}
