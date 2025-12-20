@@ -11,6 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # 1. DETECT CHANGES
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -19,6 +20,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       telegram: ${{ steps.filter.outputs.telegram }}
       migrator: ${{ steps.filter.outputs.backend }}
+      # New output for infrastructure changes
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
@@ -27,14 +30,21 @@ jobs:
           filters: |
             frontend:
               - 'services/frontend/**'
-              - 'bun.lockb'
+              - 'bun.lock'          # Global file triggers frontend rebuild
+              - 'package.json'
             backend:
               - 'services/backend/**'
-              - 'bun.lockb'
+              - 'bun.lock'          # Global file triggers backend rebuild
+              - 'package.json'
             telegram:
               - 'services/telegram/**'
-              - 'bun.lockb'
+              - 'bun.lock'          # Global file triggers telegram rebuild
+              - 'package.json'
+            infra:
+              - 'docker-compose.prod.yml'
+              - 'nginx/**'
 
+  # 2. LINT & TYPE CHECK
   lint-frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
@@ -71,10 +81,16 @@ jobs:
       - run: bun run lint
         working-directory: ./services/telegram
 
+  # 3. BUILD DOCKER IMAGES
   build-and-push-images:
     name: Build & Push Docker Images
     needs: [changes, lint-frontend, lint-backend, lint-telegram]
-    if: github.ref == 'refs/heads/main' && always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    # Run only on main branch AND if there are code changes
+    if: |
+      github.ref == 'refs/heads/main' &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.telegram == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -132,13 +148,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # 4. DEPLOY TO PRODUCTION
   deploy:
-    needs: build-and-push-images
-    if: github.ref == 'refs/heads/main'
+    needs: [changes, build-and-push-images]
     runs-on: self-hosted
     concurrency:
       group: deploy-chopcheck
       cancel-in-progress: true
+    # Run if:
+    # 1. We are on main branch
+    # 2. Previous jobs didn't fail (skippped is OK)
+    # 3. AND (Something was built OR Infrastructure changed)
+    if: |
+      github.ref == 'refs/heads/main' &&
+      !failure() && !cancelled() &&
+      (needs.changes.outputs.backend == 'true' ||
+       needs.changes.outputs.frontend == 'true' ||
+       needs.changes.outputs.telegram == 'true' ||
+       needs.changes.outputs.infra == 'true')
     steps:
       - uses: actions/checkout@v6
 
@@ -148,12 +175,18 @@ jobs:
       - name: Update configs and Deploy
         run: |
           mkdir -p /opt/chopcheck/nginx
-
           [ -f "/opt/chopcheck/nginx/nginx.conf" ] && rm /opt/chopcheck/nginx/nginx.conf
+
+          # Always copy configs as they might have changed (infra trigger)
           cp docker-compose.prod.yml /opt/chopcheck/
           cp nginx/nginx.conf /opt/chopcheck/nginx/nginx.conf
 
           cd /opt/chopcheck
+
+          # Pull will only download layers if images were actually rebuilt in the previous job
           docker compose -f docker-compose.prod.yml pull
+
+          # Up will only recreate containers if image hash changed or config changed
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
           docker image prune -f
