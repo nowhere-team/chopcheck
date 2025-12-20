@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '$lib/shared/constants'
+import { getApiUrl } from '$lib/shared/constants'
 import { createLogger } from '$lib/shared/logger'
 
 const log = createLogger('receipt-stream')
@@ -36,7 +36,7 @@ export async function streamReceiptFromQr(
 	onEvent: StreamCallback,
 	signal?: AbortSignal
 ): Promise<void> {
-	const url = `${API_BASE_URL}/receipts/scan/qr/stream`
+	const url = `${getApiUrl()}/receipts/scan/qr/stream`
 	await openEventSource(url, { qrRaw }, onEvent, signal)
 }
 
@@ -45,7 +45,7 @@ export async function streamReceiptFromImage(
 	onEvent: StreamCallback,
 	signal?: AbortSignal
 ): Promise<void> {
-	const url = `${API_BASE_URL}/receipts/scan/image/stream`
+	const url = `${getApiUrl()}/receipts/scan/image/stream`
 	await openEventSource(url, { image: imageBase64 }, onEvent, signal)
 }
 
