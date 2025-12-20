@@ -174,6 +174,7 @@
 			background 0.15s var(--ease-out);
 		user-select: none;
 		-webkit-user-select: none;
+		contain: content;
 	}
 
 	:global(.item-card.has-warnings) {

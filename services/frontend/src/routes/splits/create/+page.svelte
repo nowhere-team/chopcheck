@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useDebounce } from 'runed'
+	import { untrack } from 'svelte'
 
 	import { m } from '$lib/i18n'
 	import type { ItemGroup, Participant, SplitItem } from '$lib/services/api/types'
@@ -272,7 +273,7 @@
 		const data = scanner.context.receiptData
 
 		if (state === 'saving' && data) {
-			handleScannerComplete(data)
+			untrack(() => handleScannerComplete(data))
 		} else if (state === 'error' && scanner.context.error) {
 			toast.error(scanner.context.error)
 			setTimeout(() => scanner.reset(), 2000)
@@ -280,13 +281,6 @@
 	})
 
 	async function handleScannerComplete(data: any) {
-		if (data.cached) {
-			splitsService.draft.refetch()
-			toast.success(m.success_receipt_already_exists())
-			setTimeout(() => scanner.reset(), 500)
-			return
-		}
-
 		try {
 			let currentSplitId = splitId
 			if (!currentSplitId) {
@@ -299,7 +293,11 @@
 			}
 
 			await splitsService.linkReceipt(currentSplitId, data.receipt.id)
-			toast.success(m.success_receipt_uploaded())
+			if (data.cached) {
+				toast.success(m.success_receipt_already_exists())
+			} else {
+				toast.success(m.success_receipt_uploaded())
+			}
 
 			if (
 				(!ctx.localName || ctx.localName === m.create_split_default_name()) &&

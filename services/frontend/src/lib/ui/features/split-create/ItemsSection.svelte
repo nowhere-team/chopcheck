@@ -59,11 +59,15 @@
 	}
 
 	function handleAddItem() {
-		ctx.sheets.openNewItem()
+		setTimeout(() => {
+			ctx.sheets.openNewItem()
+		}, 150)
 	}
 
 	function handleOpenScanner() {
-		ctx.sheets.open('scanner')
+		setTimeout(() => {
+			ctx.sheets.open('scanner')
+		}, 150)
 	}
 </script>
 
