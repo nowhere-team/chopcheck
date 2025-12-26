@@ -1,5 +1,5 @@
-﻿import { parse, validate } from '@tma.js/init-data-node'
-import { telegramAuthSchema } from '@chopcheck/shared'
+﻿import { telegramAuthSchema } from '@chopcheck/shared'
+import { parse, validate } from '@tma.js/init-data-node'
 import { Hono } from 'hono'
 import { setCookie } from 'hono/cookie'
 

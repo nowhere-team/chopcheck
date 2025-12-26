@@ -263,7 +263,7 @@
 
     "@lix-js/server-protocol-schema": ["@lix-js/server-protocol-schema@0.1.1", "", {}, "sha512-jBeALB6prAbtr5q4vTuxnRZZv1M2rKe8iNqRQhFJ4Tv7150unEa0vKyz0hs8Gl3fUGsWaNJBh3J8++fpbrpRBQ=="],
 
-    "@nowhere-team/catalog": ["@nowhere-team/catalog@1.0.1", "https://npm.pkg.github.com/download/@nowhere-team/catalog/1.0.1/a8ef95662364495da5111af26915885ba8a34006", {}, "sha512-zb+YM7QoRoVYqdMxxzspcLJfB1qtrKhE9TpdGWp/Irrbc/+pkLJH5E1dvNjiXliEV7MR4xM3xQaPF3Ssh/Pu+Q=="],
+    "@nowhere-team/catalog": ["@nowhere-team/catalog@1.0.2", "https://npm.pkg.github.com/download/@nowhere-team/catalog/1.0.2/9863c67cdb5711c48f7be57a2b27d77e5bb4d1b3", {}, "sha512-D8VktXKCb2ZfrAeuSB1/s4UhCxWdwMxawvg3vb7BM6yDmiD64LBwx2jh+3nVDxIKV/enYWivMaM8HZPHIiHmLw=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
@@ -827,7 +827,7 @@
 
     "known-css-properties": ["known-css-properties@0.37.0", "", {}, "sha512-JCDrsP4Z1Sb9JwG0aJ8Eo2r7k4Ou5MwmThS/6lcIe1ICyb7UBJKGRIUUdqc2ASdE/42lgz6zFUnzAIhtXnBVrQ=="],
 
-    "ky": ["ky@1.14.1", "", {}, "sha512-hYje4L9JCmpEQBtudo+v52X5X8tgWXUYyPcxKSuxQNboqufecl9VMWjGiucAFH060AwPXHZuH+WB2rrqfkmafw=="],
+    "ky": ["ky@1.14.2", "", {}, "sha512-q3RBbsO5A5zrPhB6CaCS8ZUv+NWCXv6JJT4Em0i264G9W0fdPB8YRfnnEi7Dm7X7omAkBIPojzYJ2D1oHTHqug=="],
 
     "kysely": ["kysely@0.27.6", "", {}, "sha512-FIyV/64EkKhJmjgC0g2hygpBv5RNWVPyNCqSAD7eTCv6eFWNIi4PN1UvdSJGicN/o35bnevgis4Y0UDC0qi8jQ=="],
 

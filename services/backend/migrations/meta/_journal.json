@@ -29,6 +29,13 @@
 			"when": 1766006140040,
 			"tag": "0003_receipt_warnings",
 			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1766785204068,
+			"tag": "0004_receipt_bounding_boxes",
+			"breakpoints": true
 		}
 	]
 }

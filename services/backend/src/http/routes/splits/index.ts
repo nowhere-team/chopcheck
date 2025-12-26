@@ -213,17 +213,22 @@ export function createSplitsRoutes() {
 		return c.json(anonymizeSplitResponse(split), 201)
 	})
 
-	app.patch('/:id/groups/:groupId', uuidParam('id', 'groupId'), validate('json', updateItemGroupDtoSchema), async c => {
-		const split = await c
-			.get('services')
-			.splits.updateItemGroup(
-				c.req.param('id'),
-				c.req.param('groupId'),
-				c.get('authContext')!.userId,
-				c.req.valid('json'),
-			)
-		return c.json(anonymizeSplitResponse(split))
-	})
+	app.patch(
+		'/:id/groups/:groupId',
+		uuidParam('id', 'groupId'),
+		validate('json', updateItemGroupDtoSchema),
+		async c => {
+			const split = await c
+				.get('services')
+				.splits.updateItemGroup(
+					c.req.param('id'),
+					c.req.param('groupId'),
+					c.get('authContext')!.userId,
+					c.req.valid('json'),
+				)
+			return c.json(anonymizeSplitResponse(split))
+		},
+	)
 
 	app.delete('/:id/groups/:groupId', uuidParam('id', 'groupId'), async c => {
 		const split = await c

@@ -160,7 +160,14 @@ export {
 	PAYMENT_METHOD_TYPES,
 	SPLIT_PHASES,
 	SPLIT_STATUSES,
-	WARNING_CODES,
+	WARNING_CODES
 } from '@chopcheck/shared'
 
-export type { DivisionMethod, ItemGroupType, PaymentMethodType, SplitPhase, SplitStatus, WarningCode }
+export type {
+	DivisionMethod,
+	ItemGroupType,
+	PaymentMethodType,
+	SplitPhase,
+	SplitStatus,
+	WarningCode
+}

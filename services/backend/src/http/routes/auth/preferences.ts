@@ -2,8 +2,8 @@
 import { Hono } from 'hono'
 
 import { auth } from '@/http/middleware/auth'
-import { toUserMeDto } from '@/http/utils/mappers'
 import { validate } from '@/http/utils'
+import { toUserMeDto } from '@/http/utils/mappers'
 
 export function createPreferencesRoute() {
 	return new Hono().patch('/me/preferences', auth(), validate('json', updatePreferencesSchema), async c => {
