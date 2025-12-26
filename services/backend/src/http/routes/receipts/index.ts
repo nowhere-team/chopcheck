@@ -1,21 +1,9 @@
-﻿import { Hono } from 'hono'
+﻿import { scanImageSchema, scanQrSchema } from '@chopcheck/shared'
+import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import { z } from 'zod'
 
 import { auth } from '@/http/middleware/auth'
 import { uuidParam, validate } from '@/http/utils'
-
-const qrSchema = z.object({ qrRaw: z.string().min(10).max(512) })
-
-const imageSchema = z
-	.object({
-		image: z.string().min(100).optional(),
-		images: z.array(z.string().min(100)).optional(),
-		saveImages: z.boolean().optional(),
-	})
-	.refine(data => data.image || (data.images && data.images.length > 0), {
-		message: 'either image or images must be provided',
-	})
 
 export function createReceiptsRoutes() {
 	const app = new Hono().use('/*', auth())
@@ -48,14 +36,14 @@ export function createReceiptsRoutes() {
 		return c.json({ success: true, savedImages })
 	})
 
-	app.post('/scan/qr', validate('json', qrSchema), async c => {
+	app.post('/scan/qr', validate('json', scanQrSchema), async c => {
 		const result = await c
 			.get('services')
 			.receipts.processQr(c.get('authContext')!.userId, c.req.valid('json').qrRaw, c.get('span'))
 		return c.json({ success: true, ...result })
 	})
 
-	app.post('/scan/qr/stream', validate('json', qrSchema), async c => {
+	app.post('/scan/qr/stream', validate('json', scanQrSchema), async c => {
 		const services = c.get('services')
 		const userId = c.get('authContext')!.userId
 		const span = c.get('span')
@@ -76,7 +64,7 @@ export function createReceiptsRoutes() {
 		})
 	})
 
-	app.post('/scan/image', validate('json', imageSchema), async c => {
+	app.post('/scan/image', validate('json', scanImageSchema), async c => {
 		const { image, images, saveImages } = c.req.valid('json')
 		const imageList = images ?? (image ? [image] : [])
 
@@ -87,7 +75,7 @@ export function createReceiptsRoutes() {
 		return c.json({ success: true, ...result })
 	})
 
-	app.post('/scan/image/stream', validate('json', imageSchema), async c => {
+	app.post('/scan/image/stream', validate('json', scanImageSchema), async c => {
 		const services = c.get('services')
 		const userId = c.get('authContext')!.userId
 		const { image, images, saveImages } = c.req.valid('json')
