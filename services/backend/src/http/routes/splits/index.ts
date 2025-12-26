@@ -1,11 +1,19 @@
-﻿import { Hono } from 'hono'
+﻿// file: services/backend/src/http/routes/splits/index.ts
+import {
+	addPaymentMethodToSplitSchema,
+	createItemGroupSchema,
+	createSplitSchema,
+	selectItemsSchema,
+	splitItemSchema,
+	updateItemGroupSchema,
+	updateItemSchema,
+} from '@chopcheck/shared'
+import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { NotFoundError } from '@/common/errors'
-import { createItemGroupSchema, createSplitSchema, updateItemGroupSchema } from '@/common/types'
 import { auth, requirePermission } from '@/http/middleware/auth'
 import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
-import { DIVISION_METHODS } from '@/platform/database/schema/enums'
 
 const joinQuerySchema = z.object({
 	anonymous: z
@@ -23,45 +31,12 @@ const mySplitsQuerySchema = z.object({
 	period: z.enum(['earlier']).optional(),
 })
 
-const selectItemsSchema = z.object({
-	participantId: z.uuid().optional(),
-	selections: z.array(
-		z.object({
-			itemId: z.uuid(),
-			divisionMethod: z.enum(DIVISION_METHODS),
-			value: z.string().optional(),
-		}),
-	),
-})
-
 const addItemsSchema = z.object({
 	items: z.array(
-		z.object({
-			name: z.string().min(1).max(128),
-			price: z.number().int().positive(),
-			type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
-			quantity: z.string().default('1'),
-			defaultDivisionMethod: z.enum(DIVISION_METHODS),
-			icon: z.string().optional(),
-			groupId: z.uuid().optional(),
+		splitItemSchema.omit({ id: true, groupId: true }).extend({
+			groupId: z.string().uuid().optional(),
 		}),
 	),
-})
-
-const updateItemSchema = z.object({
-	name: z.string().min(1).max(128).optional(),
-	price: z.number().int().positive().optional(),
-	type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).optional(),
-	quantity: z.string().optional(),
-	defaultDivisionMethod: z.enum(DIVISION_METHODS).optional(),
-	icon: z.string().optional(),
-	groupId: z.uuid().nullable().optional(),
-})
-
-const addPaymentMethodSchema = z.object({
-	paymentMethodId: z.uuid(),
-	comment: z.string().max(2048).optional(),
-	isPreferred: z.boolean().optional(),
 })
 
 export function createSplitsRoutes() {
@@ -188,7 +163,7 @@ export function createSplitsRoutes() {
 		return c.json({ success: true, data: methods })
 	})
 
-	app.post('/:id/payment-methods', uuidParam('id'), validate('json', addPaymentMethodSchema), async c => {
+	app.post('/:id/payment-methods', uuidParam('id'), validate('json', addPaymentMethodToSplitSchema), async c => {
 		await c
 			.get('services')
 			.splits.addPaymentMethod(c.req.param('id'), c.get('authContext')!.userId, c.req.valid('json'))

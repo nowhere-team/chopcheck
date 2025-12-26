@@ -47,6 +47,7 @@
 		"vitest-browser-svelte": "^1.1.0"
 	},
 	"dependencies": {
+		"@chopcheck/shared": "workspace:*",
 		"@telegram-apps/bridge": "^2.11.0",
 		"@telegram-apps/sdk": "^3.11.8",
 		"@telegram-apps/signals": "^1.1.2",

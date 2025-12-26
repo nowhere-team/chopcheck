@@ -1,4 +1,12 @@
-﻿export type PaymentMethodType = 'sbp' | 'card' | 'phone' | 'bank_transfer' | 'cash' | 'crypto' | 'custom'
+﻿import type { PaymentMethodType } from '@chopcheck/shared'
+
+export type {
+	AddPaymentMethodToSplitDto,
+	CreatePaymentMethodDto,
+	PaymentMethodType,
+	UpdatePaymentMethodDto,
+} from '@chopcheck/shared'
+export { addPaymentMethodToSplitSchema, createPaymentMethodSchema, updatePaymentMethodSchema } from '@chopcheck/shared'
 
 export interface PaymentMethod {
 	id: string
@@ -13,24 +21,4 @@ export interface PaymentMethod {
 	isDeleted: boolean
 	createdAt: Date
 	updatedAt: Date
-}
-
-export interface CreatePaymentMethodDto {
-	type: PaymentMethodType
-	displayName?: string
-	currency?: string
-	paymentData: Record<string, unknown>
-	isTemporary?: boolean
-	isDefault?: boolean
-}
-
-export interface UpdatePaymentMethodDto {
-	displayName?: string
-	isDefault?: boolean
-}
-
-export interface AddPaymentMethodToSplitDto {
-	paymentMethodId: string
-	comment?: string
-	isPreferred?: boolean
 }

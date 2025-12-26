@@ -1,4 +1,6 @@
-﻿import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
+﻿import type { SplitResponseDto } from '@chopcheck/shared'
+
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/common/errors'
 import type {
 	AddPaymentMethodToSplitDto,
 	CreateItemGroupDto,
@@ -14,6 +16,7 @@ import type {
 	SplitsByPeriod,
 	UpdateItemGroupDto,
 } from '@/common/types'
+import { toItemGroupDto, toParticipantDto, toSplitDto, toSplitItemDto } from '@/http/utils/mappers'
 import type { DivisionMethod } from '@/platform/database/schema/enums'
 import type { Logger } from '@/platform/logger'
 import type {
@@ -387,7 +390,7 @@ export class SplitsService {
 		return (await this.getById(splitId, false))!
 	}
 
-	private async buildResponse(split: Split | null, includeCalculations: boolean): Promise<SplitResponse | null> {
+	private async buildResponse(split: Split | null, includeCalculations: boolean): Promise<SplitResponseDto | null> {
 		if (!split) return null
 
 		const [items, itemGroups, participants, receiptIds] = await Promise.all([
@@ -397,15 +400,20 @@ export class SplitsService {
 			this.splits.getReceiptIds(split.id),
 		])
 
-		const response: SplitResponse = { split, items, itemGroups, participants }
+		const response: SplitResponseDto = {
+			split: toSplitDto(split),
+			items: items.map(toSplitItemDto),
+			itemGroups: itemGroups.map(toItemGroupDto),
+			participants: participants.map(toParticipantDto),
+		}
 
 		if (receiptIds.length > 0) {
 			const receipts = await this.receipts.findByIds(receiptIds)
 			response.receipts = receipts.map(r => ({
 				id: r.id,
-				placeName: r.placeName,
+				placeName: r.placeName || undefined,
 				total: r.total,
-				createdAt: r.createdAt,
+				createdAt: r.createdAt.toISOString(),
 			}))
 		}
 
