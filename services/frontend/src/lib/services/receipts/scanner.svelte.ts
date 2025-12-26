@@ -1,4 +1,5 @@
-// file: services/frontend/src/lib/services/receipts/scanner.svelte.ts
+import type { ImageMetadata, SavedImageInfo } from '$lib/services/api/types'
+
 import type { ReceiptCompleteData, ReceiptStreamEvent } from './stream'
 
 export type ScannerState = 'idle' | 'connecting' | 'processing' | 'saving' | 'completed' | 'error'
@@ -12,11 +13,16 @@ export interface ScannerContext {
 	error?: string
 	receiptData?: ReceiptCompleteData
 	isCached?: boolean
+	// image data
+	imageCount?: number
+	processedImages?: number
+	images?: ImageMetadata[]
+	savedImages?: SavedImageInfo[]
 }
 
 class ReceiptScannerManager {
 	private _state = $state<ScannerState>('idle')
-	private _isLocked = false // prevent duplicate starts
+	private _isLocked = false
 
 	context = $state<ScannerContext>({
 		itemsCount: 0,
@@ -37,7 +43,6 @@ class ReceiptScannerManager {
 	}
 
 	start(): boolean {
-		// prevent duplicate starts
 		if (this._isLocked || this.isScanning) {
 			console.warn('[scanner] already running, ignoring start()')
 			return false
@@ -50,18 +55,22 @@ class ReceiptScannerManager {
 	}
 
 	handleStreamEvent(event: ReceiptStreamEvent): void {
-		// ignore events if not in valid state
 		if (this._state === 'idle' || this._state === 'error' || this._state === 'completed') {
 			return
 		}
 
 		switch (event.type) {
-			case 'started':
+			case 'started': {
 				this._state = 'connecting'
+				const data = event.data as { imageCount?: number }
+				if (data.imageCount) {
+					this.context.imageCount = data.imageCount
+				}
 				break
+			}
 
 			case 'fns_fetched': {
-				const data = event.data
+				const data = event.data as { itemCount?: number }
 				if (data.itemCount) {
 					this.context.totalItems = data.itemCount
 				}
@@ -69,9 +78,26 @@ class ReceiptScannerManager {
 				break
 			}
 
+			case 'image_meta': {
+				const raw = event.data as { image?: ImageMetadata } | ImageMetadata
+				const image: ImageMetadata | undefined = 'index' in raw ? raw : raw.image
+
+				if (image) {
+					this.context.images = [...(this.context.images || []), image]
+					this.context.processedImages = (this.context.processedImages || 0) + 1
+				}
+				this.transitionToProcessing()
+				break
+			}
+
 			case 'item': {
-				const raw = event.data
-				const item = raw.item ?? raw
+				const raw = event.data as Record<string, unknown>
+				const item = (raw.item ?? raw) as {
+					name?: string
+					rawName?: string
+					emoji?: string
+					quantity?: number
+				}
 
 				const name = item.name || item.rawName || 'Товар'
 				const emoji = item.emoji ?? ''
@@ -88,8 +114,8 @@ class ReceiptScannerManager {
 			}
 
 			case 'place': {
-				const raw = event.data
-				const place = raw.place ?? raw
+				const raw = event.data as Record<string, unknown>
+				const place = (raw.place ?? raw) as { name?: string; emoji?: string }
 				if (place.name) {
 					this.context.storeName = place.name
 				}
@@ -99,14 +125,20 @@ class ReceiptScannerManager {
 				break
 			}
 
-			case 'receipt': {
+			case 'receipt':
 				break
-			}
 
 			case 'completed': {
-				this.context.receiptData = event.data
-				if (event.data.cached) {
+				const data = event.data as ReceiptCompleteData
+				this.context.receiptData = data
+				if (data.cached) {
 					this.context.isCached = true
+				}
+				if (data.images) {
+					this.context.images = data.images
+				}
+				if (data.savedImages) {
+					this.context.savedImages = data.savedImages
 				}
 				if (this._state === 'connecting' || this._state === 'processing') {
 					this._state = 'saving'
@@ -115,7 +147,8 @@ class ReceiptScannerManager {
 			}
 
 			case 'error': {
-				this.context.error = event.data?.message || 'Неизвестная ошибка'
+				const data = event.data as { message?: string }
+				this.context.error = data?.message || 'Неизвестная ошибка'
 				this._state = 'error'
 				this._isLocked = false
 				break
@@ -172,7 +205,11 @@ class ReceiptScannerManager {
 			lastItem: undefined,
 			error: undefined,
 			receiptData: undefined,
-			isCached: false
+			isCached: false,
+			imageCount: undefined,
+			processedImages: undefined,
+			images: undefined,
+			savedImages: undefined
 		}
 	}
 }

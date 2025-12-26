@@ -280,3 +280,70 @@ export interface AddPaymentMethodToSplitDto {
 	comment?: string
 	isPreferred?: boolean
 }
+
+// catalog image types
+export interface BboxCoords {
+	index: number
+	coords: [number, number, number, number] // [y_min, x_min, y_max, x_max]
+}
+
+export interface ImageMetadata {
+	index: number
+	bbox: [number, number, number, number] | null
+	rotation: 0 | 90 | 180 | 270
+}
+
+export interface SavedImageInfo {
+	id: string
+	index: number
+	isDuplicate?: boolean
+	originalUrl: string
+	url?: string // signed url, expires in ~1 hour
+}
+
+export interface ReceiptImagesResponse {
+	receiptId: string
+	imageMetadata: ImageMetadata[]
+	savedImages: SavedImageInfo[]
+}
+
+export interface ReceiptItem {
+	id: string
+	rawName: string
+	name?: string
+	category?: string
+	subcategory?: string
+	emoji?: string
+	tags?: string[]
+	price: number
+	quantity: string
+	unit?: string
+	sum: number
+	discount?: number
+	bbox?: BboxCoords | null
+	suggestedSplitMethod?: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
+	displayOrder: number
+	warnings?: Warning[]
+}
+
+export interface Receipt {
+	id: string
+	userId: string
+	source: 'qr' | 'image' | 'manual'
+	status: 'pending' | 'processing' | 'enriched' | 'failed'
+	placeName?: string
+	placeAddress?: string
+	currency: string
+	total: number
+	receiptDate?: string
+	imageMetadata?: ImageMetadata[]
+	savedImages?: SavedImageInfo[]
+	detectedLanguage?: string
+	createdAt: string
+	updatedAt: string
+}
+
+export interface ReceiptWithItems {
+	receipt: Receipt
+	items: ReceiptItem[]
+}

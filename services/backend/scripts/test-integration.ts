@@ -25,7 +25,7 @@ async function main() {
 		console.log('✅ containers ready')
 		console.log('🧪 running tests...')
 
-		const test = await $`bun test src/tests/integration`.env({
+		const test = await $`bun test tests/integration`.env({
 			...process.env,
 			DATABASE_URL: DB_URL,
 		})

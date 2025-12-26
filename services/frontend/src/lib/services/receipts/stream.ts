@@ -1,3 +1,4 @@
+import type { ImageMetadata, Receipt, ReceiptItem, SavedImageInfo } from '$lib/services/api/types'
 import { getApiUrl } from '$lib/shared/constants'
 import { createLogger } from '$lib/shared/logger'
 
@@ -6,9 +7,12 @@ const log = createLogger('receipt-stream')
 export type ReceiptStreamEventType =
 	| 'started'
 	| 'fns_fetched'
+	| 'image_meta'
 	| 'item'
 	| 'place'
 	| 'receipt'
+	| 'language'
+	| 'warning'
 	| 'completed'
 	| 'error'
 	| 'stream_end'
@@ -16,17 +20,19 @@ export type ReceiptStreamEventType =
 
 export interface ReceiptStreamEvent {
 	type: ReceiptStreamEventType
-	data: any
+	data: unknown
 }
 
 export interface ReceiptCompleteData {
-	receipt: {
-		id: string
-		total: number
-		placeName?: string
-	}
-	items: any[]
+	receipt: Receipt
+	items: ReceiptItem[]
+	images?: ImageMetadata[]
+	savedImages?: SavedImageInfo[]
 	cached: boolean
+}
+
+export interface ImageMetaEventData {
+	image: ImageMetadata
 }
 
 export type StreamCallback = (event: ReceiptStreamEvent) => void
@@ -40,23 +46,36 @@ export async function streamReceiptFromQr(
 	await openEventSource(url, { qrRaw }, onEvent, signal)
 }
 
+export async function streamReceiptFromImages(
+	images: string[],
+	onEvent: StreamCallback,
+	options?: { saveImages?: boolean },
+	signal?: AbortSignal
+): Promise<void> {
+	const url = `${getApiUrl()}/receipts/scan/image/stream`
+	await openEventSource(url, { images, saveImages: options?.saveImages }, onEvent, signal)
+}
+
+// backwards compatibility
 export async function streamReceiptFromImage(
 	imageBase64: string,
 	onEvent: StreamCallback,
 	signal?: AbortSignal
 ): Promise<void> {
-	const url = `${getApiUrl()}/receipts/scan/image/stream`
-	await openEventSource(url, { image: imageBase64 }, onEvent, signal)
+	return streamReceiptFromImages([imageBase64], onEvent, undefined, signal)
 }
 
-function extractEventData(type: string, raw: any): any {
+function extractEventData(type: string, raw: unknown): unknown {
+	const data = raw as Record<string, unknown>
 	switch (type) {
 		case 'item':
-			return raw.item ?? raw
+			return data.item ?? data
 		case 'place':
-			return raw.place ?? raw
+			return data.place ?? data
 		case 'receipt':
-			return raw.receipt ?? raw
+			return data.receipt ?? data
+		case 'image_meta':
+			return data.image ?? data
 		default:
 			return raw
 	}
@@ -117,7 +136,8 @@ async function openEventSource(
 
 					try {
 						const parsed = JSON.parse(jsonStr)
-						const eventType = currentEventType ?? parsed.type ?? 'unknown'
+						const eventType =
+							currentEventType ?? (parsed as { type?: string }).type ?? 'unknown'
 
 						if (eventType === 'ping') continue
 
@@ -155,4 +175,8 @@ export function fileToBase64(file: File): Promise<string> {
 		reader.onerror = reject
 		reader.readAsDataURL(file)
 	})
+}
+
+export function filesToBase64(files: File[]): Promise<string[]> {
+	return Promise.all(files.map(fileToBase64))
 }

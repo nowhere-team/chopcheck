@@ -61,13 +61,20 @@ export async function start() {
 	logger.info('fns client initialized', { tokenCount: config.fnsTokens.length })
 
 	const catalog = createCatalogClient(
-		{ serviceUrl: config.CATALOG_SERVICE_URL, requestTimeout: config.CATALOG_REQUEST_TIMEOUT },
+		{
+			baseUrl: config.CATALOG_SERVICE_URL,
+			timeout: config.CATALOG_REQUEST_TIMEOUT,
+		},
 		logger,
 		tracer,
 	)
 	logger.info('catalog client initialized')
 
-	const services = createServices(auth, database, cache, fns, catalog, logger)
+	const services = createServices(auth, database, cache, fns, catalog, logger, {
+		receipts: {
+			maxImagesPerRequest: config.CATALOG_MAX_IMAGES,
+		},
+	})
 	logger.info('services initialized')
 
 	const serverConfig = {

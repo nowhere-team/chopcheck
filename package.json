@@ -2,8 +2,8 @@
 	"name": "chopcheck",
 	"devDependencies": {
 		"concurrently": "^9.2.1",
-		"lefthook": "^2.0.4",
-		"lint-staged": "^16.2.6"
+		"lefthook": "^2.0.13",
+		"lint-staged": "^16.2.7"
 	},
 	"private": true,
 	"scripts": {
@@ -22,6 +22,7 @@
 		"fix": "bun run format && bun run lint:fix"
 	},
 	"workspaces": [
-		"services/*"
+		"services/*",
+		"packages/*"
 	]
 }
