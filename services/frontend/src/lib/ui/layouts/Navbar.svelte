@@ -2,41 +2,33 @@
 	import { Calendar, House, PlusCircle, UserCircle, Users } from 'phosphor-svelte'
 	import type { Component } from 'svelte'
 
-	import { goto } from '$app/navigation'
-	import { resolve } from '$app/paths'
-	import { page } from '$app/state'
-	import type { RouteId } from '$app/types'
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
+	import { NAV_ROUTES, type NavRoute } from '$lib/navigation/routes'
 
-	const items: { path: RouteId; icon: Component; label: string; highlight?: boolean }[] = [
+	import { tabsStore } from './tabs/store.svelte'
+
+	const items: { path: NavRoute; icon: Component; label: string; highlight?: boolean }[] = [
 		{ path: '/', icon: House, label: m.app_title_home() },
-		{
-			path: '/history',
-			icon: Calendar,
-			label: m.app_title_history()
-		},
+		{ path: '/history', icon: Calendar, label: m.app_title_history() },
 		{
 			path: '/splits/create',
 			icon: PlusCircle,
-			label: m.app_title_create_short(),
-			highlight: true
+			label: m.app_title_create_short()
 		},
 		{ path: '/contacts', icon: Users, label: m.app_title_contacts() },
-		{
-			path: '/profile',
-			icon: UserCircle,
-			label: m.app_title_profile()
-		}
+		{ path: '/profile', icon: UserCircle, label: m.app_title_profile() }
 	]
+
 	const platform = getPlatform()
 
-	function handleClick(path: RouteId, isHighlight: boolean) {
+	function handleClick(path: NavRoute, isHighlight: boolean) {
 		platform.haptic.impact(isHighlight ? 'medium' : 'light')
-		goto(resolve(path))
+		tabsStore.goToRoute(path, false)
 	}
 
-	const isActive = (path: string) => page.url.pathname === path
+	const currentIndex = $derived(tabsStore.index)
+	const isActive = (path: NavRoute) => NAV_ROUTES.indexOf(path) === currentIndex
 </script>
 
 <div class="navbar-floater">
@@ -53,11 +45,7 @@
 					aria-current={isActive(item.path) ? 'page' : undefined}
 				>
 					<!--suppress HtmlUnknownTag -->
-					<item.icon
-						size={item.highlight ? 32 : 26}
-						weight={item.highlight ? 'fill' : 'regular'}
-						aria-hidden="true"
-					/>
+					<item.icon size={item.highlight ? 32 : 26} weight="fill" aria-hidden="true" />
 				</button>
 			</div>
 		{/each}
@@ -74,7 +62,6 @@
 		max-width: 400px;
 		z-index: var(--z-navbar);
 		pointer-events: none;
-		view-transition-name: navbar;
 	}
 
 	.glass-panel {
@@ -88,9 +75,6 @@
 		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		border: 1px solid var(--glass-border);
 		border-radius: 28px;
-		/*box-shadow:*/
-		/*	0 10px 25px -5px rgba(0, 0, 0, 0.15),*/
-		/*	0 4px 10px -2px rgba(0, 0, 0, 0.08);*/
 		overflow: hidden;
 		isolation: isolate;
 	}

@@ -1,3 +1,4 @@
+// file: services/frontend/src/lib/services/api/types.ts
 import type {
 	// DTOs (Data)
 	AddItemsDto,
@@ -8,6 +9,7 @@ import type {
 	CreateSplitDto,
 	// Enums/Types
 	DivisionMethod,
+	ImageMetadataDto,
 	ItemGroupDto,
 	ItemGroupType,
 	ParticipantDto,
@@ -16,6 +18,7 @@ import type {
 	ReceiptDto,
 	ReceiptItemDto,
 	ReceiptWithItemsDto,
+	SavedImageInfoDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,
@@ -75,7 +78,7 @@ export class ApiError extends Error {
 
 export interface PaginatedResponse<T> {
 	data?: T[]
-	splits?: T[] // legacy field support if needed, or unify
+	splits?: T[]
 	pagination: {
 		offset: number
 		limit: number
@@ -93,10 +96,21 @@ export type Participant = ParticipantDto
 export type PaymentMethod = PaymentMethodDto
 export type Receipt = ReceiptDto
 export type ReceiptItem = ReceiptItemDto
+export type ReceiptWithItems = ReceiptWithItemsDto
 export type Warning = WarningDto
+export type ImageMetadata = ImageMetadataDto
+export type SavedImageInfo = SavedImageInfoDto
 
 export type SplitResponse = SplitResponseDto
 export type SplitCalculations = SplitCalculationsDto
+
+// --- Frontend Specific Response Types ---
+
+export interface ReceiptImagesResponse {
+	receiptId: string
+	imageMetadata: ImageMetadata[]
+	savedImages: SavedImageInfo[]
+}
 
 // Client-side specific types (state, UI helpers)
 
@@ -107,7 +121,7 @@ export interface ItemSelection {
 }
 
 export interface DraftItem extends Omit<SplitItemDto, 'id' | 'groupId'> {
-	id?: string // Optional for new items
+	id?: string
 	groupId?: string | null
 }
 
@@ -117,7 +131,6 @@ export interface SplitsByPeriod {
 	earlier: Split[]
 }
 
-// Contact specific interface (aggregates user info)
 export interface Contact {
 	userId: string
 	displayName: string

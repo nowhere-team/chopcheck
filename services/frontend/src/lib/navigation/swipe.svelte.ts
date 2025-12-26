@@ -5,9 +5,9 @@ import type { Platform } from '$lib/platform/types'
 
 import { getRouteIndex, NAV_ROUTES } from './routes'
 
-const THRESHOLD = 70
-const VELOCITY_THRESHOLD = 0.25
-const VERTICAL_LIMIT = 1.5
+const THRESHOLD = 50 // was 70
+const VELOCITY_THRESHOLD = 0.15 // was 0.25 - more sensitive
+const VERTICAL_LIMIT = 2 // was 1.5 - more forgiving for diagonal swipes
 
 class SwipeController {
 	private platform: Platform | null = null
@@ -18,12 +18,15 @@ class SwipeController {
 	private startX = 0
 	private startY = 0
 	private startTime = 0
+	private currentX = 0
 	private isTracking = false
+	private contentEl: HTMLElement | null = null
 
 	init(platform: Platform) {
 		if (typeof window === 'undefined') return
 
 		this.platform = platform
+		this.contentEl = document.querySelector('.content')
 
 		window.addEventListener('touchstart', this.onTouchStart, { passive: true })
 		window.addEventListener('touchmove', this.onTouchMove, { passive: false })
@@ -34,6 +37,7 @@ class SwipeController {
 		window.removeEventListener('touchstart', this.onTouchStart)
 		window.removeEventListener('touchmove', this.onTouchMove)
 		window.removeEventListener('touchend', this.onTouchEnd)
+		this.contentEl = null
 	}
 
 	setPath(path: string) {
@@ -55,36 +59,63 @@ class SwipeController {
 		const touch = e.touches[0]
 
 		// skip edge zones (system gestures)
-		if (touch.clientX < 30 || touch.clientX > window.innerWidth - 30) return
+		if (touch.clientX < 20 || touch.clientX > window.innerWidth - 20) return
 
 		this.startX = touch.clientX
 		this.startY = touch.clientY
+		this.currentX = 0
 		this.startTime = Date.now()
 		this.isTracking = true
+		this.contentEl = document.querySelector('.content')
 	}
 
 	private onTouchMove = (e: TouchEvent) => {
 		if (!this.isTracking || e.touches.length !== 1) return
 
 		const touch = e.touches[0]
-		const dx = Math.abs(touch.clientX - this.startX)
+		const dx = touch.clientX - this.startX
 		const dy = Math.abs(touch.clientY - this.startY)
+		const absDx = Math.abs(dx)
 
 		// if scrolling vertically, stop tracking
-		if (dy > dx * VERTICAL_LIMIT) {
+		if (dy > absDx * VERTICAL_LIMIT) {
 			this.isTracking = false
+			this.resetVisual()
 			return
 		}
 
-		// if clearly horizontal, prevent scroll
-		if (dx > 15 && dx > dy * 1.2 && e.cancelable) {
+		// check if we can navigate in this direction
+		const idx = getRouteIndex(this.currentPath)
+		if (idx === -1) return
+
+		const canGoLeft = dx > 0 && idx > 0
+		const canGoRight = dx < 0 && idx < NAV_ROUTES.length - 1
+
+		if (!canGoLeft && !canGoRight) {
+			return
+		}
+
+		// if clearly horizontal, prevent scroll and show visual feedback
+		if (absDx > 10 && e.cancelable) {
 			e.preventDefault()
+			this.currentX = dx
+
+			// visual feedback - slight movement of current page
+			if (this.contentEl) {
+				const progress = Math.min(absDx / 150, 1)
+				const translateX = dx * 0.15 // subtle follow
+				const opacity = 1 - progress * 0.1
+				this.contentEl.style.transform = `translateX(${translateX}px)`
+				this.contentEl.style.opacity = String(opacity)
+				this.contentEl.style.transition = 'none'
+			}
 		}
 	}
 
 	private onTouchEnd = (e: TouchEvent) => {
 		if (!this.isTracking || e.changedTouches.length !== 1) {
 			this.isTracking = false
+			this.resetVisual()
 			return
 		}
 
@@ -99,12 +130,25 @@ class SwipeController {
 		this.isTracking = false
 
 		// validate gesture
-		if (absDy > absDx * VERTICAL_LIMIT) return
-		if (absDx < THRESHOLD) return
-		if (velocity < VELOCITY_THRESHOLD) return
+		if (absDy > absDx * VERTICAL_LIMIT) {
+			this.resetVisual()
+			return
+		}
+
+		// either threshold or velocity should be enough
+		const passedThreshold = absDx >= THRESHOLD
+		const passedVelocity = velocity >= VELOCITY_THRESHOLD && absDx > 30
+
+		if (!passedThreshold && !passedVelocity) {
+			this.resetVisual()
+			return
+		}
 
 		const idx = getRouteIndex(this.currentPath)
-		if (idx === -1) return
+		if (idx === -1) {
+			this.resetVisual()
+			return
+		}
 
 		let target: RouteId | null = null
 
@@ -116,8 +160,26 @@ class SwipeController {
 
 		if (target) {
 			this.navigating = true
-			this.platform?.haptic.impact('medium')
+			this.platform?.haptic.impact('light')
+
+			// quick reset before navigation
+			if (this.contentEl) {
+				this.contentEl.style.transition = 'transform 80ms ease-out, opacity 80ms ease-out'
+				this.contentEl.style.transform = ''
+				this.contentEl.style.opacity = ''
+			}
+
 			goto(resolve(target))
+		} else {
+			this.resetVisual()
+		}
+	}
+
+	private resetVisual() {
+		if (this.contentEl) {
+			this.contentEl.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out'
+			this.contentEl.style.transform = ''
+			this.contentEl.style.opacity = ''
 		}
 	}
 }

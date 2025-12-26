@@ -1,7 +1,7 @@
 @import './reset.css';
 @import './tokens.css';
 @import './theme.css';
-@import './transitions.css';
+/*@import './transitions.css';*/
 
 html {
 	scrollbar-gutter: stable;

@@ -1,5 +1,4 @@
-﻿// file: services/backend/src/http/routes/splits/index.ts
-import {
+﻿import {
 	addItemsDtoSchema,
 	addPaymentMethodToSplitSchema,
 	createItemGroupDtoSchema,

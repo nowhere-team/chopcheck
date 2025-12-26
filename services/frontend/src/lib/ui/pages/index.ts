@@ -1,0 +1,5 @@
+export { default as ContactsPage } from './ContactsPage.svelte'
+export { default as CreatePage } from './CreatePage.svelte'
+export { default as HistoryPage } from './HistoryPage.svelte'
+export { default as HomePage } from './HomePage.svelte'
+export { default as ProfilePage } from './ProfilePage.svelte'

@@ -2,9 +2,7 @@
 	import type { Snippet } from 'svelte'
 	import { onMount } from 'svelte'
 
-	import { page } from '$app/state'
 	import { getPlatform } from '$lib/app/context.svelte'
-	import { swipeController } from '$lib/navigation/swipe.svelte'
 	import { connectionMonitor } from '$lib/services/connection.svelte'
 	import { ModalContainer } from '$lib/ui/features/modals'
 	import { ToastContainer } from '$lib/ui/features/toasts'
@@ -23,13 +21,6 @@
 		connectionMonitor.init()
 		return () => connectionMonitor.destroy()
 	})
-
-	$effect(() => {
-		swipeController.init(platform)
-		return () => swipeController.destroy()
-	})
-
-	$effect(() => swipeController.setPath(page.url.pathname))
 </script>
 
 <ToastContainer />
@@ -38,9 +29,7 @@
 <div class="shell" data-platform={platformType}>
 	<div class="container">
 		<main class="content">
-			<div class="content-viewport">
-				{@render children?.()}
-			</div>
+			{@render children?.()}
 		</main>
 
 		{#if navbar}
@@ -80,24 +69,8 @@
 
 	.content {
 		flex: 1;
-		overflow-y: auto;
-		overflow-x: hidden;
-		overscroll-behavior-y: contain;
-		touch-action: pan-y;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
-		view-transition-name: page;
+		overflow: hidden;
 		position: relative;
-	}
-
-	.content::-webkit-scrollbar {
-		display: none;
-	}
-
-	.content-viewport {
-		min-height: 100%;
-		display: flex;
-		flex-direction: column;
 	}
 
 	#portal-root {
