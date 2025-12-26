@@ -21,6 +21,17 @@ import type {
 	User,
 } from '@/common/types'
 
+// Helper to handle dates that might be strings (from cache) or Date objects (from DB)
+function toIso(date: Date | string | undefined | null): string {
+	if (!date) return new Date().toISOString()
+	return typeof date === 'string' ? date : date.toISOString()
+}
+
+function toIsoOptional(date: Date | string | undefined | null): string | undefined {
+	if (!date) return undefined
+	return typeof date === 'string' ? date : date.toISOString()
+}
+
 export function toUserDto(user: User): UserDto {
 	return {
 		id: user.id,
@@ -35,7 +46,7 @@ export function toUserMeDto(user: User): UserMeDto {
 	return {
 		...toUserDto(user),
 		preferences: (user.preferences as Record<string, unknown>) || {},
-		createdAt: user.createdAt.toISOString(),
+		createdAt: toIso(user.createdAt),
 	}
 }
 
@@ -50,8 +61,8 @@ export function toPaymentMethodDto(pm: PaymentMethod): PaymentMethodDto {
 		isTemporary: pm.isTemporary,
 		isDefault: pm.isDefault,
 		displayOrder: pm.displayOrder,
-		createdAt: pm.createdAt.toISOString(),
-		updatedAt: pm.updatedAt.toISOString(),
+		createdAt: toIso(pm.createdAt),
+		updatedAt: toIso(pm.updatedAt),
 	}
 }
 
@@ -82,10 +93,10 @@ export function toReceiptDto(receipt: Receipt): ReceiptDto {
 		placeName: receipt.placeName || undefined,
 		total: receipt.total,
 		currency: receipt.currency,
-		receiptDate: receipt.receiptDate?.toISOString(),
+		receiptDate: toIsoOptional(receipt.receiptDate),
 		imageMetadata: (receipt.imageMetadata as any) || undefined,
 		savedImages: (receipt.savedImages as any) || undefined,
-		createdAt: receipt.createdAt.toISOString(),
+		createdAt: toIso(receipt.createdAt),
 	}
 }
 
@@ -100,8 +111,8 @@ export function toSplitDto(split: Split): SplitDto {
 		phase: split.phase,
 		maxParticipants: split.maxParticipants,
 		expectedParticipants: split.expectedParticipants,
-		createdAt: split.createdAt.toISOString(),
-		updatedAt: split.updatedAt.toISOString(),
+		createdAt: toIso(split.createdAt),
+		updatedAt: toIso(split.updatedAt),
 	}
 }
 
@@ -130,7 +141,7 @@ export function toItemGroupDto(group: ItemGroup): ItemGroupDto {
 		displayOrder: group.displayOrder,
 		isCollapsed: group.isCollapsed,
 		warnings: (group.warnings as any) || [],
-		createdAt: group.createdAt.toISOString(),
+		createdAt: toIso(group.createdAt),
 	}
 }
 
@@ -140,7 +151,7 @@ export function toParticipantDto(p: ParticipantWithUser): ParticipantDto {
 		userId: p.userId,
 		displayName: p.displayName,
 		isAnonymous: p.isAnonymous,
-		joinedAt: p.joinedAt.toISOString(),
+		joinedAt: toIso(p.joinedAt),
 		user: p.user ? toUserDto(p.user as User) : null,
 	}
 }

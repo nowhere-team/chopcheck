@@ -1,4 +1,3 @@
-// file: services/backend/src/common/types/entities.ts
 import type { ImageMetadata, ItemBbox, SavedImageInfo } from '@nowhere-team/catalog/types'
 
 import type { schema } from '@/platform/database'

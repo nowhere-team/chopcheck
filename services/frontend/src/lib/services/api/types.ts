@@ -1,5 +1,7 @@
+// file: services/frontend/src/lib/services/api/types.ts
 import type {
 	// DTOs (Data)
+	AddItemsDto,
 	AddPaymentMethodToSplitDto,
 	AuthResponseDto,
 	CreateItemGroupDto,
@@ -7,24 +9,32 @@ import type {
 	CreateSplitDto,
 	// Enums/Types
 	DivisionMethod,
+	ImageMetadataDto,
 	ItemGroupDto,
+	ItemGroupType,
 	ParticipantDto,
 	PaymentMethodDto,
 	PaymentMethodType,
 	ReceiptDto,
 	ReceiptItemDto,
+	ReceiptWithItemsDto,
+	SavedImageInfoDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,
 	SplitCalculationsDto,
 	SplitDto,
 	SplitItemDto,
+	SplitPhase,
 	SplitResponseDto,
 	SplitStatus,
 	TelegramAuthDto,
+	UpdateItemDto,
 	UpdateItemGroupDto,
 	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
 	UserDto,
+	UserMeDto,
 	WarningCode,
 	WarningDto
 } from '@chopcheck/shared'
@@ -68,7 +78,7 @@ export class ApiError extends Error {
 
 export interface PaginatedResponse<T> {
 	data?: T[]
-	splits?: T[] // legacy field support if needed, or unify
+	splits?: T[]
 	pagination: {
 		offset: number
 		limit: number
@@ -86,10 +96,21 @@ export type Participant = ParticipantDto
 export type PaymentMethod = PaymentMethodDto
 export type Receipt = ReceiptDto
 export type ReceiptItem = ReceiptItemDto
+export type ReceiptWithItems = ReceiptWithItemsDto
 export type Warning = WarningDto
+export type ImageMetadata = ImageMetadataDto
+export type SavedImageInfo = SavedImageInfoDto
 
 export type SplitResponse = SplitResponseDto
 export type SplitCalculations = SplitCalculationsDto
+
+// --- Frontend Specific Response Types ---
+
+export interface ReceiptImagesResponse {
+	receiptId: string
+	imageMetadata: ImageMetadata[]
+	savedImages: SavedImageInfo[]
+}
 
 // Client-side specific types (state, UI helpers)
 
@@ -100,7 +121,7 @@ export interface ItemSelection {
 }
 
 export interface DraftItem extends Omit<SplitItemDto, 'id' | 'groupId'> {
-	id?: string // Optional for new items
+	id?: string
 	groupId?: string | null
 }
 
@@ -110,7 +131,6 @@ export interface SplitsByPeriod {
 	earlier: Split[]
 }
 
-// Contact specific interface (aggregates user info)
 export interface Contact {
 	userId: string
 	displayName: string
@@ -128,20 +148,39 @@ export interface Contact {
 
 // Request DTO exports
 export type {
+	AddItemsDto,
 	AddPaymentMethodToSplitDto,
 	AuthResponseDto,
 	CreateItemGroupDto,
 	CreatePaymentMethodDto,
 	CreateSplitDto,
+	ReceiptWithItemsDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,
 	TelegramAuthDto,
+	UpdateItemDto,
 	UpdateItemGroupDto,
-	UpdatePaymentMethodDto
+	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
+	UserMeDto
 }
 
 // Enums exports
-export { DIVISION_METHODS, PAYMENT_METHOD_TYPES, WARNING_CODES } from '@chopcheck/shared'
+export {
+	DIVISION_METHODS,
+	ITEM_GROUP_TYPES,
+	PAYMENT_METHOD_TYPES,
+	SPLIT_PHASES,
+	SPLIT_STATUSES,
+	WARNING_CODES
+} from '@chopcheck/shared'
 
-export type { DivisionMethod, PaymentMethodType, SplitStatus, WarningCode }
+export type {
+	DivisionMethod,
+	ItemGroupType,
+	PaymentMethodType,
+	SplitPhase,
+	SplitStatus,
+	WarningCode
+}

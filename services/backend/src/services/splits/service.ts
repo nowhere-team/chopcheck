@@ -86,7 +86,12 @@ export class SplitsService {
 		})
 
 		if (dto.items?.length) {
-			await this.items.createMany(split.id, dto.items)
+			const itemsToCreate = dto.items.map(item => ({
+				...item,
+				groupId: item.groupId ?? undefined,
+				icon: item.icon ?? undefined,
+			}))
+			await this.items.createMany(split.id, itemsToCreate)
 		}
 
 		if (dto.receiptIds?.length) {
@@ -129,12 +134,17 @@ export class SplitsService {
 					quantity: item.quantity,
 					type: item.type,
 					defaultDivisionMethod: item.defaultDivisionMethod,
-					icon: item.icon,
+					icon: item.icon ?? undefined,
 				})
 			}
 
 			if (toCreate.length > 0) {
-				await this.items.createMany(dto.id, toCreate)
+				const itemsToCreate = toCreate.map(item => ({
+					...item,
+					groupId: item.groupId ?? undefined,
+					icon: item.icon ?? undefined,
+				}))
+				await this.items.createMany(dto.id, itemsToCreate)
 			}
 
 			const updatedIds = new Set(toUpdate.map(i => i.id))
@@ -413,7 +423,8 @@ export class SplitsService {
 				id: r.id,
 				placeName: r.placeName || undefined,
 				total: r.total,
-				createdAt: r.createdAt.toISOString(),
+				// Robust check: date might be string if cached or Date if fresh
+				createdAt: typeof r.createdAt === 'string' ? r.createdAt : r.createdAt.toISOString(),
 			}))
 		}
 

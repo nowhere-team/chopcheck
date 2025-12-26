@@ -153,7 +153,7 @@ export const addItemsDtoSchema = z.object({
 			quantity: z.string().default('1'),
 			defaultDivisionMethod: z.enum(DIVISION_METHODS),
 			icon: z.string().optional(),
-			groupId: uuidSchema.optional(),
+			groupId: uuidSchema.optional().nullable(),
 		}),
 	),
 })

@@ -1,5 +1,4 @@
-﻿// file: services/backend/src/services/receipts/types.ts
-import type { ImageMetadata, SavedImageInfo } from '@nowhere-team/catalog/types'
+﻿import type { ImageMetadata, SavedImageInfo } from '@nowhere-team/catalog/types'
 
 import type { schema } from '@/platform/database'
 
