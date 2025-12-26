@@ -1,5 +1,6 @@
 import type {
 	// DTOs (Data)
+	AddItemsDto,
 	AddPaymentMethodToSplitDto,
 	AuthResponseDto,
 	CreateItemGroupDto,
@@ -8,23 +9,29 @@ import type {
 	// Enums/Types
 	DivisionMethod,
 	ItemGroupDto,
+	ItemGroupType,
 	ParticipantDto,
 	PaymentMethodDto,
 	PaymentMethodType,
 	ReceiptDto,
 	ReceiptItemDto,
+	ReceiptWithItemsDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,
 	SplitCalculationsDto,
 	SplitDto,
 	SplitItemDto,
+	SplitPhase,
 	SplitResponseDto,
 	SplitStatus,
 	TelegramAuthDto,
+	UpdateItemDto,
 	UpdateItemGroupDto,
 	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
 	UserDto,
+	UserMeDto,
 	WarningCode,
 	WarningDto
 } from '@chopcheck/shared'
@@ -128,20 +135,32 @@ export interface Contact {
 
 // Request DTO exports
 export type {
+	AddItemsDto,
 	AddPaymentMethodToSplitDto,
 	AuthResponseDto,
 	CreateItemGroupDto,
 	CreatePaymentMethodDto,
 	CreateSplitDto,
+	ReceiptWithItemsDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,
 	TelegramAuthDto,
+	UpdateItemDto,
 	UpdateItemGroupDto,
-	UpdatePaymentMethodDto
+	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
+	UserMeDto
 }
 
 // Enums exports
-export { DIVISION_METHODS, PAYMENT_METHOD_TYPES, WARNING_CODES } from '@chopcheck/shared'
+export {
+	DIVISION_METHODS,
+	ITEM_GROUP_TYPES,
+	PAYMENT_METHOD_TYPES,
+	SPLIT_PHASES,
+	SPLIT_STATUSES,
+	WARNING_CODES,
+} from '@chopcheck/shared'
 
-export type { DivisionMethod, PaymentMethodType, SplitStatus, WarningCode }
+export type { DivisionMethod, ItemGroupType, PaymentMethodType, SplitPhase, SplitStatus, WarningCode }
