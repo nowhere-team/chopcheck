@@ -20,7 +20,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       telegram: ${{ steps.filter.outputs.telegram }}
       migrator: ${{ steps.filter.outputs.backend }}
-      # New output for infrastructure changes
+      shared: ${{ steps.filter.outputs.shared }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v6
@@ -30,16 +30,21 @@ jobs:
           filters: |
             frontend:
               - 'services/frontend/**'
-              - 'bun.lock'          # Global file triggers frontend rebuild
+              - 'packages/shared/**'
+              - 'bun.lock'
               - 'package.json'
             backend:
               - 'services/backend/**'
-              - 'bun.lock'          # Global file triggers backend rebuild
+              - 'packages/shared/**'
+              - 'bun.lock'
               - 'package.json'
             telegram:
               - 'services/telegram/**'
-              - 'bun.lock'          # Global file triggers telegram rebuild
+              - 'packages/shared/**'
+              - 'bun.lock'
               - 'package.json'
+            shared:
+              - 'packages/shared/**'
             infra:
               - 'docker-compose.prod.yml'
               - 'nginx/**'
@@ -52,8 +57,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-        working-directory: ./services/frontend
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bun run lint
         working-directory: ./services/frontend
 
@@ -64,8 +71,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-        working-directory: ./services/backend
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bun run lint
         working-directory: ./services/backend
 
@@ -76,8 +85,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-        working-directory: ./services/telegram
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: bun run lint
         working-directory: ./services/telegram
 
@@ -85,7 +96,6 @@ jobs:
   build-and-push-images:
     name: Build & Push Docker Images
     needs: [changes, lint-frontend, lint-backend, lint-telegram]
-    # Run only on main branch AND if there are code changes
     if: |
       github.ref == 'refs/heads/main' &&
       !contains(needs.*.result, 'failure') &&
@@ -114,6 +124,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push telegram
         if: needs.changes.outputs.telegram == 'true'
@@ -125,6 +137,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/telegram:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push frontend
         if: needs.changes.outputs.frontend == 'true'
@@ -136,6 +150,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push migrator
         if: needs.changes.outputs.backend == 'true'
@@ -147,6 +163,8 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/migrator:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
   # 4. DEPLOY TO PRODUCTION
   deploy:
@@ -155,10 +173,6 @@ jobs:
     concurrency:
       group: deploy-chopcheck
       cancel-in-progress: true
-    # Run if:
-    # 1. We are on main branch
-    # 2. Previous jobs didn't fail (skippped is OK)
-    # 3. AND (Something was built OR Infrastructure changed)
     if: |
       github.ref == 'refs/heads/main' &&
       !failure() && !cancelled() &&
@@ -177,16 +191,11 @@ jobs:
           mkdir -p /opt/chopcheck/nginx
           [ -f "/opt/chopcheck/nginx/nginx.conf" ] && rm /opt/chopcheck/nginx/nginx.conf
 
-          # Always copy configs as they might have changed (infra trigger)
           cp docker-compose.prod.yml /opt/chopcheck/
           cp nginx/nginx.conf /opt/chopcheck/nginx/nginx.conf
 
           cd /opt/chopcheck
 
-          # Pull will only download layers if images were actually rebuilt in the previous job
           docker compose -f docker-compose.prod.yml pull
-
-          # Up will only recreate containers if image hash changed or config changed
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
           docker image prune -f

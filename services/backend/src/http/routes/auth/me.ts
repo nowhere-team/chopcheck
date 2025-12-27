@@ -1,6 +1,7 @@
 ﻿import { Hono } from 'hono'
 
 import { auth } from '@/http/middleware/auth'
+import { toUserMeDto } from '@/http/utils/mappers'
 
 export function createMeRoute() {
 	return new Hono().get('/me', auth(), async c => {
@@ -9,14 +10,6 @@ export function createMeRoute() {
 
 		if (!user) return c.json({ error: 'user not found' }, 404)
 
-		return c.json({
-			id: user.id,
-			username: user.username,
-			display_name: user.displayName,
-			avatar_url: user.avatarUrl,
-			telegram_id: user.telegramId,
-			preferences: user.preferences,
-			created_at: user.createdAt,
-		})
+		return c.json(toUserMeDto(user))
 	})
 }

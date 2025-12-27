@@ -1,12 +1,9 @@
-﻿import { Hono } from 'hono'
+﻿import { scanImageSchema, scanQrSchema } from '@chopcheck/shared'
+import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import { z } from 'zod'
 
 import { auth } from '@/http/middleware/auth'
 import { uuidParam, validate } from '@/http/utils'
-
-const qrSchema = z.object({ qrRaw: z.string().min(10).max(512) })
-const imageSchema = z.object({ image: z.string().min(100) })
 
 export function createReceiptsRoutes() {
 	const app = new Hono().use('/*', auth())
@@ -24,14 +21,29 @@ export function createReceiptsRoutes() {
 		return c.json(receipt)
 	})
 
-	app.post('/scan/qr', validate('json', qrSchema), async c => {
+	app.get('/:id/images', uuidParam('id'), async c => {
+		const data = await c.get('services').receipts.getWithImages(c.req.param('id'), c.get('authContext')!.userId)
+		if (!data) return c.json({ error: 'receipt not found' }, 404)
+		return c.json({
+			receiptId: data.receipt.id,
+			imageMetadata: data.imageMetadata,
+			savedImages: data.savedImages,
+		})
+	})
+
+	app.post('/:id/images/refresh', uuidParam('id'), async c => {
+		const savedImages = await c.get('services').receipts.refreshImageUrls(c.req.param('id'))
+		return c.json({ success: true, savedImages })
+	})
+
+	app.post('/scan/qr', validate('json', scanQrSchema), async c => {
 		const result = await c
 			.get('services')
 			.receipts.processQr(c.get('authContext')!.userId, c.req.valid('json').qrRaw, c.get('span'))
 		return c.json({ success: true, ...result })
 	})
 
-	app.post('/scan/qr/stream', validate('json', qrSchema), async c => {
+	app.post('/scan/qr/stream', validate('json', scanQrSchema), async c => {
 		const services = c.get('services')
 		const userId = c.get('authContext')!.userId
 		const span = c.get('span')
@@ -52,18 +64,22 @@ export function createReceiptsRoutes() {
 		})
 	})
 
-	app.post('/scan/image', validate('json', imageSchema), async c => {
+	app.post('/scan/image', validate('json', scanImageSchema), async c => {
+		const { image, images, saveImages } = c.req.valid('json')
+		const imageList = images ?? (image ? [image] : [])
+
 		const result = await c
 			.get('services')
-			.receipts.processImage(c.get('authContext')!.userId, c.req.valid('json').image, c.get('span'))
+			.receipts.processImages(c.get('authContext')!.userId, imageList, { saveImages })
+
 		return c.json({ success: true, ...result })
 	})
 
-	app.post('/scan/image/stream', validate('json', imageSchema), async c => {
+	app.post('/scan/image/stream', validate('json', scanImageSchema), async c => {
 		const services = c.get('services')
 		const userId = c.get('authContext')!.userId
-		const span = c.get('span')
-		const { image } = c.req.valid('json')
+		const { image, images, saveImages } = c.req.valid('json')
+		const imageList = images ?? (image ? [image] : [])
 
 		return streamSSE(c, async stream => {
 			const keepalive = setInterval(
@@ -71,7 +87,7 @@ export function createReceiptsRoutes() {
 				5000,
 			)
 			try {
-				for await (const event of services.receipts.processImageStream(userId, image, span)) {
+				for await (const event of services.receipts.processImagesStream(userId, imageList, { saveImages })) {
 					await stream.writeSSE({ event: event.type, data: JSON.stringify(event.data) })
 				}
 			} finally {

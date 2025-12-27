@@ -1,3 +1,5 @@
+import type { ImageMetadata, ItemBbox, SavedImageInfo } from '@nowhere-team/catalog/types'
+
 import type { schema } from '@/platform/database'
 
 export type User = typeof schema.users.$inferSelect
@@ -16,3 +18,17 @@ export type ParticipantWithUser = Participant & {
 export type ParticipantWithSelections = ParticipantWithUser & {
 	itemParticipations: ParticipantItem[]
 }
+
+// enriched receipt with typed image data
+export interface ReceiptWithImageData extends Receipt {
+	imageMetadata: ImageMetadata[]
+	savedImages: SavedImageInfo[]
+}
+
+// receipt item with typed bbox
+export interface ReceiptItemWithBbox extends ReceiptItem {
+	bbox: ItemBbox | null
+}
+
+// re-export catalog types for convenience
+export type { ImageMetadata, ItemBbox, SavedImageInfo } from '@nowhere-team/catalog/types'

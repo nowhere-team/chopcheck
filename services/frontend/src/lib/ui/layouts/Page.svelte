@@ -10,8 +10,7 @@
 	}
 
 	const { title, centered = false, navPadding = false, safeTop = 0.8, children }: Props = $props()
-
-	const topMult = typeof safeTop === 'number' ? safeTop : safeTop ? 0.8 : 0
+	const topMult = $derived(+(Number.isInteger(safeTop) ? safeTop : 0.8))
 </script>
 
 <div class="page" class:centered class:with-nav={navPadding} style:--pt-mult={topMult}>

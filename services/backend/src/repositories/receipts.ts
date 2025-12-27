@@ -62,10 +62,9 @@ export class ReceiptsRepository extends BaseRepository {
 	async findByIds(ids: string[]): Promise<Receipt[]> {
 		if (ids.length === 0) return []
 
-		const receipts = await this.db.query.receipts.findMany({
+		return await this.db.query.receipts.findMany({
 			where: (r, { inArray }) => inArray(r.id, ids),
 		})
-		return receipts
 	}
 
 	async create(data: NewReceipt): Promise<Receipt> {

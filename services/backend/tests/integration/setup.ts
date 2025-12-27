@@ -68,7 +68,11 @@ export async function createTestContext(): Promise<TestContext> {
 	const fns = createMockFnsClient()
 	const catalog = createMockCatalogClient()
 
-	const services = createServices(auth, db, cache, fns, catalog, logger)
+	const services = createServices(auth, db, cache, fns, catalog, logger, {
+		receipts: {
+			maxImagesPerRequest: 3,
+		},
+	})
 
 	const app = createRouter({
 		database: db,

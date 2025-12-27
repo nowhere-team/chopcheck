@@ -1,4 +1,5 @@
-import type { CatalogClient, EnrichResponse, StreamEvent } from '@/platform/catalog'
+import type { CatalogClient, EnrichRequest, EnrichResponse, StreamEvent } from '@nowhere-team/catalog'
+
 import type { FnsClient, FnsReceiptData } from '@/platform/fns'
 import type { TelegramServiceClient } from '@/platform/telegram'
 
@@ -15,7 +16,7 @@ export function createMockFnsClient(): FnsClient {
 		retailPlaceAddress: 'Test Address 123',
 		userInn: '1234567890',
 		dateTime: new Date().toISOString(),
-		totalSum: 150000, // 1500.00 in kopecks
+		totalSum: 150000, // 1500.00
 		items: [
 			{ name: 'Pizza', price: 120000, quantity: 1, sum: 120000 },
 			{ name: 'Cola', price: 15000, quantity: 2, sum: 30000 },
@@ -44,24 +45,32 @@ export function createMockFnsClient(): FnsClient {
 export function createMockCatalogClient(): CatalogClient {
 	const mockEnrichResponse: EnrichResponse = {
 		language: 'ru',
+		images: [],
+		savedImages: [],
 		items: [
 			{
+				id: 'item-1',
+				isNew: true,
 				rawName: 'Pizza',
 				name: 'Пицца Маргарита',
 				category: 'food',
-				subcategory: 'pizza',
+				subcategory: 'bakery', // fallback for type safety
 				tags: ['italian', 'hot'],
 				emoji: '🍕',
 				price: 1200,
 				sum: 1200,
 				quantity: 1,
 				confidence: 0.95,
+				unit: 'piece',
+				splitMethod: 'per_unit',
 			},
 		],
 		place: {
+			id: 'place-1',
+			isNew: true,
 			name: 'Test Cafe',
 			type: 'restaurant',
-			subtype: 'cafe',
+			subtype: 'casual',
 			tags: ['casual'],
 		},
 		receipt: {
@@ -75,23 +84,47 @@ export function createMockCatalogClient(): CatalogClient {
 	return {
 		enrich: async () => mockEnrichResponse,
 		enrichStream: async function* (): AsyncGenerator<StreamEvent> {
-			yield { type: 'started', data: {} }
-			for (const item of mockEnrichResponse.items) {
-				yield { type: 'item', data: item }
+			yield {
+				type: 'started',
+				data: {
+					enrichmentType: 'receipt',
+					sourceType: 'image',
+					imageCount: 1,
+					savedImages: [],
+				},
 			}
+
+			// yield items with index
+			for (let i = 0; i < mockEnrichResponse.items.length; i++) {
+				const item = mockEnrichResponse.items[i]!
+				yield {
+					type: 'item',
+					data: { index: i, item },
+				}
+			}
+
 			if (mockEnrichResponse.place) {
-				yield { type: 'place', data: mockEnrichResponse.place }
+				yield {
+					type: 'place',
+					data: { place: mockEnrichResponse.place },
+				}
 			}
-			yield { type: 'completed', data: { response: mockEnrichResponse } }
+
+			yield {
+				type: 'completed',
+				data: { response: mockEnrichResponse },
+			}
 		},
-		// @ts-expect-error just tests
-		buildStructuredRequest: (items, place, total, date) => ({
-			type: 'receipt',
-			source: { type: 'structured', data: { items, place, total, date } },
-		}),
-		buildImageRequest: (base64: string) => ({
-			type: 'receipt',
-			source: { type: 'image', data: base64 },
-		}),
+		// Mock implementation for helpers just to satisfy the interface if used
+		buildStructuredRequest: (fnsData: any) =>
+			({
+				type: 'receipt',
+				source: { type: 'structured', data: fnsData },
+			}) as EnrichRequest,
+		buildImageRequest: (images: string[]) =>
+			({
+				type: 'receipt',
+				source: { type: 'image', data: images },
+			}) as EnrichRequest,
 	} as unknown as CatalogClient
 }

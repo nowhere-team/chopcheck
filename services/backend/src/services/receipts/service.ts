@@ -1,18 +1,32 @@
-﻿// noinspection DuplicatedCode
+﻿// noinspection JSUnusedGlobalSymbols
 
-import type { CatalogClient, EnrichResponse, Warning } from '@/platform/catalog'
+import type {
+	EnrichRequest,
+	EnrichResponse,
+	ImageMetadata,
+	SavedImageInfo,
+	StreamEvent,
+	Warning,
+} from '@nowhere-team/catalog'
+import { CatalogClient } from '@nowhere-team/catalog'
+
 import type { FnsClient, FnsReceiptData } from '@/platform/fns'
 import type { Logger } from '@/platform/logger'
 import type { SpanContext } from '@/platform/tracing'
 import type { ReceiptsRepository, ReceiptWithItems } from '@/repositories'
 
-import type { ProcessedReceipt, ReceiptStreamEvent } from './types'
+import type { ProcessedReceipt, ReceiptStreamEvent, ReceiptWithImages } from './types'
+
+export interface ReceiptsServiceConfig {
+	maxImagesPerRequest: number
+}
 
 export class ReceiptsService {
 	constructor(
 		private readonly repo: ReceiptsRepository,
 		private readonly fns: FnsClient,
 		private readonly catalog: CatalogClient,
+		private readonly config: ReceiptsServiceConfig,
 		private readonly logger: Logger,
 	) {}
 
@@ -22,6 +36,51 @@ export class ReceiptsService {
 
 	async listByUser(userId: string, options: { limit?: number; offset?: number } = {}): Promise<ReceiptWithItems[]> {
 		return this.repo.findByUser(userId, options)
+	}
+
+	async getWithImages(receiptId: string, userId: string): Promise<ReceiptWithImages | null> {
+		const data = await this.repo.findByIdWithItems(receiptId, userId)
+		if (!data) return null
+
+		const savedImages = await this.getRefreshedImages(data.receipt)
+
+		return {
+			receipt: data.receipt,
+			items: data.items,
+			imageMetadata: (data.receipt.imageMetadata as ImageMetadata[]) || [],
+			savedImages,
+		}
+	}
+
+	async refreshImageUrls(receiptId: string): Promise<SavedImageInfo[]> {
+		const receipt = await this.repo.findById(receiptId)
+		if (!receipt) return []
+
+		return this.getRefreshedImages(receipt)
+	}
+
+	private async getRefreshedImages(receipt: { id: string; savedImages: unknown }): Promise<SavedImageInfo[]> {
+		const savedImages = (receipt.savedImages as SavedImageInfo[]) || []
+		if (savedImages.length === 0) return []
+
+		const refreshed: SavedImageInfo[] = []
+
+		for (const img of savedImages) {
+			try {
+				const urls = await this.catalog.getImageUrls(img.id)
+				refreshed.push({
+					...img,
+					url: urls.url ?? undefined,
+					originalUrl: urls.originalUrl,
+				})
+			} catch (error) {
+				this.logger.warn('failed to refresh image url', { imageId: img.id, error })
+				refreshed.push(img)
+			}
+		}
+
+		await this.repo.update(receipt.id, { savedImages: refreshed })
+		return refreshed
 	}
 
 	async processQr(userId: string, qrRaw: string, span?: SpanContext): Promise<ProcessedReceipt> {
@@ -57,7 +116,7 @@ export class ReceiptsService {
 		const items = await this.createItemsFromFns(receipt.id, fnsData)
 
 		try {
-			const enriched = await this.enrichReceipt(receipt.id, fnsData, span)
+			const enriched = await this.enrichFromStructured(receipt.id, fnsData)
 			return { receipt: enriched.receipt!, items: enriched.items, enriched: true }
 		} catch (error) {
 			this.logger.error('enrichment failed', { receiptId: receipt.id, error })
@@ -79,7 +138,17 @@ export class ReceiptsService {
 		if (existing) {
 			if (existing.status === 'enriched') {
 				const items = await this.repo.getItems(existing.id)
-				yield { type: 'completed', data: { receipt: existing, items, cached: true } }
+				const savedImages = await this.getRefreshedImages(existing)
+				yield {
+					type: 'completed',
+					data: {
+						receipt: existing,
+						items,
+						images: existing.imageMetadata,
+						savedImages,
+						cached: true,
+					},
+				}
 				return
 			}
 
@@ -88,7 +157,7 @@ export class ReceiptsService {
 					type: 'fns_fetched',
 					data: { itemCount: (existing.fnsData as FnsReceiptData).items?.length || 0 },
 				}
-				yield* this.streamEnrichment(existing, existing.fnsData as FnsReceiptData, userId, span)
+				yield* this.streamEnrichmentFromStructured(existing, existing.fnsData as FnsReceiptData, userId)
 				return
 			}
 
@@ -122,32 +191,31 @@ export class ReceiptsService {
 			receiptDate: fnsData.dateTime ? new Date(fnsData.dateTime) : undefined,
 		})
 
-		yield* this.streamEnrichment(receipt, fnsData, userId, span)
+		yield* this.streamEnrichmentFromStructured(receipt, fnsData, userId)
 	}
 
-	async processImage(userId: string, base64: string, span?: SpanContext): Promise<ProcessedReceipt> {
-		this.logger.info('processing image receipt', { userId })
+	async processImages(
+		userId: string,
+		images: string[],
+		options?: { saveImages?: boolean },
+	): Promise<ProcessedReceipt> {
+		this.logger.info('processing image receipt', { userId, imageCount: images.length })
+
+		if (images.length === 0) {
+			throw new Error('at least one image is required')
+		}
+
+		if (images.length > this.config.maxImagesPerRequest) {
+			throw new Error(`too many images: max ${this.config.maxImagesPerRequest}, got ${images.length}`)
+		}
 
 		const receipt = await this.repo.create({ userId, source: 'image', status: 'processing', total: 0 })
 
 		try {
-			const enrichRequest = this.catalog.buildImageRequest(base64)
-			const enriched = await this.catalog.enrich(enrichRequest, span)
+			const request = this.buildImageRequest(images, options?.saveImages)
+			const enriched = await this.catalog.enrich(request)
 
-			await this.createEnrichedItems(receipt.id, enriched)
-
-			const total = enriched.receipt?.total
-				? Math.round(enriched.receipt.total * 100)
-				: enriched.items.reduce((sum, item) => sum + (item.sum || 0) * 100, 0)
-
-			await this.repo.update(receipt.id, {
-				status: 'enriched',
-				total,
-				placeName: enriched.place?.name,
-				placeAddress: enriched.place?.address,
-				enrichmentData: enriched,
-				enrichedAt: new Date(),
-			})
+			await this.saveEnrichmentResult(receipt.id, enriched)
 
 			const items = await this.repo.getItems(receipt.id)
 			const updated = await this.repo.findById(receipt.id)
@@ -159,41 +227,30 @@ export class ReceiptsService {
 		}
 	}
 
-	async *processImageStream(userId: string, base64: string, span?: SpanContext): AsyncGenerator<ReceiptStreamEvent> {
-		yield { type: 'started', data: { source: 'image' } }
+	async *processImagesStream(
+		userId: string,
+		images: string[],
+		options?: { saveImages?: boolean },
+	): AsyncGenerator<ReceiptStreamEvent> {
+		yield { type: 'started', data: { source: 'image', imageCount: images.length } }
+
+		if (images.length === 0) {
+			yield { type: 'error', data: { message: 'at least one image is required' } }
+			return
+		}
+
+		if (images.length > this.config.maxImagesPerRequest) {
+			yield { type: 'error', data: { message: `too many images: max ${this.config.maxImagesPerRequest}` } }
+			return
+		}
 
 		const receipt = await this.repo.create({ userId, source: 'image', status: 'processing', total: 0 })
 
 		try {
-			const enrichRequest = this.catalog.buildImageRequest(base64)
+			const request = this.buildImageRequest(images, options?.saveImages)
 
-			for await (const event of this.catalog.enrichStream(enrichRequest, span)) {
-				if (event.type === 'item') yield { type: 'item', data: event.data }
-				else if (event.type === 'place') yield { type: 'place', data: event.data }
-				else if (event.type === 'receipt') yield { type: 'receipt', data: event.data }
-				else if (event.type === 'completed') {
-					const enriched = (event.data as any).response as EnrichResponse
-					await this.createEnrichedItems(receipt.id, enriched)
-
-					const total = enriched.receipt?.total
-						? Math.round(enriched.receipt.total * 100)
-						: enriched.items.reduce((sum, item) => sum + (item.sum || 0) * 100, 0)
-
-					await this.repo.update(receipt.id, {
-						status: 'enriched',
-						total,
-						placeName: enriched.place?.name,
-						placeAddress: enriched.place?.address,
-						enrichmentData: enriched,
-						enrichedAt: new Date(),
-					})
-
-					const updated = await this.repo.findByIdWithItems(receipt.id, userId)
-					yield {
-						type: 'completed',
-						data: { receipt: updated?.receipt, items: updated?.items, cached: false },
-					}
-				}
+			for await (const event of this.catalog.enrichStream(request)) {
+				yield* this.mapCatalogEvent(event, receipt.id, userId)
 			}
 		} catch (error) {
 			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
@@ -201,49 +258,16 @@ export class ReceiptsService {
 		}
 	}
 
-	private async *streamEnrichment(
-		receipt: any,
+	private async *streamEnrichmentFromStructured(
+		receipt: { id: string; imageMetadata?: unknown; savedImages?: unknown },
 		fnsData: FnsReceiptData,
 		userId: string,
-		span?: SpanContext,
 	): AsyncGenerator<ReceiptStreamEvent> {
-		const enrichRequest = this.catalog.buildStructuredRequest(
-			(fnsData.items || []).map(item => ({
-				name: item.name,
-				quantity: item.quantity,
-				price: item.price / 100,
-				sum: item.sum / 100,
-			})),
-			fnsData.retailPlace
-				? { name: fnsData.retailPlace, address: fnsData.retailPlaceAddress, inn: fnsData.userInn }
-				: undefined,
-			fnsData.totalSum ? fnsData.totalSum / 100 : undefined,
-			fnsData.dateTime,
-		)
+		const request = this.buildStructuredRequest(fnsData)
 
 		try {
-			for await (const event of this.catalog.enrichStream(enrichRequest, span)) {
-				if (event.type === 'item') yield { type: 'item', data: event.data }
-				else if (event.type === 'place') yield { type: 'place', data: event.data }
-				else if (event.type === 'receipt') yield { type: 'receipt', data: event.data }
-				else if (event.type === 'completed') {
-					const enriched = (event.data as any).response as EnrichResponse
-					await this.createEnrichedItems(receipt.id, enriched)
-
-					await this.repo.update(receipt.id, {
-						status: 'enriched',
-						placeName: enriched.place?.name || receipt.placeName,
-						placeAddress: enriched.place?.address || receipt.placeAddress,
-						enrichmentData: enriched,
-						enrichedAt: new Date(),
-					})
-
-					const updated = await this.repo.findByIdWithItems(receipt.id, userId)
-					yield {
-						type: 'completed',
-						data: { receipt: updated?.receipt, items: updated?.items, cached: false },
-					}
-				}
+			for await (const event of this.catalog.enrichStream(request)) {
+				yield* this.mapCatalogEvent(event, receipt.id, userId)
 			}
 		} catch (error) {
 			this.logger.warn('enrichment failed, saving raw items', { receiptId: receipt.id, error })
@@ -251,6 +275,96 @@ export class ReceiptsService {
 			await this.repo.update(receipt.id, { status: 'failed', lastError: this.truncateError(error as Error) })
 			yield { type: 'error', data: { message: (error as Error).message, stage: 'enrichment' } }
 		}
+	}
+
+	private async *mapCatalogEvent(
+		event: StreamEvent,
+		receiptId: string,
+		userId: string,
+	): AsyncGenerator<ReceiptStreamEvent> {
+		switch (event.type) {
+			case 'started':
+				yield { type: 'started', data: event.data }
+				break
+
+			case 'image_meta':
+				yield { type: 'image_meta', data: event.data }
+				break
+
+			case 'item':
+				yield { type: 'item', data: event.data }
+				break
+
+			case 'place':
+				yield { type: 'place', data: event.data }
+				break
+
+			case 'receipt':
+				yield { type: 'receipt', data: event.data }
+				break
+
+			case 'language':
+				yield { type: 'language', data: event.data }
+				break
+
+			case 'warning':
+				yield { type: 'warning', data: event.data }
+				break
+
+			case 'completed': {
+				const enriched = (event.data as { response: EnrichResponse }).response
+				await this.saveEnrichmentResult(receiptId, enriched)
+
+				const updated = await this.repo.findByIdWithItems(receiptId, userId)
+				yield {
+					type: 'completed',
+					data: {
+						receipt: updated?.receipt,
+						items: updated?.items,
+						images: enriched.images,
+						savedImages: enriched.savedImages,
+						cached: enriched.cached,
+					},
+				}
+				break
+			}
+
+			case 'error':
+				yield { type: 'error', data: event.data }
+				break
+		}
+	}
+
+	private async enrichFromStructured(receiptId: string, fnsData: FnsReceiptData) {
+		const request = this.buildStructuredRequest(fnsData)
+		const enriched = await this.catalog.enrich(request)
+
+		await this.saveEnrichmentResult(receiptId, enriched)
+
+		const receipt = await this.repo.findById(receiptId)
+		const items = await this.repo.getItems(receiptId)
+
+		return { receipt, items }
+	}
+
+	private async saveEnrichmentResult(receiptId: string, enriched: EnrichResponse): Promise<void> {
+		await this.createEnrichedItems(receiptId, enriched)
+
+		const total = enriched.receipt?.total
+			? Math.round(enriched.receipt.total * 100)
+			: enriched.items.reduce((sum, item) => sum + (item.sum || 0) * 100, 0)
+
+		await this.repo.update(receiptId, {
+			status: 'enriched',
+			total,
+			placeName: enriched.place?.name ?? undefined,
+			placeAddress: enriched.place?.address ?? undefined,
+			enrichmentData: enriched,
+			enrichedAt: new Date(),
+			imageMetadata: enriched.images,
+			savedImages: enriched.savedImages,
+			detectedLanguage: enriched.language,
+		})
 	}
 
 	private async createItemsFromFns(receiptId: string, fnsData: FnsReceiptData) {
@@ -264,35 +378,9 @@ export class ReceiptsService {
 				quantity: String(item.quantity),
 				sum: item.sum,
 				displayOrder: i,
-				// Default fallback
-				suggestedDivisionMethod: 'by_fraction',
+				suggestedSplitMethod: 'by_fraction',
 			})),
 		)
-	}
-
-	private async enrichReceipt(receiptId: string, fnsData: FnsReceiptData, span?: SpanContext) {
-		const enrichRequest = this.catalog.buildStructuredRequest(
-			(fnsData.items || []).map(item => ({
-				name: item.name,
-				quantity: item.quantity,
-				price: item.price / 100,
-				sum: item.sum / 100,
-			})),
-			fnsData.retailPlace
-				? { name: fnsData.retailPlace, address: fnsData.retailPlaceAddress, inn: fnsData.userInn }
-				: undefined,
-			fnsData.totalSum ? fnsData.totalSum / 100 : undefined,
-			fnsData.dateTime,
-		)
-
-		const enriched = await this.catalog.enrich(enrichRequest, span)
-		await this.saveEnrichedItems(receiptId, enriched)
-		await this.repo.update(receiptId, { status: 'enriched', enrichmentData: enriched, enrichedAt: new Date() })
-
-		const receipt = await this.repo.findById(receiptId)
-		const items = await this.repo.getItems(receiptId)
-
-		return { receipt, items }
 	}
 
 	private async createEnrichedItems(receiptId: string, enriched: EnrichResponse) {
@@ -312,51 +400,55 @@ export class ReceiptsService {
 				unit: ei.unit,
 				sum: Math.round((ei.sum || 0) * 100),
 				discount: ei.discount ? Math.round(ei.discount * 100) : 0,
+				bbox: ei.bbox ?? null,
 				suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
 				displayOrder: i,
-				catalogItemId: ei.id,
+				catalogItemId: (ei as any).id,
 				warnings: this.getItemWarnings(enriched, i),
 			})),
 		)
 	}
 
-	private async saveEnrichedItems(receiptId: string, enriched: EnrichResponse) {
-		const existing = await this.repo.getItems(receiptId)
+	private buildImageRequest(images: string[], saveImage?: boolean): EnrichRequest {
+		const normalized = images.map(img => (img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`))
 
-		if (existing.length > 0) {
-			for (let i = 0; i < enriched.items.length; i++) {
-				const ei = enriched.items[i]!
-				const ex = existing[i]
-
-				if (ex) {
-					await this.repo.updateItem(ex.id, {
-						name: ei.name,
-						category: ei.category,
-						subcategory: ei.subcategory,
-						emoji: this.normalizeEmoji(ei.emoji),
-						tags: ei.tags,
-						unit: ei.unit,
-						suggestedSplitMethod: this.mapSplitMethod(ei.splitMethod),
-						catalogItemId: ei.id,
-						warnings: this.getItemWarnings(enriched, i),
-					})
-				}
-			}
-		} else {
-			await this.createEnrichedItems(receiptId, enriched)
+		return {
+			type: 'receipt',
+			source: {
+				type: 'image',
+				data: normalized.length === 1 ? normalized[0]! : normalized,
+			},
+			saveImage,
 		}
 	}
 
-	/**
-	 * MAPPING POLICY:
-	 * by_fraction --> 'by_fraction' (replaces shares/equal)
-	 * by_amount --> 'by_amount' (replaces proportional)
-	 * per_unit --> 'per_unit' (replaces fixed/unit logic)
-	 * not_shareable --> 'per_unit' (Instruction exception: convert to per_unit)
-	 * ambiguous --> 'per_unit'
-	 */
+	private buildStructuredRequest(fnsData: FnsReceiptData): EnrichRequest {
+		return {
+			type: 'receipt',
+			source: {
+				type: 'structured',
+				data: {
+					items: (fnsData.items || []).map(item => ({
+						name: item.name,
+						quantity: item.quantity,
+						price: item.price / 100,
+						sum: item.sum / 100,
+					})),
+					place: fnsData.retailPlace
+						? {
+								name: fnsData.retailPlace,
+								address: fnsData.retailPlaceAddress,
+								inn: fnsData.userInn,
+							}
+						: undefined,
+					total: fnsData.totalSum ? fnsData.totalSum / 100 : undefined,
+					date: fnsData.dateTime,
+				},
+			},
+		}
+	}
+
 	private mapSplitMethod(catalogMethod?: string): 'by_fraction' | 'by_amount' | 'per_unit' | 'custom' {
-		// Rule: "when ambiguous: default to per_unit"
 		if (!catalogMethod) return 'per_unit'
 
 		switch (catalogMethod) {
@@ -367,7 +459,6 @@ export class ReceiptsService {
 			case 'per_unit':
 				return 'per_unit'
 			case 'not_shareable':
-				// Rule: "not_shareable is treated as per_unit"
 				return 'per_unit'
 			default:
 				return 'per_unit'

@@ -3,10 +3,10 @@
 
 	import { onMount } from 'svelte'
 
-	import { onNavigate } from '$app/navigation'
+	import { page } from '$app/state'
 	import { app, setPlatformContext } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
-	import { getNavigationDirection } from '$lib/navigation/routes'
+	import { isNavRoute } from '$lib/navigation/routes'
 	import { createPlatform } from '$lib/platform/create'
 	import {
 		setContactsService,
@@ -20,6 +20,8 @@
 	import { UserService } from '$lib/state/stores/user.svelte'
 	import AppShell from '$lib/ui/layouts/AppShell.svelte'
 	import Navbar from '$lib/ui/layouts/Navbar.svelte'
+	import { TabsCarousel, TabSlide } from '$lib/ui/layouts/tabs'
+	import { ContactsPage, CreatePage, HistoryPage, HomePage, ProfilePage } from '$lib/ui/pages'
 	import ConsentScreen from '$lib/ui/screens/ConsentScreen.svelte'
 	import ErrorScreen from '$lib/ui/screens/ErrorScreen.svelte'
 	import LoadingScreen from '$lib/ui/screens/LoadingScreen.svelte'
@@ -41,6 +43,9 @@
 	setContactsService(contactsService)
 	setPaymentMethodsService(paymentMethodsService)
 
+	// check if current path is a main tab
+	const isMainTab = $derived(isNavRoute(page.url.pathname))
+
 	onMount(async () => {
 		try {
 			const initResult = await platform.init()
@@ -60,22 +65,6 @@
 			app.setError(error instanceof Error ? error : new Error('initialization failed'))
 			initialized = true
 		}
-	})
-
-	onNavigate(navigation => {
-		if (!document.startViewTransition) return
-		if (navigation.type === 'popstate' || navigation.delta === -1) return
-
-		const from = navigation.from?.url.pathname || '/'
-		const to = navigation.to?.url.pathname || '/'
-		document.documentElement.dataset.navDirection = getNavigationDirection(from, to)
-
-		return new Promise(resolve => {
-			document.startViewTransition(async () => {
-				resolve()
-				await navigation.complete
-			})
-		})
 	})
 </script>
 
@@ -99,7 +88,18 @@
 		{#snippet navbar()}
 			<Navbar />
 		{/snippet}
-		{@render children?.()}
+
+		{#if isMainTab}
+			<TabsCarousel>
+				<TabSlide><HomePage /></TabSlide>
+				<TabSlide><HistoryPage /></TabSlide>
+				<TabSlide><CreatePage /></TabSlide>
+				<TabSlide><ContactsPage /></TabSlide>
+				<TabSlide><ProfilePage /></TabSlide>
+			</TabsCarousel>
+		{:else}
+			{@render children?.()}
+		{/if}
 	</AppShell>
 {:else}
 	<LoadingScreen />

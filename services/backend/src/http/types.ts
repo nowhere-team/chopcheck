@@ -1,5 +1,6 @@
-﻿import type { AuthClient, AuthContext } from '@/platform/auth'
-import type { CatalogClient } from '@/platform/catalog'
+﻿import type { CatalogClient } from '@nowhere-team/catalog'
+
+import type { AuthClient, AuthContext } from '@/platform/auth'
 import type { Database } from '@/platform/database'
 import type { FnsClient } from '@/platform/fns'
 import type { Logger } from '@/platform/logger'

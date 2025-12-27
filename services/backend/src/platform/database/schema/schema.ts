@@ -1,4 +1,5 @@
-﻿import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
+﻿import type { ImageMetadata, ItemBbox, SavedImageInfo } from '@nowhere-team/catalog'
+import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, unique, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import {
 	divisionMethodEnum,
@@ -125,6 +126,11 @@ export const receipts = pgTable(
 		enrichmentData: jsonb('enrichment_data'),
 		enrichedAt: timestamptz('enriched_at'),
 
+		// image metadata from catalog
+		imageMetadata: jsonb('image_metadata').default('[]').$type<ImageMetadata[]>(),
+		savedImages: jsonb('saved_images').default('[]').$type<SavedImageInfo[]>(),
+		detectedLanguage: varchar('detected_language', { length: 2 }),
+
 		// error tracking
 		lastError: varchar('last_error', { length: 2048 }),
 		retryCount: integer('retry_count').notNull().default(0),
@@ -167,6 +173,9 @@ export const receiptItems = pgTable(
 		unit: varchar('unit', { length: 32 }).default('piece'),
 		sum: money('sum').notNull(),
 		discount: money('discount').default(0),
+
+		// bbox for item location on image
+		bbox: jsonb('bbox').$type<ItemBbox | null>(),
 
 		// split method suggestion
 		suggestedSplitMethod: divisionMethodEnum('suggested_split_method'),

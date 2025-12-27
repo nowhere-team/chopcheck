@@ -1,3 +1,46 @@
+// file: services/frontend/src/lib/services/api/types.ts
+import type {
+	// DTOs (Data)
+	AddItemsDto,
+	AddPaymentMethodToSplitDto,
+	AuthResponseDto,
+	CreateItemGroupDto,
+	CreatePaymentMethodDto,
+	CreateSplitDto,
+	// Enums/Types
+	DivisionMethod,
+	ImageMetadataDto,
+	ItemGroupDto,
+	ItemGroupType,
+	ParticipantDto,
+	PaymentMethodDto,
+	PaymentMethodType,
+	ReceiptDto,
+	ReceiptItemDto,
+	ReceiptWithItemsDto,
+	SavedImageInfoDto,
+	ScanImageDto,
+	ScanQrDto,
+	SelectItemsDto,
+	SplitCalculationsDto,
+	SplitDto,
+	SplitItemDto,
+	SplitPhase,
+	SplitResponseDto,
+	SplitStatus,
+	TelegramAuthDto,
+	UpdateItemDto,
+	UpdateItemGroupDto,
+	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
+	UserDto,
+	UserMeDto,
+	WarningCode,
+	WarningDto
+} from '@chopcheck/shared'
+
+// --- API Utils ---
+
 export interface ApiRequestOptions extends RequestInit {
 	timeout?: number
 	skipAuth?: boolean
@@ -33,102 +76,53 @@ export class ApiError extends Error {
 	}
 }
 
-// backend entity types
-export interface User {
-	id: string
-	displayName: string
-	username?: string
-	avatarUrl?: string
-	telegramId?: number
+export interface PaginatedResponse<T> {
+	data?: T[]
+	splits?: T[]
+	pagination: {
+		offset: number
+		limit: number
+		hasMore: boolean
+	}
 }
 
-export interface UserStats {
-	totalJoinedSplits: number
-	monthlySpent: number
+// --- Re-exports & Aliases for Frontend Convenience ---
+
+export type User = UserDto
+export type Split = SplitDto
+export type SplitItem = SplitItemDto
+export type ItemGroup = ItemGroupDto
+export type Participant = ParticipantDto
+export type PaymentMethod = PaymentMethodDto
+export type Receipt = ReceiptDto
+export type ReceiptItem = ReceiptItemDto
+export type ReceiptWithItems = ReceiptWithItemsDto
+export type Warning = WarningDto
+export type ImageMetadata = ImageMetadataDto
+export type SavedImageInfo = SavedImageInfoDto
+
+export type SplitResponse = SplitResponseDto
+export type SplitCalculations = SplitCalculationsDto
+
+// --- Frontend Specific Response Types ---
+
+export interface ReceiptImagesResponse {
+	receiptId: string
+	imageMetadata: ImageMetadata[]
+	savedImages: SavedImageInfo[]
 }
 
-export interface Split {
-	id: string
-	shortId: string
-	name: string
-	icon?: string
-	currency: string
-	status: 'draft' | 'active' | 'completed'
-	phase: 'setup' | 'voting' | 'payment' | 'confirming'
-	maxParticipants?: number
-	expectedParticipants?: number
-	scheduledAt?: string
-	completedAt?: string
-	createdAt: string
-	updatedAt: string
-	items?: SplitItem[]
-	participants?: Participant[]
+// Client-side specific types (state, UI helpers)
+
+export interface ItemSelection {
+	itemId: string
+	divisionMethod: DivisionMethod
+	value?: string
 }
 
-export const WARNING_CODES = [
-	'low_confidence_item',
-	'possible_ocr_error',
-	'price_anomaly',
-	'missing_price',
-	'missing_quantity',
-	'multiple_alcohol_items',
-	'total_mismatch',
-	'unknown_category',
-	'duplicate_item',
-	'incomplete_place_data',
-	'unreadable_receipt',
-	'partial_extraction'
-] as const
-
-export type WarningCode = (typeof WARNING_CODES)[number]
-
-export interface Warning {
-	code: WarningCode
-	itemIndex?: number
-	details?: string
-}
-
-export type Unit = 'piece' | 'g' | 'kg' | 'ml' | 'l' | 'pack' | 'portion' | 'set' | 'other'
-
-export interface SplitItem {
-	id: string
-	name: string
-	price: number
-	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-	quantity: string
-	unit?: Unit | string
-	icon?: string
+export interface DraftItem extends Omit<SplitItemDto, 'id' | 'groupId'> {
+	id?: string
 	groupId?: string | null
-	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
-	warnings?: Warning[]
-}
-
-export interface ItemGroup {
-	id: string
-	splitId: string
-	receiptId?: string | null
-	type: 'receipt' | 'manual' | 'custom'
-	name: string
-	icon?: string | null
-	displayOrder: number
-	isCollapsed: boolean
-	warnings?: Warning[]
-	createdAt: string
-	updatedAt: string
-}
-
-export interface Participant {
-	id: string
-	userId: string | null
-	displayName?: string | null
-	isAnonymous: boolean
-	joinedAt: string
-	user: {
-		id: string
-		displayName: string
-		username?: string
-		avatarUrl?: string
-	} | null
 }
 
 export interface SplitsByPeriod {
@@ -152,131 +146,41 @@ export interface Contact {
 	}
 }
 
-export interface PaginatedResponse<T> {
-	data?: T[]
-	splits?: T[]
-	pagination: {
-		offset: number
-		limit: number
-		hasMore: boolean
-	}
+// Request DTO exports
+export type {
+	AddItemsDto,
+	AddPaymentMethodToSplitDto,
+	AuthResponseDto,
+	CreateItemGroupDto,
+	CreatePaymentMethodDto,
+	CreateSplitDto,
+	ReceiptWithItemsDto,
+	ScanImageDto,
+	ScanQrDto,
+	SelectItemsDto,
+	TelegramAuthDto,
+	UpdateItemDto,
+	UpdateItemGroupDto,
+	UpdatePaymentMethodDto,
+	UpdatePreferencesDto,
+	UserMeDto
 }
 
-// request/response types
-export interface CreateSplitDto {
-	name: string
-	currency?: string
-	icon?: string
-	items?: Array<{
-		id?: string
-		name: string
-		price: number
-		quantity: string
-		type?: SplitItem['type']
-		defaultDivisionMethod?: SplitItem['defaultDivisionMethod']
-	}>
-}
+// Enums exports
+export {
+	DIVISION_METHODS,
+	ITEM_GROUP_TYPES,
+	PAYMENT_METHOD_TYPES,
+	SPLIT_PHASES,
+	SPLIT_STATUSES,
+	WARNING_CODES
+} from '@chopcheck/shared'
 
-export interface SplitResponse {
-	split: Split
-	items: SplitItem[]
-	itemGroups: ItemGroup[]
-	participants: Participant[]
-	calculations?: SplitCalculations
-}
-
-export interface SplitCalculations {
-	participants: ParticipantCalculation[]
-	totals: {
-		splitAmount: number
-		collected: number
-		difference: number
-	}
-}
-
-export interface ParticipantCalculation {
-	participantId: string
-	displayName: string
-	totalBase: number
-	totalDiscount: number
-	totalFinal: number
-	items: Record<string, ItemCalculation>
-}
-
-export interface ItemCalculation {
-	baseAmount: number
-	discountAmount: number
-	finalAmount: number
-	divisionMethod: string
-	participationValue?: string
-}
-
-export interface ItemSelection {
-	itemId: string
-	divisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
-	value?: string
-}
-
-export interface DraftItem {
-	id?: string
-	name: string
-	price: number
-	quantity: string
-	type: 'product' | 'tip' | 'delivery' | 'service_fee' | 'tax'
-	defaultDivisionMethod: 'by_fraction' | 'by_amount' | 'per_unit' | 'custom'
-	icon?: string
-}
-
-// payment methods
-export type PaymentMethodType =
-	| 'sbp'
-	| 'card'
-	| 'phone'
-	| 'bank_transfer'
-	| 'cash'
-	| 'crypto'
-	| 'custom'
-
-export interface PaymentMethod {
-	id: string
-	userId: string
-	type: PaymentMethodType
-	displayName: string | null
-	currency: string
-	paymentData: Record<string, unknown>
-	isTemporary: boolean
-	isDefault: boolean
-	displayOrder: number
-	isDeleted: boolean
-	createdAt: string
-	updatedAt: string
-}
-
-export interface CreatePaymentMethodDto {
-	type: PaymentMethodType
-	displayName?: string
-	currency?: string
-	paymentData: Record<string, unknown>
-	isTemporary?: boolean
-	isDefault?: boolean
-}
-
-export interface UpdatePaymentMethodDto {
-	displayName?: string
-	isDefault?: boolean
-}
-
-export interface SplitPaymentMethod {
-	id: string
-	splitId: string
-	paymentMethodId: string
-	comment: string | null
-	isPreferred: boolean
-	paymentMethod: PaymentMethod
-}
-
-export interface AddPaymentMethodToSplitDto {
-	paymentMethodId: string
-	comment?: string
-	isPreferred?: boolean
+export type {
+	DivisionMethod,
+	ItemGroupType,
+	PaymentMethodType,
+	SplitPhase,
+	SplitStatus,
+	WarningCode
 }

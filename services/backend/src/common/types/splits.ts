@@ -1,46 +1,33 @@
-﻿import { z } from 'zod'
-
-import { DIVISION_METHODS, ITEM_GROUP_TYPES } from '@/platform/database/schema/enums'
+﻿import type { SplitCalculationsDto, SplitResponseDto } from '@chopcheck/shared'
 
 import type { Item, ItemGroup, ParticipantWithSelections, Split } from './entities'
 
-export const createSplitSchema = z.object({
-	id: z.uuid().optional(),
-	icon: z.string().optional(),
-	name: z.string().min(1).max(255),
-	currency: z.string().length(3).default('RUB'),
-	items: z
-		.array(
-			z.object({
-				id: z.uuid().optional(),
-				name: z.string().min(1).max(128),
-				price: z.number().int().positive(),
-				type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
-				quantity: z.string().default('1'),
-				defaultDivisionMethod: z.enum(DIVISION_METHODS).default('per_unit'),
-				icon: z.string().optional(),
-			}),
-		)
-		.optional(),
-	receiptIds: z.array(z.uuid()).optional(),
-})
+export type SplitResponse = SplitResponseDto
+export type SplitCalculations = SplitCalculationsDto
 
-export const createItemGroupSchema = z.object({
-	name: z.string().min(1).max(255),
-	icon: z.string().optional(),
-	type: z.enum(ITEM_GROUP_TYPES).default('custom'),
-})
+// Dto re-exports for service layers
+export type {
+	AddItemsDto,
+	AddPaymentMethodToSplitDto,
+	CreateItemGroupDto,
+	CreateSplitDto,
+	SelectItemsDto,
+	SplitItemDto,
+	UpdateItemDto,
+	UpdateItemGroupDto,
+} from '@chopcheck/shared'
+export {
+	addItemsDtoSchema,
+	addPaymentMethodToSplitSchema,
+	createItemGroupDtoSchema,
+	createSplitSchema,
+	selectItemsDtoSchema,
+	splitItemSchema,
+	updateItemDtoSchema,
+	updateItemGroupDtoSchema,
+} from '@chopcheck/shared'
 
-export const updateItemGroupSchema = z.object({
-	name: z.string().min(1).max(255).optional(),
-	icon: z.string().optional(),
-	isCollapsed: z.boolean().optional(),
-})
-
-export type CreateSplitDto = z.infer<typeof createSplitSchema>
-export type CreateItemGroupDto = z.infer<typeof createItemGroupSchema>
-export type UpdateItemGroupDto = z.infer<typeof updateItemGroupSchema>
-
+// Backend-specific types (not DTOs)
 export interface SplitData {
 	split: Split
 	items: Item[]
@@ -64,20 +51,6 @@ export interface ParticipantCalculation {
 			participationValue?: string
 		}
 	>
-}
-
-export interface SplitCalculations {
-	participants: ParticipantCalculation[]
-	totals: {
-		splitAmount: number
-		collected: number
-		difference: number
-	}
-}
-
-export interface SplitResponse extends SplitData {
-	calculations?: SplitCalculations
-	receipts?: Array<{ id: string; placeName?: string | null; total: number; createdAt: Date }>
 }
 
 export interface SplitsByPeriod {

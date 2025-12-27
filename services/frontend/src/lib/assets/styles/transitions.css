@@ -1,8 +1,8 @@
 /* main page transition */
 ::view-transition-old(page),
 ::view-transition-new(page) {
-	animation-duration: 280ms;
-	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	animation-duration: 180ms;
+	animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
 	animation-fill-mode: both;
 }
 
@@ -51,15 +51,15 @@
 	animation-name: page-fade-in;
 }
 
-/* forward keyframes */
+/* forward keyframes - shorter distance */
 @keyframes page-out-to-left {
 	from {
 		opacity: 1;
 		transform: translateX(0);
 	}
 	to {
-		opacity: 0.6;
-		transform: translateX(-100%);
+		opacity: 0.4;
+		transform: translateX(-30%);
 	}
 }
 
@@ -88,8 +88,8 @@
 
 @keyframes page-in-from-left {
 	from {
-		opacity: 0.6;
-		transform: translateX(-100%);
+		opacity: 0.4;
+		transform: translateX(-30%);
 	}
 	to {
 		opacity: 1;

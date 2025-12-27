@@ -1,11 +1,18 @@
-﻿import { Hono } from 'hono'
+﻿import {
+	addItemsDtoSchema,
+	addPaymentMethodToSplitSchema,
+	createItemGroupDtoSchema,
+	createSplitSchema,
+	selectItemsDtoSchema,
+	updateItemDtoSchema,
+	updateItemGroupDtoSchema,
+} from '@chopcheck/shared'
+import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { NotFoundError } from '@/common/errors'
-import { createItemGroupSchema, createSplitSchema, updateItemGroupSchema } from '@/common/types'
 import { auth, requirePermission } from '@/http/middleware/auth'
 import { anonymizeSplitResponse, uuidParam, validate } from '@/http/utils'
-import { DIVISION_METHODS } from '@/platform/database/schema/enums'
 
 const joinQuerySchema = z.object({
 	anonymous: z
@@ -21,47 +28,6 @@ const mySplitsQuerySchema = z.object({
 	limit: z.coerce.number().int().min(1).max(100).default(20),
 	status: z.enum(['draft', 'active', 'completed']).optional(),
 	period: z.enum(['earlier']).optional(),
-})
-
-const selectItemsSchema = z.object({
-	participantId: z.uuid().optional(),
-	selections: z.array(
-		z.object({
-			itemId: z.uuid(),
-			divisionMethod: z.enum(DIVISION_METHODS),
-			value: z.string().optional(),
-		}),
-	),
-})
-
-const addItemsSchema = z.object({
-	items: z.array(
-		z.object({
-			name: z.string().min(1).max(128),
-			price: z.number().int().positive(),
-			type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).default('product'),
-			quantity: z.string().default('1'),
-			defaultDivisionMethod: z.enum(DIVISION_METHODS),
-			icon: z.string().optional(),
-			groupId: z.uuid().optional(),
-		}),
-	),
-})
-
-const updateItemSchema = z.object({
-	name: z.string().min(1).max(128).optional(),
-	price: z.number().int().positive().optional(),
-	type: z.enum(['product', 'tip', 'delivery', 'service_fee', 'tax']).optional(),
-	quantity: z.string().optional(),
-	defaultDivisionMethod: z.enum(DIVISION_METHODS).optional(),
-	icon: z.string().optional(),
-	groupId: z.uuid().nullable().optional(),
-})
-
-const addPaymentMethodSchema = z.object({
-	paymentMethodId: z.uuid(),
-	comment: z.string().max(2048).optional(),
-	isPreferred: z.boolean().optional(),
 })
 
 export function createSplitsRoutes() {
@@ -144,14 +110,14 @@ export function createSplitsRoutes() {
 		return c.json({ participation })
 	})
 
-	app.post('/:id/items', uuidParam('id'), validate('json', addItemsSchema), async c => {
+	app.post('/:id/items', uuidParam('id'), validate('json', addItemsDtoSchema), async c => {
 		const split = await c
 			.get('services')
 			.splits.addItems(c.req.param('id'), c.get('authContext')!.userId, c.req.valid('json').items)
 		return c.json(anonymizeSplitResponse(split))
 	})
 
-	app.patch('/:id/items/:itemId', uuidParam('id', 'itemId'), validate('json', updateItemSchema), async c => {
+	app.patch('/:id/items/:itemId', uuidParam('id', 'itemId'), validate('json', updateItemDtoSchema), async c => {
 		const split = await c
 			.get('services')
 			.splits.updateItem(
@@ -170,7 +136,7 @@ export function createSplitsRoutes() {
 		return c.json(anonymizeSplitResponse(split))
 	})
 
-	app.post('/:id/select', uuidParam('id'), validate('json', selectItemsSchema), async c => {
+	app.post('/:id/select', uuidParam('id'), validate('json', selectItemsDtoSchema), async c => {
 		const { participantId, selections } = c.req.valid('json')
 		const services = c.get('services')
 		const userId = c.get('authContext')!.userId
@@ -188,7 +154,7 @@ export function createSplitsRoutes() {
 		return c.json({ success: true, data: methods })
 	})
 
-	app.post('/:id/payment-methods', uuidParam('id'), validate('json', addPaymentMethodSchema), async c => {
+	app.post('/:id/payment-methods', uuidParam('id'), validate('json', addPaymentMethodToSplitSchema), async c => {
 		await c
 			.get('services')
 			.splits.addPaymentMethod(c.req.param('id'), c.get('authContext')!.userId, c.req.valid('json'))
@@ -239,24 +205,29 @@ export function createSplitsRoutes() {
 		return c.json({ preparedMessageId, splitId: data.split.id, shortId: data.split.shortId })
 	})
 
-	app.post('/:id/groups', uuidParam('id'), validate('json', createItemGroupSchema), async c => {
+	app.post('/:id/groups', uuidParam('id'), validate('json', createItemGroupDtoSchema), async c => {
 		const split = await c
 			.get('services')
 			.splits.createItemGroup(c.req.param('id'), c.get('authContext')!.userId, c.req.valid('json'))
 		return c.json(anonymizeSplitResponse(split), 201)
 	})
 
-	app.patch('/:id/groups/:groupId', uuidParam('id', 'groupId'), validate('json', updateItemGroupSchema), async c => {
-		const split = await c
-			.get('services')
-			.splits.updateItemGroup(
-				c.req.param('id'),
-				c.req.param('groupId'),
-				c.get('authContext')!.userId,
-				c.req.valid('json'),
-			)
-		return c.json(anonymizeSplitResponse(split))
-	})
+	app.patch(
+		'/:id/groups/:groupId',
+		uuidParam('id', 'groupId'),
+		validate('json', updateItemGroupDtoSchema),
+		async c => {
+			const split = await c
+				.get('services')
+				.splits.updateItemGroup(
+					c.req.param('id'),
+					c.req.param('groupId'),
+					c.get('authContext')!.userId,
+					c.req.valid('json'),
+				)
+			return c.json(anonymizeSplitResponse(split))
+		},
+	)
 
 	app.delete('/:id/groups/:groupId', uuidParam('id', 'groupId'), async c => {
 		const split = await c

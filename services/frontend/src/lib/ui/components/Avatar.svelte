@@ -33,7 +33,7 @@
 
 {#if isPlain}
 	<div class="plain-emoji" style:width="{size}px" style:height="{size}px">
-		<Emoji emoji={icon} size={size * 0.95} />
+		<Emoji emoji={icon} size={size * 0.95} lazy />
 	</div>
 {:else}
 	<div

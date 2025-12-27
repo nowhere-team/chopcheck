@@ -1,3 +1,4 @@
+// file: services/frontend/src/lib/ui/features/split-create/machine.svelte.ts
 import type { DraftItem, ItemGroup } from '$lib/services/api/types'
 
 export type SheetType =
@@ -47,7 +48,13 @@ export class SheetMachine {
 	openItemEdit(item: DraftItem, groupId: string | null = null): void {
 		this.context = {
 			...this.context,
-			editingItem: { ...item },
+			editingItem: {
+				// @ts-expect-error types
+				unit: 'piece',
+				// @ts-expect-error types
+				warnings: [],
+				...item
+			},
 			editingItemGroupId: groupId,
 			isNewItem: !item.id || item.id.startsWith('temp-')
 		}
@@ -61,7 +68,9 @@ export class SheetMachine {
 			quantity: '1',
 			type: 'product',
 			defaultDivisionMethod: 'by_fraction',
-			icon: '📦'
+			icon: '📦',
+			unit: 'piece', // added required field
+			warnings: [] // added required field
 		}
 		this.openItemEdit(newItem, null)
 	}

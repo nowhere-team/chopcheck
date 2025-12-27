@@ -1,6 +1,7 @@
-﻿import type { AuthClient } from '@/platform/auth'
+﻿import type { CatalogClient } from '@nowhere-team/catalog'
+
+import type { AuthClient } from '@/platform/auth'
 import type { Cache } from '@/platform/cache'
-import type { CatalogClient } from '@/platform/catalog'
 import type { Database } from '@/platform/database'
 import type { FnsClient } from '@/platform/fns'
 import type { Logger } from '@/platform/logger'
@@ -9,7 +10,7 @@ import { createRepositories } from '@/repositories'
 import { CalculationService } from './calculation'
 import { ContactsService } from './contacts'
 import { PaymentMethodsService } from './payment-methods'
-import { ReceiptsService } from './receipts'
+import { ReceiptsService, type ReceiptsServiceConfig } from './receipts'
 import { SplitsService } from './splits'
 import { UsersService } from './users'
 
@@ -21,6 +22,10 @@ export interface Services {
 	contacts: ContactsService
 }
 
+export interface ServicesConfig {
+	receipts: ReceiptsServiceConfig
+}
+
 export function createServices(
 	auth: AuthClient,
 	db: Database,
@@ -28,12 +33,13 @@ export function createServices(
 	fns: FnsClient,
 	catalog: CatalogClient,
 	logger: Logger,
+	config: ServicesConfig,
 ): Services {
 	const repos = createRepositories(db, cache, logger)
 
 	const users = new UsersService(repos.users, auth, logger.named('svc/users'))
 	const calc = new CalculationService(logger.named('svc/calc'))
-	const receipts = new ReceiptsService(repos.receipts, fns, catalog, logger.named('svc/receipts'))
+	const receipts = new ReceiptsService(repos.receipts, fns, catalog, config.receipts, logger.named('svc/receipts'))
 	const splits = new SplitsService(
 		repos.splits,
 		repos.items,

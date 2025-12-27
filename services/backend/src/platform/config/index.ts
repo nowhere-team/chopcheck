@@ -39,6 +39,7 @@ const schema = z.object({
 	// catalog integration
 	CATALOG_SERVICE_URL: z.url().nonempty(),
 	CATALOG_REQUEST_TIMEOUT: z.coerce.number().default(30000),
+	CATALOG_MAX_IMAGES: z.coerce.number().min(1).max(10).default(5),
 
 	// tracing
 	TRACING_ENABLED: z

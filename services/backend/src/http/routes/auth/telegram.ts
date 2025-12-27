@@ -1,14 +1,12 @@
-﻿import { parse, validate } from '@tma.js/init-data-node'
+﻿import { telegramAuthSchema } from '@chopcheck/shared'
+import { parse, validate } from '@tma.js/init-data-node'
 import { Hono } from 'hono'
 import { setCookie } from 'hono/cookie'
-import { z } from 'zod'
 
 import { validate as v } from '@/http/utils'
 
-const schema = z.object({ initData: z.string().nonempty() })
-
 export function createTelegramAuthRoute() {
-	return new Hono().post('/telegram', v('json', schema), async c => {
+	return new Hono().post('/telegram', v('json', telegramAuthSchema), async c => {
 		const { initData } = c.req.valid('json')
 		const auth = c.get('auth')
 		const services = c.get('services')

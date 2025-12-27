@@ -4,26 +4,32 @@ WORKDIR /app
 
 # ===== deps stage - all dependencies =====
 FROM base AS deps
-COPY package.json bun.lock ./
+COPY package.json bun.lock bunfig.toml ./
 COPY services/backend/scripts ./services/backend/scripts
 COPY services/frontend/scripts ./services/frontend/scripts
 COPY services/backend/package.json ./services/backend/
 COPY services/telegram/package.json ./services/telegram/
 COPY services/frontend/package.json ./services/frontend/
-RUN bun install --frozen-lockfile
+COPY packages/shared/package.json ./packages/shared/
+RUN --mount=type=secret,id=GITHUB_TOKEN \
+    GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) \
+    bun install --frozen-lockfile
 
 # ===== backend build =====
 FROM deps AS backend-build
+COPY packages/shared ./packages/shared
 COPY services/backend ./services/backend
 WORKDIR /app/services/backend
 
 # ===== telegram build =====
 FROM deps AS telegram-build
+COPY packages/shared ./packages/shared
 COPY services/telegram ./services/telegram
 WORKDIR /app/services/telegram
 
 # ===== frontend build =====
 FROM deps AS frontend-build
+COPY packages/shared ./packages/shared
 COPY services/frontend ./services/frontend
 WORKDIR /app/services/frontend
 RUN bun run build
@@ -33,6 +39,7 @@ FROM base AS backend
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
+COPY packages/shared ./packages/shared
 COPY services/backend ./services/backend
 WORKDIR /app/services/backend
 ENV NODE_ENV=production
@@ -44,6 +51,7 @@ FROM base AS telegram
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
+COPY packages/shared ./packages/shared
 COPY services/telegram ./services/telegram
 WORKDIR /app/services/telegram
 ENV NODE_ENV=production
@@ -65,6 +73,7 @@ FROM base AS migrator
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
+COPY packages/shared ./packages/shared
 COPY services/backend ./services/backend
 WORKDIR /app/services/backend
 CMD ["bun", "run", "db:migrate"]

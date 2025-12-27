@@ -1,2 +1,2 @@
-﻿export { ReceiptsService } from './service'
+﻿export { ReceiptsService, type ReceiptsServiceConfig } from './service'
 export * from './types'
