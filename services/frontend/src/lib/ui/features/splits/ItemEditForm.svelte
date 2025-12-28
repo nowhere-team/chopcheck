@@ -196,7 +196,6 @@
 		z-index: calc(var(--z-modal) - 10);
 		border-radius: var(--radius-lg);
 		overflow: hidden;
-		background: var(--color-bg-secondary);
 	}
 
 	.edit-form {

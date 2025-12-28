@@ -34,8 +34,7 @@
 
 	const bboxPct = $derived.by(() => {
 		const transformed = transformBboxForRotation(bbox, rotation)
-		// Делаем отступ адаптивным: не больше 20% от ширины объекта, но и не совсем впритык
-		const dynamicPadding = Math.max(10, Math.min(transformed.width * 0.2, 40))
+		const dynamicPadding = Math.max(8, Math.min(transformed.width * 0.05, 20))
 		const padded = addBboxPadding(transformed, dynamicPadding)
 		return {
 			left: padded.left / 10,
@@ -49,9 +48,8 @@
 		if (!containerWidth || !imageWidth || !bboxPct.width) return 1
 
 		const fitScale = containerWidth / imageWidth
-
 		const bboxPixelWidth = (bboxPct.width / 100) * imageWidth
-		const zoomScale = (containerWidth * 0.65) / bboxPixelWidth
+		const zoomScale = (containerWidth * 0.9) / bboxPixelWidth
 
 		return Math.max(fitScale, zoomScale)
 	})
@@ -134,6 +132,8 @@
 	})
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!--suppress HtmlUnknownAttribute -->
 <div
 	class="viewport {className}"
 	bind:this={containerRef}
@@ -175,7 +175,6 @@
 	</div>
 </div>
 
-<!--suppress CssInvalidPropertyValue -->
 <style>
 	.viewport {
 		position: relative;
@@ -184,8 +183,31 @@
 		overflow: hidden;
 		touch-action: none;
 		user-select: none;
-		-webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 100%);
-		mask-image: radial-gradient(ellipse at center, black 40%, transparent 100%);
+		background: transparent;
+
+		--fade-size: 15%;
+
+		--mask-h: linear-gradient(
+			to right,
+			transparent,
+			black var(--fade-size),
+			black calc(100% - var(--fade-size)),
+			transparent
+		);
+
+		--mask-v: linear-gradient(
+			to bottom,
+			transparent,
+			black var(--fade-size),
+			black calc(100% - var(--fade-size)),
+			transparent
+		);
+
+		-webkit-mask-image: var(--mask-h), var(--mask-v);
+		-webkit-mask-composite: source-in;
+
+		mask-image: var(--mask-h), var(--mask-v);
+		mask-composite: intersect;
 	}
 
 	.image-layer {
@@ -205,7 +227,7 @@
 		pointer-events: none;
 		max-width: none;
 		max-height: none;
-		filter: contrast(1.05) saturate(1.05);
+		filter: contrast(1.1) saturate(1.1) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
 	}
 
 	.bbox-corners {
@@ -220,8 +242,8 @@
 		border-color: var(--color-primary, #3b82f6);
 		border-style: solid;
 		border-width: 0;
-		opacity: 0.9;
-		filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+		opacity: 0.7;
+		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 	}
 
 	.tl {
