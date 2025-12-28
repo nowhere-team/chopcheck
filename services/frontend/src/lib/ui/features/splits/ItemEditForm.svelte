@@ -2,14 +2,17 @@
 	import { Trash } from 'phosphor-svelte'
 
 	import { m } from '$lib/i18n'
-	import type { DraftItem, ItemGroup } from '$lib/services/api/types'
+	import type { DraftItem, ItemBboxDto, ItemGroup } from '$lib/services/api/types'
 	import { Button, Divider, Input } from '$lib/ui/components'
+	import ReceiptItemCrop from '$lib/ui/features/receipts/ReceiptItemCrop.svelte'
 	import { EditableEmoji, PriceInput, Select } from '$lib/ui/forms'
 
 	interface Props {
 		item: DraftItem
 		groupId?: string | null
 		groups?: ItemGroup[]
+		receiptId?: string | null
+		bbox?: ItemBboxDto | null
 		onSave?: (groupId: string | null) => void
 		onDelete?: () => void
 		onCancel?: () => void
@@ -20,6 +23,8 @@
 		item = $bindable(),
 		groupId = null,
 		groups = [],
+		receiptId = null,
+		bbox = null,
 		onSave,
 		onDelete,
 		onCancel,
@@ -28,6 +33,8 @@
 
 	let iconValue = $derived(item.icon || '📦')
 	let selectedGroupId = $derived(groupId)
+
+	const hasBbox = $derived(!!bbox && !!receiptId)
 
 	const divisionMethods = [
 		{
@@ -61,7 +68,6 @@
 		{ value: '__new__', label: '+ Создать группу' }
 	])
 
-	// compute select value from state
 	const groupSelectValue = $derived(selectedGroupId ?? '__none__')
 
 	function handleEmojiChange(newEmoji: string) {
@@ -83,13 +89,19 @@
 		onSave?.(selectedGroupId)
 	}
 
-	// expose method to update group after creation
 	export function setGroupId(id: string) {
 		selectedGroupId = id
 	}
 </script>
 
 <form onsubmit={e => e.preventDefault()}>
+	<!-- receipt crop preview -->
+	{#if receiptId && hasBbox}
+		<div class="crop-section">
+			<ReceiptItemCrop {receiptId} {bbox} height={100} />
+		</div>
+	{/if}
+
 	<div class="fields">
 		<div class="name-row">
 			<div class="icon-field">
@@ -143,6 +155,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
+	}
+
+	.crop-section {
+		margin-bottom: var(--space-2);
 	}
 
 	.fields {

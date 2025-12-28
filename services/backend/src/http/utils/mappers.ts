@@ -3,6 +3,7 @@ import type {
 	ParticipantDto,
 	PaymentMethodDto,
 	ReceiptDto,
+	ReceiptImagesResponseDto,
 	ReceiptItemDto,
 	SplitDto,
 	SplitItemDto,
@@ -81,6 +82,7 @@ export function toReceiptItemDto(item: ReceiptItem): ReceiptItemDto {
 		discount: item.discount || undefined,
 		suggestedSplitMethod: item.suggestedSplitMethod || undefined,
 		warnings: (item.warnings as any) || undefined,
+		bbox: (item.bbox as any) || null,
 	}
 }
 
@@ -97,6 +99,20 @@ export function toReceiptDto(receipt: Receipt): ReceiptDto {
 		imageMetadata: (receipt.imageMetadata as any) || undefined,
 		savedImages: (receipt.savedImages as any) || undefined,
 		createdAt: toIso(receipt.createdAt),
+	}
+}
+
+export function toReceiptImagesDto(data: {
+	receipt: Receipt
+	items: ReceiptItem[]
+	imageMetadata: unknown[]
+	savedImages: unknown[]
+}): ReceiptImagesResponseDto {
+	return {
+		receiptId: data.receipt.id,
+		imageMetadata: (data.imageMetadata as any) || [],
+		savedImages: (data.savedImages as any) || [],
+		items: data.items.map(toReceiptItemDto),
 	}
 }
 

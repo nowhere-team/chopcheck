@@ -10,6 +10,7 @@ import type {
 	// Enums/Types
 	DivisionMethod,
 	ImageMetadataDto,
+	ItemBboxDto,
 	ItemGroupDto,
 	ItemGroupType,
 	ParticipantDto,
@@ -98,6 +99,7 @@ export type Receipt = ReceiptDto
 export type ReceiptItem = ReceiptItemDto
 export type ReceiptWithItems = ReceiptWithItemsDto
 export type Warning = WarningDto
+export type ItemBbox = ItemBboxDto
 export type ImageMetadata = ImageMetadataDto
 export type SavedImageInfo = SavedImageInfoDto
 
@@ -154,7 +156,11 @@ export type {
 	CreateItemGroupDto,
 	CreatePaymentMethodDto,
 	CreateSplitDto,
+	ImageMetadataDto,
+	ItemBboxDto,
+	ReceiptItemDto,
 	ReceiptWithItemsDto,
+	SavedImageInfoDto,
 	ScanImageDto,
 	ScanQrDto,
 	SelectItemsDto,

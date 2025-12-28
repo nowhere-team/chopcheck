@@ -1,5 +1,6 @@
 // file: services/frontend/src/lib/ui/features/split-create/machine.svelte.ts
-import type { DraftItem, ItemGroup } from '$lib/services/api/types'
+
+import type { DraftItem, ItemBboxDto, ItemGroup } from '$lib/services/api/types'
 
 export type SheetType =
 	| 'participants'
@@ -13,6 +14,8 @@ export type SheetType =
 export interface SheetContextData {
 	editingItem: DraftItem | null
 	editingItemGroupId: string | null
+	editingItemBbox: ItemBboxDto | null
+	receiptId: string | null
 	isNewItem: boolean
 	editingGroup: { id: string; name: string; icon: string } | null
 }
@@ -23,6 +26,8 @@ export class SheetMachine {
 	context = $state<SheetContextData>({
 		editingItem: null,
 		editingItemGroupId: null,
+		editingItemBbox: null,
+		receiptId: null,
 		isNewItem: false,
 		editingGroup: null
 	})
@@ -31,6 +36,8 @@ export class SheetMachine {
 		this.context = {
 			editingItem: null,
 			editingItemGroupId: null,
+			editingItemBbox: null,
+			receiptId: null,
 			isNewItem: false,
 			editingGroup: null
 		}
@@ -45,7 +52,11 @@ export class SheetMachine {
 		setTimeout(() => this.resetContext(), 300)
 	}
 
-	openItemEdit(item: DraftItem, groupId: string | null = null): void {
+	openItemEdit(
+		item: DraftItem,
+		groupId: string | null = null,
+		options?: { receiptId?: string | null; bbox?: ItemBboxDto | null }
+	): void {
 		this.context = {
 			...this.context,
 			editingItem: {
@@ -56,6 +67,8 @@ export class SheetMachine {
 				...item
 			},
 			editingItemGroupId: groupId,
+			editingItemBbox: options?.bbox ?? null,
+			receiptId: options?.receiptId ?? null,
 			isNewItem: !item.id || item.id.startsWith('temp-')
 		}
 		this.current = 'item-edit'
@@ -69,8 +82,8 @@ export class SheetMachine {
 			type: 'product',
 			defaultDivisionMethod: 'by_fraction',
 			icon: '📦',
-			unit: 'piece', // added required field
-			warnings: [] // added required field
+			unit: 'piece',
+			warnings: []
 		}
 		this.openItemEdit(newItem, null)
 	}
