@@ -1,5 +1,3 @@
-// file: services/frontend/src/lib/ui/features/split-create/machine.svelte.ts
-
 import type { DraftItem, ItemBboxDto, ItemGroup } from '$lib/services/api/types'
 
 export type SheetType =
@@ -60,15 +58,15 @@ export class SheetMachine {
 		this.context = {
 			...this.context,
 			editingItem: {
-				// @ts-expect-error types
-				unit: 'piece',
-				// @ts-expect-error types
-				warnings: [],
-				...item
+				...item,
+				// Ensure defaults essentially required by DTO but might be missing in partial drafts
+				unit: item.unit ?? 'piece',
+				warnings: item.warnings ?? []
 			},
 			editingItemGroupId: groupId,
-			editingItemBbox: options?.bbox ?? null,
-			receiptId: options?.receiptId ?? null,
+			// Prioritize options, then fallback to item properties (if DTO has them)
+			editingItemBbox: options?.bbox ?? item.bbox ?? null,
+			receiptId: options?.receiptId ?? item.receiptId ?? null,
 			isNewItem: !item.id || item.id.startsWith('temp-')
 		}
 		this.current = 'item-edit'

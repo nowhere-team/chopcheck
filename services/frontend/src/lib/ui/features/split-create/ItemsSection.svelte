@@ -32,17 +32,19 @@
 		if (ctx.selection.active) {
 			ctx.selection.toggle(item.id)
 		} else {
+			// Используем spread, чтобы передать все поля, включая unit и warnings
+			// Также явно передаем bbox и receiptId в опции (или они подтянутся из item)
 			ctx.sheets.openItemEdit(
 				{
-					id: item.id,
-					name: item.name,
-					price: item.price,
-					quantity: item.quantity,
-					type: item.type,
-					defaultDivisionMethod: item.defaultDivisionMethod,
-					icon: item.icon
+					...item,
+					// Явно указываем id, так как он есть в SplitItem
+					id: item.id
 				},
-				item.groupId ?? null
+				item.groupId ?? null,
+				{
+					bbox: item.bbox ?? null,
+					receiptId: item.receiptId ?? null
+				}
 			)
 		}
 	}

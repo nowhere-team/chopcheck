@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { Trash } from 'phosphor-svelte'
+	import { onMount } from 'svelte'
+	import { fade, fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
 	import type { DraftItem, ItemBboxDto, ItemGroup } from '$lib/services/api/types'
+	import { receiptImagesStore } from '$lib/state/stores/receipt-images.svelte'
 	import { Button, Divider, Input } from '$lib/ui/components'
 	import ReceiptItemCrop from '$lib/ui/features/receipts/ReceiptItemCrop.svelte'
 	import { EditableEmoji, PriceInput, Select } from '$lib/ui/forms'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Props {
 		item: DraftItem
@@ -31,10 +35,41 @@
 		onRequestCreateGroup
 	}: Props = $props()
 
+	// --- State ---
 	let iconValue = $derived(item.icon || '📦')
 	let selectedGroupId = $derived(groupId)
 
-	const hasBbox = $derived(!!bbox && !!receiptId)
+	// --- Image Loading State ---
+	let imageUrl = $state<string | null>(null)
+	let imageDims = $state<{ width: number; height: number } | null>(null)
+	let rotation = $state<0 | 90 | 180 | 270>(0)
+	let isImageReady = $state(false)
+
+	// Загружаем данные картинки при маунте, если есть receiptId и bbox
+	onMount(async () => {
+		if (receiptId && bbox) {
+			const data = await receiptImagesStore.load(receiptId)
+			if (!data) return
+
+			const savedImage = data.savedImages.find(img => img.index === bbox.index)
+			const metadata = data.imageMetadata.find(meta => meta.index === bbox.index)
+
+			if (savedImage?.url) {
+				imageUrl = savedImage.url
+				rotation = (metadata?.rotation as any) ?? 0
+
+				// Preload to get dims
+				const img = new Image()
+				img.src = savedImage.url
+				img.onload = () => {
+					imageDims = { width: img.naturalWidth, height: img.naturalHeight }
+					isImageReady = true
+				}
+			}
+		}
+	})
+
+	// --- Form Logic ---
 
 	const divisionMethods = [
 		{
@@ -94,13 +129,28 @@
 	}
 </script>
 
-<form onsubmit={e => e.preventDefault()}>
-	<!-- receipt crop preview -->
-	{#if receiptId && hasBbox}
-		<div class="crop-section">
-			<ReceiptItemCrop {receiptId} {bbox} height={100} />
+<!-- Portal for Crop View -->
+{#if isImageReady && imageUrl && bbox && imageDims}
+	<Portal target="body">
+		<div
+			class="crop-portal-container"
+			in:fly={{ y: -20, duration: 300 }}
+			out:fade={{ duration: 200 }}
+		>
+			<ReceiptItemCrop
+				{imageUrl}
+				bbox={bbox.coords}
+				{rotation}
+				imageWidth={imageDims.width}
+				imageHeight={imageDims.height}
+			/>
 		</div>
-	{/if}
+	</Portal>
+{/if}
+
+<form onsubmit={e => e.preventDefault()} class="edit-form">
+	<!-- Spacer for visual comfort if crop is present (optional) -->
+	<!-- <div class="spacer"></div> -->
 
 	<div class="fields">
 		<div class="name-row">
@@ -151,14 +201,25 @@
 </form>
 
 <style>
-	form {
+	.crop-portal-container {
+		position: fixed;
+		top: calc(var(--safe-top) + 20px);
+		left: 50%;
+		transform: translateX(-50%);
+		width: calc(100% - 32px);
+		max-width: 400px;
+		height: 180px;
+		z-index: 6000; /* Higher than modal backdrop, visible above sheet */
+		pointer-events: auto;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+		border-radius: var(--radius-lg);
+	}
+
+	.edit-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
-	}
-
-	.crop-section {
-		margin-bottom: var(--space-2);
+		/* Padding bottom handled by bottom sheet container */
 	}
 
 	.fields {

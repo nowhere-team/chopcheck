@@ -12,8 +12,8 @@ import type {
 } from '@chopcheck/shared'
 
 import type {
-	Item,
 	ItemGroup,
+	ItemWithReceiptData,
 	ParticipantWithUser,
 	PaymentMethod,
 	Receipt,
@@ -132,7 +132,7 @@ export function toSplitDto(split: Split): SplitDto {
 	}
 }
 
-export function toSplitItemDto(item: Item): SplitItemDto {
+export function toSplitItemDto(item: ItemWithReceiptData): SplitItemDto {
 	return {
 		id: item.id,
 		name: item.name,
@@ -144,6 +144,9 @@ export function toSplitItemDto(item: Item): SplitItemDto {
 		groupId: item.groupId,
 		unit: item.unit || 'piece',
 		warnings: (item.warnings as any) || [],
+		// Map receipt data if available
+		bbox: (item.receiptItem?.bbox as any) || null,
+		receiptId: item.receiptItem?.receiptId || null,
 	}
 }
 
@@ -158,6 +161,7 @@ export function toItemGroupDto(group: ItemGroup): ItemGroupDto {
 		isCollapsed: group.isCollapsed,
 		warnings: (group.warnings as any) || [],
 		createdAt: toIso(group.createdAt),
+		receiptId: group.receiptId,
 	}
 }
 
