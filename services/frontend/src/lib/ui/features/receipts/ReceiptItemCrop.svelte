@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte'
-	import { fade } from 'svelte/transition'
 
 	import type { BboxCoords } from '$lib/shared/bbox'
 	import { addBboxPadding, transformBboxForRotation } from '$lib/shared/bbox'
-	import { Spinner } from '$lib/ui/components'
 
 	interface Props {
 		imageUrl: string
-		bbox: BboxCoords // [y_min, x_min, y_max, x_max] (norm or absolute)
+		bbox: BboxCoords
 		rotation?: 0 | 90 | 180 | 270
 		imageWidth: number
 		imageHeight: number
@@ -24,86 +22,92 @@
 		class: className = ''
 	}: Props = $props()
 
-	// --- Logic ---
-
 	let containerRef = $state<HTMLDivElement | null>(null)
 	let containerWidth = $state(0)
 	let containerHeight = $state(0)
 
-	// Dragging state
 	let isDragging = $state(false)
 	let startX = 0
 	let startY = 0
-	let offsetX = $state(0)
-	let offsetY = $state(0)
+	let translateX = $state(0)
+	let translateY = $state(0)
 
-	// Transform Logic
-	const cropData = $derived.by(() => {
-		if (!imageWidth || !imageHeight) return null
-
-		// 1. Transform bbox to current rotation space
-		const transformedBbox = transformBboxForRotation(bbox, rotation, imageWidth, imageHeight)
-
-		// 2. Add padding (15% visual context)
-		const padding = Math.min(transformedBbox.width, transformedBbox.height) * 0.25
-		const cropRect = addBboxPadding(
-			transformedBbox,
-			padding,
-			// Dimensions need to be swapped if rotated 90/270
-			rotation % 180 !== 0 ? imageHeight : imageWidth,
-			rotation % 180 !== 0 ? imageWidth : imageHeight
-		)
-
-		// 3. Calculate scale to fit container height
-		// We want the cropRect.height to match containerHeight (approx 200px)
-		// But if container isn't mounted yet, assume generic height
-		const targetHeight = containerHeight || 200
-		const scale = targetHeight / cropRect.height
-
+	// bbox transformed and padded, in percentages 0-100
+	const bboxPct = $derived.by(() => {
+		const transformed = transformBboxForRotation(bbox, rotation)
+		const padded = addBboxPadding(transformed, 30)
 		return {
-			scale,
-			// Initial position to center the crop
-			initialLeft: -cropRect.left * scale,
-			initialTop: -cropRect.top * scale,
-			// Width of the visible crop area in pixels
-			visualWidth: cropRect.width * scale,
-			visualHeight: cropRect.height * scale
+			left: padded.left / 10,
+			top: padded.top / 10,
+			width: padded.width / 10,
+			height: padded.height / 10
 		}
 	})
 
-	// Drag Handlers
+	// scale image to fit container width with some padding
+	const imageScale = $derived.by(() => {
+		if (!containerWidth || !imageWidth) return 1
+		return (containerWidth * 0.9) / imageWidth
+	})
+
+	const scaledWidth = $derived(imageWidth * imageScale)
+	const scaledHeight = $derived(imageHeight * imageScale)
+
+	// bbox rect in scaled pixels (for corner positioning)
+	const bboxRect = $derived({
+		left: (bboxPct.left / 100) * scaledWidth,
+		top: (bboxPct.top / 100) * scaledHeight,
+		width: (bboxPct.width / 100) * scaledWidth,
+		height: (bboxPct.height / 100) * scaledHeight
+	})
+
+	// initial position: center bbox in viewport
+	const initialX = $derived.by(() => {
+		if (!containerWidth) return 0
+		const bboxCenterX = bboxRect.left + bboxRect.width / 2
+		return containerWidth / 2 - bboxCenterX
+	})
+
+	const initialY = $derived.by(() => {
+		if (!containerHeight) return 0
+		const bboxCenterY = bboxRect.top + bboxRect.height / 2
+		return containerHeight / 2 - bboxCenterY
+	})
+
 	function handleStart(e: TouchEvent | MouseEvent) {
 		isDragging = true
 		const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
 		const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
-		startX = clientX - offsetX
-		startY = clientY - offsetY
+		startX = clientX - translateX
+		startY = clientY - translateY
 	}
 
 	function handleMove(e: TouchEvent | MouseEvent) {
-		if (!isDragging || !cropData) return
-		e.preventDefault() // prevent scroll
-
+		if (!isDragging) return
 		const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
 		const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
-
-		const rawX = clientX - startX
-		const rawY = clientY - startY
-
-		// Limit dragging to logical bounds (don't let user drag image completely out)
-		// Simple limitation: allow dragging up to 50% of the view
-		const limitX = containerWidth / 2
-		const limitY = containerHeight / 4
-
-		offsetX = Math.max(-limitX, Math.min(limitX, rawX))
-		offsetY = Math.max(-limitY, Math.min(limitY, rawY))
+		translateX = clientX - startX
+		translateY = clientY - startY
 	}
 
 	function handleEnd() {
 		isDragging = false
 	}
 
-	// Observer for container size
+	function dragAction(node: HTMLElement) {
+		function onTouchMove(e: TouchEvent) {
+			if (!isDragging) return
+			e.preventDefault()
+			handleMove(e)
+		}
+		node.addEventListener('touchmove', onTouchMove, { passive: false })
+		return {
+			destroy() {
+				node.removeEventListener('touchmove', onTouchMove)
+			}
+		}
+	}
+
 	$effect(() => {
 		if (containerRef) {
 			const obs = new ResizeObserver(entries => {
@@ -116,22 +120,23 @@
 		}
 	})
 
-	// Reset drag when image changes
+	// reset position when image changes
 	$effect(() => {
-		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-		imageUrl
+		void imageUrl
+		void bbox
 		untrack(() => {
-			offsetX = 0
-			offsetY = 0
+			translateX = 0
+			translateY = 0
 		})
 	})
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-	class="crop-wrapper {className}"
+	class="viewport {className}"
 	bind:this={containerRef}
+	use:dragAction
 	ontouchstart={handleStart}
-	ontouchmove={handleMove}
 	ontouchend={handleEnd}
 	onmousedown={handleStart}
 	onmousemove={handleMove}
@@ -140,59 +145,58 @@
 	role="img"
 	aria-label="Фрагмент чека"
 >
-	{#if cropData}
+	<div
+		class="image-layer"
+		style:transform="translate({initialX + translateX}px, {initialY + translateY}px)"
+		class:dragging={isDragging}
+	>
+		<img
+			src={imageUrl}
+			alt=""
+			style:width="{scaledWidth}px"
+			style:height="{scaledHeight}px"
+			draggable="false"
+		/>
+
+		<!-- corners on bbox -->
 		<div
-			class="image-layer"
-			style:transform="translate({cropData.initialLeft + offsetX}px, {cropData.initialTop +
-				offsetY}px)"
-			class:dragging={isDragging}
+			class="bbox-corners"
+			style:left="{bboxRect.left}px"
+			style:top="{bboxRect.top}px"
+			style:width="{bboxRect.width}px"
+			style:height="{bboxRect.height}px"
 		>
-			<img
-				src={imageUrl}
-				alt=""
-				style:width="{rotation % 180 !== 0 ? imageHeight : imageWidth}px"
-				style:height="{rotation % 180 !== 0 ? imageWidth : imageHeight}px"
-				style:transform="scale({cropData.scale}) rotate({rotation}deg)"
-				style:transform-origin="0 0"
-				draggable="false"
-			/>
+			<div class="corner tl"></div>
+			<div class="corner tr"></div>
+			<div class="corner bl"></div>
+			<div class="corner br"></div>
 		</div>
-
-		<!-- UI Overlay (Fixed on top of image) -->
-		<div class="overlay-layer">
-			<!-- Google Lens Corners -->
-			<div class="lens-box" style:width="{cropData.visualWidth}px">
-				<div class="corner tl"></div>
-				<div class="corner tr"></div>
-				<div class="corner bl"></div>
-				<div class="corner br"></div>
-			</div>
-
-			<!-- Edges fade -->
-			<div class="fade-mask left"></div>
-			<div class="fade-mask right"></div>
-		</div>
-	{:else}
-		<div class="loading" transition:fade>
-			<Spinner size="lg" variant="muted" />
-		</div>
-	{/if}
+	</div>
 </div>
 
 <!--suppress CssInvalidPropertyValue -->
 <style>
-	.crop-wrapper {
+	.viewport {
 		position: relative;
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
-		background: #000; /* Dark background for better contrast */
-		border-radius: var(--radius-lg);
-		touch-action: none; /* Important for drag */
+		touch-action: none;
 		user-select: none;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent 0%,
+			black 15%,
+			black 85%,
+			transparent 100%
+		);
+		mask-image: linear-gradient(
+			to bottom,
+			transparent 0%,
+			black 15%,
+			black 85%,
+			transparent 100%
+		);
 	}
 
 	.image-layer {
@@ -200,43 +204,31 @@
 		top: 0;
 		left: 0;
 		will-change: transform;
-		transform-origin: 0 0;
-		transition: transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+		transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1);
 	}
 
 	.image-layer.dragging {
 		transition: none;
 	}
 
-	img {
+	.image-layer img {
 		display: block;
 		pointer-events: none;
-		/* Ensure rotation happens around center if needed, but here we handle it via bbox transform logic */
-		image-rendering: -webkit-optimize-contrast;
+		max-width: none;
+		max-height: none;
+		border-radius: 4px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 	}
 
-	.overlay-layer {
+	.bbox-corners {
 		position: absolute;
-		inset: 0;
-		pointer-events: none; /* Let clicks pass through to drag */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	/* Lens Box */
-	.lens-box {
-		position: relative;
-		height: 100%;
-		max-width: 90%;
-		/* Optional: minimal shadow to separate from bg */
-		box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+		pointer-events: none;
 	}
 
 	.corner {
 		position: absolute;
-		width: 20px;
-		height: 20px;
+		width: 16px;
+		height: 16px;
 		border-color: white;
 		border-style: solid;
 		border-width: 0;
@@ -244,57 +236,34 @@
 	}
 
 	.tl {
-		top: 0;
-		left: 0;
+		top: -2px;
+		left: -2px;
 		border-top-width: 3px;
 		border-left-width: 3px;
 		border-top-left-radius: 4px;
 	}
+
 	.tr {
-		top: 0;
-		right: 0;
+		top: -2px;
+		right: -2px;
 		border-top-width: 3px;
 		border-right-width: 3px;
 		border-top-right-radius: 4px;
 	}
+
 	.bl {
-		bottom: 0;
-		left: 0;
+		bottom: -2px;
+		left: -2px;
 		border-bottom-width: 3px;
 		border-left-width: 3px;
 		border-bottom-left-radius: 4px;
 	}
+
 	.br {
-		bottom: 0;
-		right: 0;
+		bottom: -2px;
+		right: -2px;
 		border-bottom-width: 3px;
 		border-right-width: 3px;
 		border-bottom-right-radius: 4px;
-	}
-
-	/* Fades */
-	.fade-mask {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 40px;
-		z-index: 10;
-	}
-	.left {
-		left: 0;
-		background: linear-gradient(to right, rgba(0, 0, 0, 0.8), transparent);
-	}
-	.right {
-		right: 0;
-		background: linear-gradient(to left, rgba(0, 0, 0, 0.8), transparent);
-	}
-
-	.loading {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--color-bg-secondary);
 	}
 </style>

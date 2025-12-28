@@ -35,17 +35,14 @@
 		onRequestCreateGroup
 	}: Props = $props()
 
-	// --- State ---
 	let iconValue = $derived(item.icon || '📦')
 	let selectedGroupId = $derived(groupId)
 
-	// --- Image Loading State ---
 	let imageUrl = $state<string | null>(null)
 	let imageDims = $state<{ width: number; height: number } | null>(null)
 	let rotation = $state<0 | 90 | 180 | 270>(0)
 	let isImageReady = $state(false)
 
-	// Загружаем данные картинки при маунте, если есть receiptId и bbox
 	onMount(async () => {
 		if (receiptId && bbox) {
 			const data = await receiptImagesStore.load(receiptId)
@@ -58,7 +55,6 @@
 				imageUrl = savedImage.url
 				rotation = (metadata?.rotation as any) ?? 0
 
-				// Preload to get dims
 				const img = new Image()
 				img.src = savedImage.url
 				img.onload = () => {
@@ -68,8 +64,6 @@
 			}
 		}
 	})
-
-	// --- Form Logic ---
 
 	const divisionMethods = [
 		{
@@ -129,14 +123,9 @@
 	}
 </script>
 
-<!-- Portal for Crop View -->
 {#if isImageReady && imageUrl && bbox && imageDims}
 	<Portal target="body">
-		<div
-			class="crop-portal-container"
-			in:fly={{ y: -20, duration: 300 }}
-			out:fade={{ duration: 200 }}
-		>
+		<div class="crop-viewport" in:fly={{ y: -20, duration: 300 }} out:fade={{ duration: 150 }}>
 			<ReceiptItemCrop
 				{imageUrl}
 				bbox={bbox.coords}
@@ -149,9 +138,6 @@
 {/if}
 
 <form onsubmit={e => e.preventDefault()} class="edit-form">
-	<!-- Spacer for visual comfort if crop is present (optional) -->
-	<!-- <div class="spacer"></div> -->
-
 	<div class="fields">
 		<div class="name-row">
 			<div class="icon-field">
@@ -201,25 +187,22 @@
 </form>
 
 <style>
-	.crop-portal-container {
+	.crop-viewport {
 		position: fixed;
-		top: calc(var(--safe-top) + 20px);
-		left: 50%;
-		transform: translateX(-50%);
-		width: calc(100% - 32px);
-		max-width: 400px;
-		height: 180px;
-		z-index: 6000; /* Higher than modal backdrop, visible above sheet */
-		pointer-events: auto;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+		top: calc(var(--safe-top) + 16px);
+		left: 16px;
+		right: 16px;
+		height: 200px;
+		z-index: calc(var(--z-modal) - 10);
 		border-radius: var(--radius-lg);
+		overflow: hidden;
+		background: var(--color-bg-secondary);
 	}
 
 	.edit-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
-		/* Padding bottom handled by bottom sheet container */
 	}
 
 	.fields {
