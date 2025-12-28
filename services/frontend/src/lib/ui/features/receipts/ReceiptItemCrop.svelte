@@ -32,10 +32,11 @@
 	let translateX = $state(0)
 	let translateY = $state(0)
 
-	// bbox transformed and padded, in percentages 0-100
 	const bboxPct = $derived.by(() => {
 		const transformed = transformBboxForRotation(bbox, rotation)
-		const padded = addBboxPadding(transformed, 30)
+		// Делаем отступ адаптивным: не больше 20% от ширины объекта, но и не совсем впритык
+		const dynamicPadding = Math.max(10, Math.min(transformed.width * 0.2, 40))
+		const padded = addBboxPadding(transformed, dynamicPadding)
 		return {
 			left: padded.left / 10,
 			top: padded.top / 10,
@@ -44,16 +45,20 @@
 		}
 	})
 
-	// scale image to fit container width with some padding
 	const imageScale = $derived.by(() => {
-		if (!containerWidth || !imageWidth) return 1
-		return (containerWidth * 0.9) / imageWidth
+		if (!containerWidth || !imageWidth || !bboxPct.width) return 1
+
+		const fitScale = containerWidth / imageWidth
+
+		const bboxPixelWidth = (bboxPct.width / 100) * imageWidth
+		const zoomScale = (containerWidth * 0.65) / bboxPixelWidth
+
+		return Math.max(fitScale, zoomScale)
 	})
 
 	const scaledWidth = $derived(imageWidth * imageScale)
 	const scaledHeight = $derived(imageHeight * imageScale)
 
-	// bbox rect in scaled pixels (for corner positioning)
 	const bboxRect = $derived({
 		left: (bboxPct.left / 100) * scaledWidth,
 		top: (bboxPct.top / 100) * scaledHeight,
@@ -61,7 +66,6 @@
 		height: (bboxPct.height / 100) * scaledHeight
 	})
 
-	// initial position: center bbox in viewport
 	const initialX = $derived.by(() => {
 		if (!containerWidth) return 0
 		const bboxCenterX = bboxRect.left + bboxRect.width / 2
@@ -120,7 +124,6 @@
 		}
 	})
 
-	// reset position when image changes
 	$effect(() => {
 		void imageUrl
 		void bbox
@@ -131,7 +134,6 @@
 	})
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	class="viewport {className}"
 	bind:this={containerRef}
@@ -158,7 +160,6 @@
 			draggable="false"
 		/>
 
-		<!-- corners on bbox -->
 		<div
 			class="bbox-corners"
 			style:left="{bboxRect.left}px"
@@ -183,20 +184,8 @@
 		overflow: hidden;
 		touch-action: none;
 		user-select: none;
-		-webkit-mask-image: linear-gradient(
-			to bottom,
-			transparent 0%,
-			black 15%,
-			black 85%,
-			transparent 100%
-		);
-		mask-image: linear-gradient(
-			to bottom,
-			transparent 0%,
-			black 15%,
-			black 85%,
-			transparent 100%
-		);
+		-webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 100%);
+		mask-image: radial-gradient(ellipse at center, black 40%, transparent 100%);
 	}
 
 	.image-layer {
@@ -204,7 +193,7 @@
 		top: 0;
 		left: 0;
 		will-change: transform;
-		transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1);
+		transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
 	}
 
 	.image-layer.dragging {
@@ -216,8 +205,7 @@
 		pointer-events: none;
 		max-width: none;
 		max-height: none;
-		border-radius: 4px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		filter: contrast(1.05) saturate(1.05);
 	}
 
 	.bbox-corners {
@@ -229,10 +217,11 @@
 		position: absolute;
 		width: 16px;
 		height: 16px;
-		border-color: white;
+		border-color: var(--color-primary, #3b82f6);
 		border-style: solid;
 		border-width: 0;
-		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+		opacity: 0.9;
+		filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
 	}
 
 	.tl {
