@@ -12,6 +12,11 @@ export const warningSchema = z.object({
 
 export const bboxCoordsSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]) // [y_min, x_min, y_max, x_max]
 
+export const itemBboxSchema = z.object({
+	index: z.number(), // image index
+	coords: bboxCoordsSchema
+})
+
 export const imageMetadataSchema = z.object({
 	index: z.number(),
 	bbox: bboxCoordsSchema.nullable(),
@@ -23,7 +28,7 @@ export const savedImageInfoSchema = z.object({
 	index: z.number(),
 	isDuplicate: z.boolean().optional(),
 	originalUrl: z.string(),
-	url: z.string().optional() // signed URL
+	url: z.string().optional() // signed URL, expires in 1 hour
 })
 
 export const receiptItemSchema = z.object({
@@ -39,7 +44,8 @@ export const receiptItemSchema = z.object({
 	sum: moneySchema,
 	discount: moneySchema.optional(),
 	suggestedSplitMethod: z.string().optional(),
-	warnings: z.array(warningSchema).optional()
+	warnings: z.array(warningSchema).optional(),
+	bbox: itemBboxSchema.nullable().optional()
 })
 
 export const receiptSchema = z.object({
@@ -61,6 +67,13 @@ export const receiptWithItemsSchema = z.object({
 	items: z.array(receiptItemSchema)
 })
 
+export const receiptImagesResponseSchema = z.object({
+	receiptId: uuidSchema,
+	imageMetadata: z.array(imageMetadataSchema),
+	savedImages: z.array(savedImageInfoSchema),
+	items: z.array(receiptItemSchema)
+})
+
 // --- Requests ---
 
 export const scanQrSchema = z.object({
@@ -76,10 +89,13 @@ export const scanImageSchema = z.object({
 // --- Types ---
 
 export type WarningDto = z.infer<typeof warningSchema>
+export type BboxCoordsDto = z.infer<typeof bboxCoordsSchema>
+export type ItemBboxDto = z.infer<typeof itemBboxSchema>
 export type ImageMetadataDto = z.infer<typeof imageMetadataSchema>
 export type SavedImageInfoDto = z.infer<typeof savedImageInfoSchema>
 export type ReceiptItemDto = z.infer<typeof receiptItemSchema>
 export type ReceiptDto = z.infer<typeof receiptSchema>
 export type ReceiptWithItemsDto = z.infer<typeof receiptWithItemsSchema>
+export type ReceiptImagesResponseDto = z.infer<typeof receiptImagesResponseSchema>
 export type ScanQrDto = z.infer<typeof scanQrSchema>
 export type ScanImageDto = z.infer<typeof scanImageSchema>

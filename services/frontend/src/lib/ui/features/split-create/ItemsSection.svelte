@@ -34,15 +34,14 @@
 		} else {
 			ctx.sheets.openItemEdit(
 				{
-					id: item.id,
-					name: item.name,
-					price: item.price,
-					quantity: item.quantity,
-					type: item.type,
-					defaultDivisionMethod: item.defaultDivisionMethod,
-					icon: item.icon
+					...item,
+					id: item.id
 				},
-				item.groupId ?? null
+				item.groupId ?? null,
+				{
+					bbox: item.bbox ?? null,
+					receiptId: item.receiptId ?? null
+				}
 			)
 		}
 	}

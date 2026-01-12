@@ -3,6 +3,7 @@ import type {
 	ParticipantDto,
 	PaymentMethodDto,
 	ReceiptDto,
+	ReceiptImagesResponseDto,
 	ReceiptItemDto,
 	SplitDto,
 	SplitItemDto,
@@ -11,8 +12,8 @@ import type {
 } from '@chopcheck/shared'
 
 import type {
-	Item,
 	ItemGroup,
+	ItemWithReceiptData,
 	ParticipantWithUser,
 	PaymentMethod,
 	Receipt,
@@ -81,6 +82,7 @@ export function toReceiptItemDto(item: ReceiptItem): ReceiptItemDto {
 		discount: item.discount || undefined,
 		suggestedSplitMethod: item.suggestedSplitMethod || undefined,
 		warnings: (item.warnings as any) || undefined,
+		bbox: (item.bbox as any) || null,
 	}
 }
 
@@ -100,6 +102,20 @@ export function toReceiptDto(receipt: Receipt): ReceiptDto {
 	}
 }
 
+export function toReceiptImagesDto(data: {
+	receipt: Receipt
+	items: ReceiptItem[]
+	imageMetadata: unknown[]
+	savedImages: unknown[]
+}): ReceiptImagesResponseDto {
+	return {
+		receiptId: data.receipt.id,
+		imageMetadata: (data.imageMetadata as any) || [],
+		savedImages: (data.savedImages as any) || [],
+		items: data.items.map(toReceiptItemDto),
+	}
+}
+
 export function toSplitDto(split: Split): SplitDto {
 	return {
 		id: split.id,
@@ -116,7 +132,7 @@ export function toSplitDto(split: Split): SplitDto {
 	}
 }
 
-export function toSplitItemDto(item: Item): SplitItemDto {
+export function toSplitItemDto(item: ItemWithReceiptData): SplitItemDto {
 	return {
 		id: item.id,
 		name: item.name,
@@ -128,6 +144,9 @@ export function toSplitItemDto(item: Item): SplitItemDto {
 		groupId: item.groupId,
 		unit: item.unit || 'piece',
 		warnings: (item.warnings as any) || [],
+		// Map receipt data if available
+		bbox: (item.receiptItem?.bbox as any) || null,
+		receiptId: item.receiptItem?.receiptId || null,
 	}
 }
 
@@ -142,6 +161,7 @@ export function toItemGroupDto(group: ItemGroup): ItemGroupDto {
 		isCollapsed: group.isCollapsed,
 		warnings: (group.warnings as any) || [],
 		createdAt: toIso(group.createdAt),
+		receiptId: group.receiptId,
 	}
 }
 

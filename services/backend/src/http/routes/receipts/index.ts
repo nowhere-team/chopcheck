@@ -4,6 +4,7 @@ import { streamSSE } from 'hono/streaming'
 
 import { auth } from '@/http/middleware/auth'
 import { uuidParam, validate } from '@/http/utils'
+import { toReceiptImagesDto } from '@/http/utils/mappers'
 
 export function createReceiptsRoutes() {
 	const app = new Hono().use('/*', auth())
@@ -24,11 +25,7 @@ export function createReceiptsRoutes() {
 	app.get('/:id/images', uuidParam('id'), async c => {
 		const data = await c.get('services').receipts.getWithImages(c.req.param('id'), c.get('authContext')!.userId)
 		if (!data) return c.json({ error: 'receipt not found' }, 404)
-		return c.json({
-			receiptId: data.receipt.id,
-			imageMetadata: data.imageMetadata,
-			savedImages: data.savedImages,
-		})
+		return c.json(toReceiptImagesDto(data))
 	})
 
 	app.post('/:id/images/refresh', uuidParam('id'), async c => {

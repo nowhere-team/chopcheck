@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { dateSchema, moneySchema, uuidSchema } from '../common'
 import { DIVISION_METHODS, ITEM_GROUP_TYPES, SPLIT_PHASES, SPLIT_STATUSES } from '../enums'
+import { itemBboxSchema, warningSchema } from './receipt'
 import { userPublicSchema } from './user'
-import { warningSchema } from './receipt'
 
 // --- Entities ---
 
@@ -16,7 +16,9 @@ export const splitItemSchema = z.object({
 	icon: z.string().optional().nullable(),
 	groupId: uuidSchema.optional().nullable(),
 	unit: z.string().optional().default('piece'),
-	warnings: z.array(warningSchema).optional().default([])
+	warnings: z.array(warningSchema).optional().default([]),
+	bbox: itemBboxSchema.nullable().optional(),
+	receiptId: uuidSchema.nullable().optional(),
 })
 
 export const itemGroupSchema = z.object({
@@ -28,7 +30,9 @@ export const itemGroupSchema = z.object({
 	displayOrder: z.number(),
 	isCollapsed: z.boolean(),
 	warnings: z.array(warningSchema).optional().default([]),
-	createdAt: dateSchema
+	createdAt: dateSchema,
+	// Useful to have receiptId on group level too if needed, but item level is critical for crop
+	receiptId: uuidSchema.nullable().optional(),
 })
 
 export const participantSchema = z.object({
@@ -69,6 +73,7 @@ export const calculationParticipantSchema = z.object({
 	displayName: z.string(),
 	totalBase: moneySchema,
 	totalDiscount: moneySchema,
+	totalDiscountPercent: z.string().optional(),
 	totalFinal: moneySchema,
 	items: z.record(z.string(), calculationItemResultSchema) // itemId -> calc
 })

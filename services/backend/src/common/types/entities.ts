@@ -30,5 +30,10 @@ export interface ReceiptItemWithBbox extends ReceiptItem {
 	bbox: ItemBbox | null
 }
 
+// Item combined with its source receipt item data
+export type ItemWithReceiptData = Item & {
+	receiptItem: (Pick<ReceiptItem, 'id' | 'receiptId'> & { bbox: unknown }) | null
+}
+
 // re-export catalog types for convenience
 export type { ImageMetadata, ItemBbox, SavedImageInfo } from '@nowhere-team/catalog/types'

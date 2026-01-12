@@ -1,15 +1,22 @@
 <script lang="ts">
 	import { Trash } from 'phosphor-svelte'
+	import { onMount } from 'svelte'
+	import { fade, fly } from 'svelte/transition'
 
 	import { m } from '$lib/i18n'
-	import type { DraftItem, ItemGroup } from '$lib/services/api/types'
+	import type { DraftItem, ItemBboxDto, ItemGroup } from '$lib/services/api/types'
+	import { receiptImagesStore } from '$lib/state/stores/receipt-images.svelte'
 	import { Button, Divider, Input } from '$lib/ui/components'
+	import ReceiptItemCrop from '$lib/ui/features/receipts/ReceiptItemCrop.svelte'
 	import { EditableEmoji, PriceInput, Select } from '$lib/ui/forms'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Props {
 		item: DraftItem
 		groupId?: string | null
 		groups?: ItemGroup[]
+		receiptId?: string | null
+		bbox?: ItemBboxDto | null
 		onSave?: (groupId: string | null) => void
 		onDelete?: () => void
 		onCancel?: () => void
@@ -20,6 +27,8 @@
 		item = $bindable(),
 		groupId = null,
 		groups = [],
+		receiptId = null,
+		bbox = null,
 		onSave,
 		onDelete,
 		onCancel,
@@ -28,6 +37,33 @@
 
 	let iconValue = $derived(item.icon || '📦')
 	let selectedGroupId = $derived(groupId)
+
+	let imageUrl = $state<string | null>(null)
+	let imageDims = $state<{ width: number; height: number } | null>(null)
+	let rotation = $state<0 | 90 | 180 | 270>(0)
+	let isImageReady = $state(false)
+
+	onMount(async () => {
+		if (receiptId && bbox) {
+			const data = await receiptImagesStore.load(receiptId)
+			if (!data) return
+
+			const savedImage = data.savedImages.find(img => img.index === bbox.index)
+			const metadata = data.imageMetadata.find(meta => meta.index === bbox.index)
+
+			if (savedImage?.url) {
+				imageUrl = savedImage.url
+				rotation = (metadata?.rotation as any) ?? 0
+
+				const img = new Image()
+				img.src = savedImage.url
+				img.onload = () => {
+					imageDims = { width: img.naturalWidth, height: img.naturalHeight }
+					isImageReady = true
+				}
+			}
+		}
+	})
 
 	const divisionMethods = [
 		{
@@ -61,7 +97,6 @@
 		{ value: '__new__', label: '+ Создать группу' }
 	])
 
-	// compute select value from state
 	const groupSelectValue = $derived(selectedGroupId ?? '__none__')
 
 	function handleEmojiChange(newEmoji: string) {
@@ -83,13 +118,26 @@
 		onSave?.(selectedGroupId)
 	}
 
-	// expose method to update group after creation
 	export function setGroupId(id: string) {
 		selectedGroupId = id
 	}
 </script>
 
-<form onsubmit={e => e.preventDefault()}>
+{#if isImageReady && imageUrl && bbox && imageDims}
+	<Portal target="body">
+		<div class="crop-viewport" in:fly={{ y: -20, duration: 300 }} out:fade={{ duration: 150 }}>
+			<ReceiptItemCrop
+				{imageUrl}
+				bbox={bbox.coords}
+				{rotation}
+				imageWidth={imageDims.width}
+				imageHeight={imageDims.height}
+			/>
+		</div>
+	</Portal>
+{/if}
+
+<form onsubmit={e => e.preventDefault()} class="edit-form">
 	<div class="fields">
 		<div class="name-row">
 			<div class="icon-field">
@@ -139,7 +187,18 @@
 </form>
 
 <style>
-	form {
+	.crop-viewport {
+		position: fixed;
+		top: calc(var(--safe-top) + 16px);
+		left: 16px;
+		right: 16px;
+		height: 200px;
+		z-index: calc(var(--z-modal) - 10);
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+	}
+
+	.edit-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);

@@ -151,6 +151,8 @@
 			bind:item={ctx.sheets.context.editingItem}
 			groupId={ctx.sheets.context.editingItemGroupId}
 			groups={itemGroups}
+			receiptId={ctx.sheets.context.receiptId}
+			bbox={ctx.sheets.context.editingItemBbox}
 			onSave={onSaveItem}
 			onDelete={onDeleteItem}
 			onCancel={closeSheet}

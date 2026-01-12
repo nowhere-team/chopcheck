@@ -1,6 +1,6 @@
 ﻿import { and, eq } from 'drizzle-orm'
 
-import type { Item } from '@/common/types'
+import type { Item, ItemWithReceiptData } from '@/common/types'
 import { schema } from '@/platform/database'
 
 import { BaseRepository } from './base'
@@ -19,11 +19,20 @@ export class ItemsRepository extends BaseRepository {
 		return `split:${splitId}:items`
 	}
 
-	async findBySplitId(splitId: string): Promise<Item[]> {
+	async findBySplitId(splitId: string): Promise<ItemWithReceiptData[]> {
 		return this.cached(this.key(splitId), async () => {
 			return this.db.query.splitItems.findMany({
 				where: and(eq(schema.splitItems.splitId, splitId), eq(schema.splitItems.isDeleted, false)),
 				orderBy: (items, { asc }) => [asc(items.displayOrder)],
+				with: {
+					receiptItem: {
+						columns: {
+							id: true,
+							receiptId: true,
+							bbox: true,
+						},
+					},
+				},
 			})
 		})
 	}
