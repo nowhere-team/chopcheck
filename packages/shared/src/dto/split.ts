@@ -17,7 +17,6 @@ export const splitItemSchema = z.object({
 	groupId: uuidSchema.optional().nullable(),
 	unit: z.string().optional().default('piece'),
 	warnings: z.array(warningSchema).optional().default([]),
-	// New fields for crop support
 	bbox: itemBboxSchema.nullable().optional(),
 	receiptId: uuidSchema.nullable().optional(),
 })
