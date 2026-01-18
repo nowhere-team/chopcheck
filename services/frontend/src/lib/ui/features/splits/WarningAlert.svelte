@@ -42,9 +42,9 @@
 				<Warning size={compact ? 14 : 16} weight="fill" class="warning-icon" />
 				<div class="warning-content">
 					<span class="warning-text">
-						{warningLabels[warning.code] ?? warning.code}
+						{warning.translated ?? warningLabels[warning.code] ?? warning.code}
 					</span>
-					{#if warning.details}
+					{#if warning.details && !warning.translated}
 						<span class="warning-details">{warning.details}</span>
 					{/if}
 				</div>

@@ -1,4 +1,6 @@
-import type { ModalConfig, ModalState } from './types'
+import { generateId } from '$lib/shared/id'
+
+import type { ModalButton, ModalConfig, ModalState } from './types'
 
 class ModalManager {
 	stack = $state<ModalState[]>([])
@@ -9,7 +11,7 @@ class ModalManager {
 
 	private show(config: ModalConfig): Promise<unknown> {
 		return new Promise(resolve => {
-			const id = crypto.randomUUID()
+			const id = generateId()
 			this.stack = [...this.stack, { ...config, id, resolve }]
 		})
 	}
@@ -81,6 +83,59 @@ class ModalManager {
 			],
 			dismissible: true
 		}) as Promise<string | null>
+	}
+
+	// new: flexible custom modal for success/action scenarios
+	custom<T = unknown>(config: {
+		title?: string
+		message?: string
+		icon?: string
+		buttons: ModalButton[]
+		layout?: 'default' | 'stacked' | 'horizontal'
+		dismissible?: boolean
+	}): Promise<T> {
+		return this.show({
+			type: 'custom',
+			...config,
+			dismissible: config.dismissible ?? true
+		}) as Promise<T>
+	}
+
+	// convenience: success modal with actions
+	success(
+		message: string,
+		options: {
+			title?: string
+			icon?: string
+			primaryAction: { label: string; value: unknown }
+			secondaryAction?: { label: string; value: unknown }
+		}
+	): Promise<unknown> {
+		const buttons: ModalButton[] = []
+
+		if (options.secondaryAction) {
+			buttons.push({
+				label: options.secondaryAction.label,
+				variant: 'secondary',
+				value: options.secondaryAction.value
+			})
+		}
+
+		buttons.push({
+			label: options.primaryAction.label,
+			variant: 'primary',
+			value: options.primaryAction.value
+		})
+
+		return this.show({
+			type: 'custom',
+			title: options.title,
+			message,
+			icon: options.icon ?? '✅',
+			buttons,
+			layout: 'stacked',
+			dismissible: false
+		})
 	}
 }
 

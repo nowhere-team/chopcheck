@@ -1,3 +1,4 @@
+// file: services/frontend/src/lib/services/receipts/scanner.svelte.ts
 import type { ImageMetadata, SavedImageInfo } from '$lib/services/api/types'
 
 import type { ReceiptCompleteData, ReceiptStreamEvent } from './stream'
@@ -11,6 +12,7 @@ export interface ScannerContext {
 	totalItems?: number
 	lastItem?: string
 	error?: string
+	warnings?: string[]
 	receiptData?: ReceiptCompleteData
 	isCached?: boolean
 	// image data
@@ -26,7 +28,8 @@ class ReceiptScannerManager {
 
 	context = $state<ScannerContext>({
 		itemsCount: 0,
-		isCached: false
+		isCached: false,
+		warnings: []
 	})
 
 	get state(): ScannerState {
@@ -125,6 +128,15 @@ class ReceiptScannerManager {
 				break
 			}
 
+			case 'warning': {
+				const raw = event.data as { warning?: { translated?: string; details?: string } }
+				const w = raw.warning ?? (raw as { translated?: string; details?: string })
+				const message = w.translated || w.details || 'Предупреждение при обработке'
+
+				this.context.warnings = [...(this.context.warnings || []), message]
+				break
+			}
+
 			case 'receipt':
 				break
 
@@ -204,6 +216,7 @@ class ReceiptScannerManager {
 			totalItems: undefined,
 			lastItem: undefined,
 			error: undefined,
+			warnings: [],
 			receiptData: undefined,
 			isCached: false,
 			imageCount: undefined,

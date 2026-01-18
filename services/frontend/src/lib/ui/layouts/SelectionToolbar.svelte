@@ -5,6 +5,7 @@
 	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
 	import { Button } from '$lib/ui/components'
+	import Portal from '$lib/ui/overlays/Portal.svelte'
 
 	interface Props {
 		count: number
@@ -27,27 +28,29 @@
 </script>
 
 {#if count > 0}
-	<div class="toolbar-wrapper" transition:fly={{ y: -60, duration: 250 }}>
-		<div class="toolbar glass-panel">
-			<div class="left">
-				<Button variant="ghost" size="sm" onclick={handleCancel}>
-					{#snippet iconLeft()}
-						<X size={20} />
-					{/snippet}
-				</Button>
-				<span class="count">{m.selection_count({ count: count })}</span>
-			</div>
+	<Portal target="#portal-root">
+		<div class="toolbar-wrapper" transition:fly={{ y: -60, duration: 250 }}>
+			<div class="toolbar glass-panel">
+				<div class="left">
+					<Button variant="ghost" size="sm" onclick={handleCancel}>
+						{#snippet iconLeft()}
+							<X size={20} />
+						{/snippet}
+					</Button>
+					<span class="count">{m.selection_count({ count: count })}</span>
+				</div>
 
-			<div class="actions">
-				<Button variant="danger" size="sm" onclick={handleDelete}>
-					{#snippet iconLeft()}
-						<Trash size={18} />
-					{/snippet}
-					{m.action_delete()}
-				</Button>
+				<div class="actions">
+					<Button variant="danger" size="sm" onclick={handleDelete}>
+						{#snippet iconLeft()}
+							<Trash size={18} />
+						{/snippet}
+						{m.action_delete()}
+					</Button>
+				</div>
 			</div>
 		</div>
-	</div>
+	</Portal>
 {/if}
 
 <style>
@@ -59,6 +62,7 @@
 		z-index: calc(var(--z-navbar) + 10);
 		width: calc(100% - 32px);
 		max-width: 400px;
+		pointer-events: auto;
 	}
 
 	.toolbar {
@@ -71,6 +75,7 @@
 		-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
 		border: 1px solid var(--glass-border);
 		border-radius: 16px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	}
 
 	.left {

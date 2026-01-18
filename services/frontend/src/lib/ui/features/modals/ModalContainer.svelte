@@ -38,6 +38,8 @@
 			modal.close(inputValue)
 		}
 	}
+
+	const layout = $derived(modal.current?.layout ?? 'default')
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -66,7 +68,7 @@
 
 				{#if modal.current.icon}
 					<div class="modal-icon">
-						<Emoji emoji={modal.current.icon} size={48} />
+						<Emoji emoji={modal.current.icon} size={56} />
 					</div>
 				{/if}
 
@@ -89,9 +91,14 @@
 				{/if}
 
 				{#if modal.current.buttons?.length}
-					<div class="modal-actions" class:single={modal.current.buttons.length === 1}>
+					<div
+						class="modal-actions"
+						class:single={modal.current.buttons.length === 1}
+						class:stacked={layout === 'stacked'}
+					>
 						{#each modal.current.buttons as btn (btn.label)}
 							<Button
+								size="md"
 								variant={btn.variant ?? 'secondary'}
 								onclick={() => handleButtonClick(btn.value)}
 							>
@@ -130,7 +137,7 @@
 		border-radius: var(--radius-lg);
 		padding: var(--space-6);
 		width: 100%;
-		max-width: 320px;
+		max-width: 350px;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -184,14 +191,10 @@
 	}
 
 	.modal-actions {
-		display: flex;
+		display: grid;
 		gap: var(--space-3);
 		width: 100%;
 		margin-top: var(--space-3);
-	}
-
-	.modal-actions :global(button) {
-		flex: 1;
 	}
 
 	.modal-actions.single {
@@ -201,5 +204,14 @@
 	.modal-actions.single :global(button) {
 		flex: none;
 		min-width: 120px;
+	}
+
+	.modal-actions.stacked {
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.modal-actions.stacked :global(button) {
+		width: 100%;
 	}
 </style>

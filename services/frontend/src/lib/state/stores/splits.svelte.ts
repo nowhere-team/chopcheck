@@ -1,3 +1,4 @@
+// file: services/frontend/src/lib/state/stores/splits.svelte.ts
 import { resource } from 'runed'
 import { SvelteURLSearchParams } from 'svelte/reactivity'
 
@@ -39,8 +40,11 @@ export class SplitsService {
 		async () => {
 			try {
 				return await api.get<SplitResponse>('splits/draft')
-			} catch (e) {
-				if (e instanceof ApiError && e.isNotFound) {
+			} catch (e: any) {
+				// Robust check for 404 (Draft not found)
+				// If the draft doesn't exist (e.g. after publishing), we should just return null
+				// instead of letting the error propagate.
+				if (e?.status === 404 || (e instanceof ApiError && e.isNotFound)) {
 					return null
 				}
 				throw e
@@ -96,10 +100,14 @@ export class SplitsService {
 			this.draft.mutate(res)
 		}
 
-		await Promise.all([this.active.refetch(), this.grouped.refetch()])
+		// Background refresh, don't block
+		void Promise.all([
+			this.active.refetch().catch(() => {}),
+			this.grouped.refetch().catch(() => {})
+		])
 
 		if (this.currentId === dto.id) {
-			await this.current.refetch()
+			await this.current.refetch().catch(() => {})
 		}
 
 		return res
@@ -138,6 +146,10 @@ export class SplitsService {
 
 	async publish(splitId: string) {
 		await api.post<SplitResponse>(`splits/${splitId}/publish`)
+
+		// Immediately clear draft to reflect that it's gone
+		this.draft.mutate(null)
+
 		await this.refreshAll()
 	}
 
@@ -203,9 +215,15 @@ export class SplitsService {
 	}
 
 	async refreshAll() {
-		await Promise.all([this.active.refetch(), this.grouped.refetch(), this.draft.refetch()])
+		// Use Promise.all but catch individual errors so one failure (e.g. draft 404)
+		// doesn't stop the whole operation.
+		await Promise.all([
+			this.active.refetch().catch(e => console.warn('refresh active failed', e)),
+			this.grouped.refetch().catch(e => console.warn('refresh grouped failed', e)),
+			this.draft.refetch().catch(e => console.warn('refresh draft failed', e))
+		])
 		if (this.currentId) {
-			await this.current.refetch()
+			await this.current.refetch().catch(e => console.warn('refresh current failed', e))
 		}
 	}
 

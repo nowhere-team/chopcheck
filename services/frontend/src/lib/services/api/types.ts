@@ -1,4 +1,3 @@
-// file: services/frontend/src/lib/services/api/types.ts
 import type {
 	// DTOs (Data)
 	AddItemsDto,
@@ -37,7 +36,7 @@ import type {
 	UserDto,
 	UserMeDto,
 	WarningCode,
-	WarningDto
+	WarningDto as SharedWarningDto // Переименовываем импорт
 } from '@chopcheck/shared'
 
 // --- API Utils ---
@@ -91,14 +90,19 @@ export interface PaginatedResponse<T> {
 
 export type User = UserDto
 export type Split = SplitDto
-export type SplitItem = SplitItemDto
-export type ItemGroup = ItemGroupDto
+export type SplitItem = Omit<SplitItemDto, 'warnings'> & { warnings?: Warning[] }
+export type ItemGroup = Omit<ItemGroupDto, 'warnings'> & { warnings?: Warning[] }
+
 export type Participant = ParticipantDto
 export type PaymentMethod = PaymentMethodDto
 export type Receipt = ReceiptDto
 export type ReceiptItem = ReceiptItemDto
 export type ReceiptWithItems = ReceiptWithItemsDto
-export type Warning = WarningDto
+
+export interface Warning extends SharedWarningDto {
+	translated?: string | null
+}
+
 export type ItemBbox = ItemBboxDto
 export type ImageMetadata = ImageMetadataDto
 export type SavedImageInfo = SavedImageInfoDto
@@ -122,9 +126,10 @@ export interface ItemSelection {
 	value?: string
 }
 
-export interface DraftItem extends Omit<SplitItemDto, 'id' | 'groupId'> {
+export interface DraftItem extends Omit<SplitItemDto, 'id' | 'groupId' | 'warnings'> {
 	id?: string
 	groupId?: string | null
+	warnings?: Warning[]
 }
 
 export interface SplitsByPeriod {

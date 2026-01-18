@@ -2,6 +2,9 @@
 	import { useDebounce } from 'runed'
 	import { untrack } from 'svelte'
 
+	import { goto } from '$app/navigation'
+	import { resolve } from '$app/paths'
+	import { getPlatform } from '$lib/app/context.svelte'
 	import { m } from '$lib/i18n'
 	import type { ItemGroup, Participant, SplitItem } from '$lib/services/api/types'
 	import { receiptScanner } from '$lib/services/receipts/scanner.svelte'
@@ -12,7 +15,8 @@
 	} from '$lib/services/receipts/stream'
 	import { scanQrCode } from '$lib/services/scanner/qr'
 	import { getPaymentMethodsService, getSplitsService } from '$lib/state/context'
-	import { Divider } from '$lib/ui/components'
+	import { Button, Divider } from '$lib/ui/components'
+	import { modal } from '$lib/ui/features/modals'
 	import {
 		CreateSheets,
 		createSplitCreateContext,
@@ -25,6 +29,7 @@
 	import Page from '$lib/ui/layouts/Page.svelte'
 	import SelectionToolbar from '$lib/ui/layouts/SelectionToolbar.svelte'
 
+	const platform = getPlatform()
 	const splitsService = getSplitsService()
 	const paymentMethodsService = getPaymentMethodsService()
 	const scanner = receiptScanner
@@ -49,7 +54,6 @@
 	let initialized = $state(false)
 	$effect(() => {
 		if (splitData && !initialized) {
-			// FIX: Provide default strings for potentially null values
 			ctx.initFromDraft({
 				name: splitData.name ?? '',
 				icon: splitData.icon ?? '🍔',
@@ -69,6 +73,11 @@
 
 	const selectionCount = $derived(ctx.selection.count)
 	const selectionActive = $derived(ctx.selection.active)
+
+	// validation
+	const canPublish = $derived(items.length > 0 && ctx.localName.trim().length > 0)
+
+	let isPublishing = $state(false)
 
 	const saveMetadata = useDebounce(async () => {
 		await splitsService.createOrUpdate({
@@ -267,8 +276,20 @@
 		try {
 			let currentSplitId = splitId
 			if (!currentSplitId) {
+				// Determine name BEFORE API call to pass validation
+				let nameToSave = ctx.localName.trim()
+				if (!nameToSave) {
+					if (scanner.context.storeName) {
+						nameToSave = scanner.context.storeName
+					} else {
+						nameToSave = m.create_split_default_name() // Fallback e.g. "Новый сплит"
+					}
+					// Update local state immediately
+					ctx.localName = nameToSave
+				}
+
 				const res = await splitsService.createOrUpdate({
-					name: ctx.localName,
+					name: nameToSave,
 					currency: ctx.localCurrency,
 					items: []
 				})
@@ -282,6 +303,7 @@
 				toast.success(m.success_receipt_uploaded())
 			}
 
+			// If name was updated by scanner metadata
 			if (
 				(!ctx.localName || ctx.localName === m.create_split_default_name()) &&
 				scanner.context.storeName
@@ -289,7 +311,11 @@
 				ctx.localName = scanner.context.storeName
 				splitsService.updateDraftLocal({ split: { name: ctx.localName } })
 				await saveMetadata()
-				await saveMetadata.runScheduledNow()
+			}
+
+			// Show warnings if any (e.g. unreadable receipt)
+			if (scanner.context.warnings && scanner.context.warnings.length > 0) {
+				scanner.context.warnings.forEach(w => toast.warning(w))
 			}
 
 			scanner.saved()
@@ -305,6 +331,70 @@
 	function handlePaymentMethodsSplitCreated(newSplitId: string) {
 		paymentMethodsService.setSplitId(newSplitId)
 		paymentMethodsInitialized = true
+	}
+
+	async function handlePublish() {
+		if (!canPublish || isPublishing) return
+
+		isPublishing = true
+		platform.haptic.impact('medium')
+
+		try {
+			// Explicitly save first to ensure we have a valid splitId and synced metadata
+			const saved = await splitsService.createOrUpdate({
+				id: splitId,
+				name: ctx.localName,
+				icon: ctx.localIcon,
+				currency: ctx.localCurrency
+			})
+
+			await splitsService.publish(saved.split.id)
+
+			const action = await modal.success('Теперь можно пригласить друзей и разделить счёт', {
+				title: 'Сплит создан!',
+				icon: '🎉',
+				primaryAction: { label: 'Поделиться', value: 'share' },
+				secondaryAction: { label: 'Перейти к сплиту', value: 'open' }
+			})
+
+			if (action === 'share') {
+				await handleShare(saved.split.id)
+			}
+
+			await goto(resolve('/splits/[id]', { id: saved.split.shortId ?? saved.split.id }))
+		} catch (e) {
+			console.error(e)
+			toast.error('Не удалось опубликовать сплит')
+		} finally {
+			isPublishing = false
+		}
+	}
+
+	async function handleShare(id?: string) {
+		const targetId = id ?? splitId
+		if (!targetId) return
+
+		try {
+			const shareUrl = await splitsService.shareMessage(targetId)
+
+			if (platform.hasFeature('share')) {
+				const sdk = await import('@telegram-apps/sdk')
+				if (sdk.shareURL.isAvailable()) {
+					sdk.shareURL(shareUrl, `Присоединяйся к сплиту "${ctx.localName}"!`)
+				}
+			} else if (navigator.share) {
+				await navigator.share({
+					title: ctx.localName,
+					text: `Присоединяйся к сплиту "${ctx.localName}"!`,
+					url: shareUrl
+				})
+			} else {
+				await navigator.clipboard.writeText(shareUrl)
+				toast.success('Ссылка скопирована')
+			}
+		} catch {
+			toast.error('Не удалось поделиться')
+		}
 	}
 </script>
 
@@ -328,6 +418,24 @@
 		onDeleteGroup={handleDeleteGroup}
 		onDisbandGroup={handleDisbandGroup}
 	/>
+
+	<div class="publish-section">
+		<Button
+			variant="primary"
+			size="lg"
+			onclick={handlePublish}
+			disabled={!canPublish}
+			loading={isPublishing}
+			class="publish-btn"
+		>
+			Создать сплит
+		</Button>
+		{#if !canPublish && items.length === 0}
+			<p class="publish-hint">Добавьте хотя бы один товар</p>
+		{:else if !canPublish && !ctx.localName.trim()}
+			<p class="publish-hint">Укажите название сплита</p>
+		{/if}
+	</div>
 </Page>
 
 <CreateSheets
@@ -344,3 +452,23 @@
 	onPaymentMethodsChange={handlePaymentMethodsChange}
 	onPaymentMethodsSplitCreated={handlePaymentMethodsSplitCreated}
 />
+
+<style>
+	.publish-section {
+		margin-top: var(--space-6);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	:global(.publish-btn) {
+		width: 100%;
+	}
+
+	.publish-hint {
+		font-size: var(--text-sm);
+		color: var(--color-text-tertiary);
+		margin: 0;
+	}
+</style>
